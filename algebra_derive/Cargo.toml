@@ -4,7 +4,7 @@ description = "Derive macros for traits in crate algebra_traits."
 keywords = ["Arithmetic", "Vectorspace", "Parameters"]
 name = "algebra_derive"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [lib]
 proc-macro = true

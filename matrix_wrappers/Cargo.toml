@@ -1,17 +1,17 @@
 [package]
 name = "matrix_wrappers"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-derive_more    = { version = "1.0.0", features = ["full"]}
+derive_more    = { version = "2.0.1", features = ["full"]}
 derive_builder = "0.20.0"
 derive-getters = "0.5.0"
 
 num-traits = "0.2.19"
-paste = "1.0.14"
+paste = "1.0.15"
 algebra_traits   = { path = "../algebra_traits" }
 algebra_derive   = { path = "../algebra_derive" }
 algebra          = { path = "../algebra" }

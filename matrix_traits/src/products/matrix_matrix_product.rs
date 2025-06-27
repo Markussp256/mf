@@ -45,7 +45,7 @@ pub fn try_matrix_matrix_product_impl
 
 pub trait TryMatrixMatrixProduct<Rhs:Matrix> : Matrix {
     type Output : Matrix;
-    fn try_matrix_matrix_product<M:MatrixTryConstruct<T=F3>>(self, rhs:Rhs) -> Option<Self::Output>;
+    fn try_matrix_matrix_product<M:MatrixTryConstruct>(self, rhs:Rhs) -> Option<Self::Output>;
 }
 
 impl<F1     : Mul<F2,Output=F3>,

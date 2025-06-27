@@ -4,7 +4,7 @@ description = "algebra"
 keywords =  ["groups", "complex numbers", "quaternions", "matrix", "matrix decompositions"]
 name = "algebra"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -13,7 +13,7 @@ crate-type = ["lib"]
 
 [dependencies]
 #derives
-derive_more      = { version = "1.0.0", features = ["full"]}
+derive_more      = { version = "2.0.1", features = ["full"]}
 derive_builder = "0.20.0"
 derive-getters = "0.5.0"
 
@@ -24,11 +24,11 @@ container_traits = { path = "../container_traits" }
 container_derive = { path = "../container_derive" }
 
 num-traits= "0.2.15"
-paste = "1.0.14"
+paste = "1.0.15"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-splines = "4.2.0"
-thiserror = "1.0.59"
+splines = "5.0.0"
+thiserror = "2.0.12"
 
 # optional
 nalgebra = { version = "0.33", features = ["serde"], optional = true}

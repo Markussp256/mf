@@ -4,7 +4,7 @@ description = "Derive macros for traits in crate matrix_traits."
 keywords = ["MatrixMut", "Matrix", "Transpose"]
 name = "matrix_derive"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [lib]
 proc-macro = true

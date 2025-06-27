@@ -1,7 +1,7 @@
 [package]
 name = "phys_units"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 
 [lib]
@@ -11,11 +11,11 @@ crate-type = ["lib"]
 algebra_derive   = { path="../algebra_derive" }
 container_derive = { path="../container_derive" }
 
-paste = "1.0.14"
+paste = "1.0.15"
 num-traits= "0.2.15"
 serde = { version = "1.0.197", features = ["derive"] }
 either = "1.13.0"
-thiserror = "1.0.58"
+thiserror = "2.0.12"
 
 utils= { path = "../utils" }
 algebra_traits = { path="../algebra_traits", features = ["serde_support", "nalgebra_support"]}

@@ -31,7 +31,7 @@ dependencies = [
  "serde",
  "serde_json",
  "splines",
- "thiserror 1.0.69",
+ "thiserror",
  "utils",
 ]
 
@@ -64,7 +64,7 @@ dependencies = [
  "paste",
  "serde",
  "strum",
- "thiserror 1.0.69",
+ "thiserror",
  "utils",
 ]
 
@@ -134,15 +134,15 @@ dependencies = [
  "nalgebra",
  "num-traits",
  "paste",
- "thiserror 2.0.12",
+ "thiserror",
  "utils",
 ]
 
 [[package]]
 name = "convert_case"
-version = "0.6.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
+checksum = "bb402b8d4c85569410425650ce3eddc7d698ed96d39a73f941b08fb63082f1e7"
 dependencies = [
  "unicode-segmentation",
 ]
@@ -271,18 +271,18 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "1.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a9b99b9cbbe49445b21764dc0625032a89b145a2642e67603e1c936f5458d05"
+checksum = "093242cf7570c207c83073cf82f79706fe7b8317e98620a47d5be7c3d8497678"
 dependencies = [
  "derive_more-impl",
 ]
 
 [[package]]
 name = "derive_more-impl"
-version = "1.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb7330aeadfbe296029522e6c40f315320aba36fc43a5b3632f3795348f3bd22"
+checksum = "bda628edc44c4bb645fbe0f758797143e4e07926f7ebf4e9bdfbd3d2ce621df3"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -330,7 +330,7 @@ dependencies = [
  "serde",
  "serde_json",
  "splines",
- "thiserror 2.0.12",
+ "thiserror",
  "utils",
  "vector_and_affine_spaces",
 ]
@@ -348,7 +348,7 @@ dependencies = [
  "num-traits",
  "paste",
  "serde",
- "thiserror 1.0.69",
+ "thiserror",
  "utils",
 ]
 
@@ -475,7 +475,7 @@ dependencies = [
  "num",
  "num-traits",
  "paste",
- "thiserror 2.0.12",
+ "thiserror",
  "utils",
 ]
 
@@ -651,7 +651,7 @@ dependencies = [
  "phys_units",
  "serde",
  "serde_json",
- "thiserror 2.0.12",
+ "thiserror",
  "utils",
 ]
 
@@ -677,7 +677,7 @@ dependencies = [
  "paste",
  "serde",
  "simple-si-units",
- "thiserror 1.0.69",
+ "thiserror",
  "utils",
 ]
 
@@ -840,9 +840,9 @@ dependencies = [
 
 [[package]]
 name = "splines"
-version = "4.4.2"
+version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3278aafb315f972aa58d958e3f6b8ef60ceb7723bfedfbd00399c73ed0570583"
+checksum = "b882be9bf6b37258bfba80ed5b5eeccccd6700bfbaca202bbd53e4c13bf3daa7"
 
 [[package]]
 name = "strsim"
@@ -858,9 +858,9 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "strum"
-version = "0.26.3"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
+checksum = "f64def088c51c9510a8579e3c5d67c65349dcf755e5479ad3d010aa6454e2c32"
 
 [[package]]
 name = "syn"
@@ -886,31 +886,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52"
-dependencies = [
- "thiserror-impl 1.0.69",
-]
-
-[[package]]
-name = "thiserror"
 version = "2.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "567b8a2dae586314f7be2a752ec7474332959c6460e02bde30d702a66d488708"
 dependencies = [
- "thiserror-impl 2.0.12",
-]
-
-[[package]]
-name = "thiserror-impl"
-version = "1.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.104",
+ "thiserror-impl",
 ]
 
 [[package]]
@@ -969,7 +949,7 @@ dependencies = [
  "num-traits",
  "optimization",
  "phys_units",
- "thiserror 2.0.12",
+ "thiserror",
  "utils",
 ]
 

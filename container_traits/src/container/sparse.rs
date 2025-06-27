@@ -70,7 +70,7 @@ impl<Index,T> Iter<T> for ContainerSparse<Index,T> where Self:IndexedIter<Index,
 }
 
 
-impl<Index:ContainerIndex,T:'static+Clone> IntoIndexedIter<Index,T> for ContainerSparse<Index,T> {
+impl<Index:'static+ContainerIndex,T:'static+Clone> IntoIndexedIter<Index,T> for ContainerSparse<Index,T> {
     fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(Index,T)> {
         let (bm,default,size)=self.into_parts();
         iter_gen(bm.into_iter(),|s|s,move ||default.clone(),size)

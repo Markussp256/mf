@@ -4,7 +4,7 @@ description = "definitions and interfaces for crate algebra"
 keywords = ["group", "scalar", "operators", "linear algebra", "vectorspace"]
 name = "algebra_traits"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -19,12 +19,12 @@ container_derive = { path = "../container_derive" }
 container_traits = { path = "../container_traits" }
 utils =            { path = "../utils"}
 
-derive_more = { version = "1.0.0", features = ["full"]}
+derive_more = { version = "2.0.1", features = ["full"]}
 either = "1.13.0"
 num-traits= "0.2.15"
 paste =     "1.0.14"
-strum =     "0.26.3"
-thiserror = "1.0.58"
+strum =     "0.27.1"
+thiserror = "2.0.12"
 
 
 # optional
