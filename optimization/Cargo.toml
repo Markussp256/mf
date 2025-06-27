@@ -1,0 +1,47 @@
+[package]
+authors = ["Markus Sprecher"]
+description = "multivariate optimization"
+keywords = ["optimization", "inverse problem", "gauss-newton", "fixpoint iteration", "jacobian"]
+name = "optimization"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+derive_builder = "0.20.0"
+derive-getters = "0.5.0"
+derive_more = { version = "1.0.0", features = ["full"] }
+
+num-traits= "0.2.15"
+paste = "1.0.14"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0.9"
+
+
+algebra_traits        = { path="../algebra_traits" }
+algebra_derive        = { path="../algebra_derive" }
+algebra               = { path="../algebra" }
+
+container_traits      = { path="../container_traits" }
+geometry_traits       = { path="../geometry_traits" }
+
+matrix_traits         = { path="../matrix_traits" }
+matrix                = { path="../matrix" }
+matrix_decompositions = { path="../matrix_decompositions" }
+utils                 = { path="../utils" }
+
+num = { version = "0.4.0", optional = true }
+nalgebra = { version = "0.33", features = ["serde"], optional = true}
+either = "1.13.0"
+
+[dev-dependencies]
+phys_units = { path="../phys_units"}
+
+[features]
+num_support = ["dep:num"]
+nalgebra_support = ["dep:nalgebra"]

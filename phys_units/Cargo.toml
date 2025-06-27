@@ -1,0 +1,35 @@
+[package]
+name = "phys_units"
+version = "0.1.0"
+edition = "2021"
+
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+algebra_derive   = { path="../algebra_derive" }
+container_derive = { path="../container_derive" }
+
+paste = "1.0.14"
+num-traits= "0.2.15"
+serde = { version = "1.0.197", features = ["derive"] }
+either = "1.13.0"
+thiserror = "1.0.58"
+
+utils= { path = "../utils" }
+algebra_traits = { path="../algebra_traits", features = ["serde_support", "nalgebra_support"]}
+container_traits = { path="../container_traits" }
+
+# optional dependencies
+measurements =    { version = "0.11.0", optional = true, features = ["serde"] }
+cgmath =          { version = "0.18.0", optional = true }
+simple-si-units = { version = "1.1.1",  optional = true }
+interoptopus = "0.14.27"
+
+
+[features]
+# Define features that includes the optional dependencies
+measurements_support = ["dep:measurements"]
+cgmath_support = ["dep:cgmath"]
+simple_si_units_support = ["dep:simple-si-units"]

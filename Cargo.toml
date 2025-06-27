@@ -1,0 +1,24 @@
+[workspace]
+
+resolver = "2"
+
+members = [
+	"algebra_traits",
+    "algebra_derive",
+    "algebra",
+    "container_traits", 
+    "container_derive",
+    "derive_helper", 
+	"geometry_traits",
+    "geometry",
+    "matrix_wrappers",
+    "matrix_decompositions",
+    "matrix_traits",
+    "matrix_derive", 
+    "matrix",
+	"optimization",
+    "phys_units",
+    "playground",
+    "utils",
+    "vector_and_affine_spaces"
+]

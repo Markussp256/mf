@@ -1,0 +1,25 @@
+[package]
+authors = ["Markus Sprecher"]
+description = "Derive macros for traits in crate algebra_traits."
+keywords = ["Arithmetic", "Vectorspace", "Parameters"]
+name = "algebra_derive"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+proc-macro2 = "1.0.70"
+quote = "1.0.32"
+syn = {version="2.0.41", features = ["full"]}
+derive_helper = { path = "../derive_helper" }
+
+
+[dev-dependencies]
+algebra_traits = { path="../algebra_traits", features = ["num_support"]}
+num = "0.4.3"
+num-traits= "0.2.15"
+paste =     "1.0.14" # for anysub macro 

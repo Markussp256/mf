@@ -1,0 +1,42 @@
+[package]
+authors = ["Markus Sprecher"]
+description = "algebra"
+keywords =  ["groups", "complex numbers", "quaternions", "matrix", "matrix decompositions"]
+name = "algebra"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+#derives
+derive_more      = { version = "1.0.0", features = ["full"]}
+derive_builder = "0.20.0"
+derive-getters = "0.5.0"
+
+algebra_traits   = { path = "../algebra_traits" }
+algebra_derive   = { path = "../algebra_derive" }
+utils =            { path = "../utils"}
+container_traits = { path = "../container_traits" }
+container_derive = { path = "../container_derive" }
+
+num-traits= "0.2.15"
+paste = "1.0.14"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+splines = "4.2.0"
+thiserror = "1.0.59"
+
+# optional
+nalgebra = { version = "0.33", features = ["serde"], optional = true}
+num = { version = "0.4.0", optional = true }
+phys_units = { path = "../phys_units", optional = true } # for lengthratio
+either = "1.13.0"
+
+[features]
+num_support = ["dep:num"]
+nalgebra_support = ["dep:nalgebra"]
+phys_units_support = ["dep:phys_units"]

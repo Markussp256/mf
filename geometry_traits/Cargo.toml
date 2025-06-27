@@ -1,0 +1,35 @@
+[package]
+authors = ["Markus Sprecher"]
+description = "defintions and interfaces for crate geometry"
+keywords = ["manifold", "lie group", "transformation"]
+name = "geometry_traits"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+derive_more = { version = "1.0.0", features = ["full"]}
+
+num-traits= "0.2.15"
+paste = "1.0.14"
+thiserror = "1.0.58"
+
+algebra_derive   = { path = "../algebra_derive"}
+algebra_traits   = { path = "../algebra_traits"}
+container_traits = { path = "../container_traits"}
+utils            = { path = "../utils"}
+
+# optional
+num = {version = "0.4.1", optional = true }
+nalgebra = { version = "0.33.0", optional = true }
+serde = { version = "1.0.197", features = ["derive"], optional = true }
+
+
+[features]
+nalgebra_support = ["dep:nalgebra"]
+num_support      = ["dep:num"]
+serde_support    = ["dep:serde"]
