@@ -1,14 +1,11 @@
 
-use std::ops::Mul;
-use container_traits::ChangeT;
-use num_traits::Zero;
 
-use crate::{ColVector, ColVectorAnyConstruct, Matrix, RowVector};
+use crate::{ColVector, ColVectorAnyConstruct, Matrix};
 
 use super::vector_vector_product::AnyVectorVectorProduct;
 
-pub trait MatrixVectorProduct<Rhs> {
-    type Output;
+pub trait MatrixVectorProduct<Rhs : ColVector> : Matrix {
+    type Output : ColVector;
     fn matrix_vector_product(self, rhs:Rhs) -> Self::Output;
 }
 
@@ -16,7 +13,7 @@ pub trait MatrixVectorProduct<Rhs> {
 // we do not implement it directly (provided method) because that would
 // put many constraints
 
-pub fn try_matrix_vector_product_impl
+pub fn any_matrix_vector_product_impl
     <F3,
      Lhs    : Matrix<Row=LhsRow>,
      LhsRow : AnyVectorVectorProduct<Rhs,Output=F3> ,
@@ -29,31 +26,14 @@ pub fn try_matrix_vector_product_impl
            .collect()).ok()
 }
 
-pub trait TryMatrixVectorProduct<Rhs> {
-    type Output;
+pub trait TryMatrixVectorProduct<Rhs : ColVector> : Matrix {
+    type Output : ColVector;
     fn try_matrix_vector_product(self, rhs:Rhs) -> Option<Self::Output>;
 }
 
-
-impl<F,
-     F3  : Zero,
-     M   : Matrix<T=F,Row=Row,Col=Col>,
-     Row : RowVector<T=F>+AnyVectorVectorProduct<Rhs,Output=F3>,
-     Col : ColVector<T=F>+ChangeT<F3,Output=ColF3>,
-     ColF3 : ColVectorAnyConstruct<T=F3>,
-     Rhs : Clone+ColVector> TryMatrixVectorProduct<Rhs> for M
-     where F:Mul<Rhs::T,Output=F3> {
-    type Output = ColF3;
-    fn try_matrix_vector_product(self, rhs:Rhs) -> Option<ColF3> {
-        let lhs_dims=self.matrix_dimensions();
-        
-        let res: Option<ColF3>=try_matrix_vector_product_impl(self,rhs);
-        if let Some(r)=&res {
-            let out_len=r.len();
-            assert_eq!(out_len, lhs_dims.0);
-        }
-        res
-    }
+pub trait AnyMatrixVectorProduct<Rhs : ColVector> : Matrix {
+    type Output : ColVector;
+    fn any_matrix_vector_product(self, rhs:Rhs) -> Option<Self::Output>;
 }
 
 // impl<M:Matrix<Row=Row,Col=Col>,

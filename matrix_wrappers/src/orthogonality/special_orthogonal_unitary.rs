@@ -4,12 +4,12 @@
 use algebra::{quaternion::ProjectiveQuaternion, Quaternion};
 use num_traits::{Zero,One};
 
-use matrix_traits::{matrix_shapes::{Matrix33,Matrix44}, AlgebraMatrix, ChangeDim, IntoBaseSquareMatrix, MatrixMut, MatrixConstructError, MatrixMatrixProduct, MatrixSquare, MatrixSquareTryConstruct, MatrixVectorProduct, Transpose};
+use matrix_traits::{matrix_shapes::{Matrix33,Matrix44}, AlgebraMatrix, ChangeDim, ColVector, IntoBaseSquareMatrix, MatrixConstructError, MatrixMatrixProduct, MatrixMut, MatrixSquare, MatrixSquareTryConstruct, MatrixVectorProduct, Transpose};
 use matrix_traits::identity::for_static::Identity;
-use algebra_traits::{AdditiveGroup, ClosedTryInv, ComplexNumber, Norm, RealNumber, Scalar, TryInv, TryNormalize};
+use algebra_traits::{AdditiveGroup, ClosedTryInv, ComplexNumber, RealNumber, ScalarVector, Scalar, TryInv};
 use super::{Homogeneous, Orthogonal, Stiefel, Unitary};
 use crate::{SkewSymmetric, SkewSymmetricPart};
-use container_traits::{for_static::{FromFn, TryFromParameters}, Get, IntoInner, IntoIter, IntoParameters, TryFromIterator};
+use container_traits::{for_static::{FromFn, TryFromParameters}, Get, IntoInner, IntoParameters, TryFromIterator};
 use std::fmt::Debug;
 
 type U2=(usize,usize);
@@ -106,10 +106,9 @@ impl<M : Matrix33<T=F>+FromFn<U2,F>, F : Clone+RealNumber> From<ProjectiveQuater
 // since this would create circular dependency we can not use optimization
 // for this impl
 impl<M   : Matrix33<T=F>+ChangeDim<Output<4,4>=M44>,
-     M44 : Matrix44<T=F>+Clone+MatrixMut<T=F>+Zero+MatrixVectorProduct<M44::Col,Output=M44::Col>,
-     F : Clone+RealNumber,
-     E : Debug> Into<ProjectiveQuaternion<F>> for SpecialOrthogonal<M>
-     where M44::Col : TryNormalize<Error=E> + Norm<NormT=F> {
+     M44 : Matrix44<T=F,Col=M44Col>+Clone+MatrixMut<T=F>+Zero+MatrixVectorProduct<M44Col,Output=M44Col>,
+     M44Col : ColVector<T=F>+ScalarVector,
+     F : Clone+RealNumber> Into<ProjectiveQuaternion<F>> for SpecialOrthogonal<M> {
     fn into(self) ->  ProjectiveQuaternion<F> {       
         // unsafe get and clone
         let usg=|i,j|self.get((i,j)).unwrap().clone();

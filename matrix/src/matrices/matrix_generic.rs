@@ -1,7 +1,7 @@
 use num_traits::{One, Zero};
 
 use container_traits::{AnyFromIterator, AnyMap, ChangeT, CommonLengthError, FromFn, Get, IndexedIter,  IntoIndexedIter, IntoIter, ItemT, Iter, Len, LenTooSmallError, LinearContainerConstructError, Map, NumberOfDegreesOfFreedom, OCTSize, Size, SizeFromORef, TryAccept, TryCommonLength, TryFromFn, TryIntoElement};
-use matrix_traits::{row_col::*, AsBaseMatrix, IntoBaseMatrix, Identity, Matrix, MatrixTryConstruct, MatrixConstructError, Transpose};
+use matrix_traits::{row_col::*, AnyMatrixVectorProduct, AnyVectorVectorProduct, AsBaseMatrix, Identity, IntoBaseMatrix, Matrix, MatrixConstructError, MatrixTryConstruct, MatrixVectorProduct, Transpose};
 use std::fmt::Display;
 use std::ops::{Index,IndexMut};
 use utils::iter::IntoExactSizeIterator;
@@ -435,6 +435,35 @@ impl<F,
     fn index_mut(& mut self, index: U2) -> & mut Self::Output {
         & mut self.0[index.0][index.1]
     }
+}
+
+
+impl<Row : AnyVectorVectorProduct<Rhs,Output=F3>,
+     Rhs : ColVector+Clone,
+     Col : ChangeT<Row,Output = C>+ChangeT<F3,Output=Out>,
+     Out : ColVector,
+     C> AnyMatrixVectorProduct<Rhs> for MatrixGeneric<Row,Col> where Self : Matrix {
+        type Output=Out;
+        fn any_matrix_vector_product(self, rhs:Rhs) -> Option<Out> {
+            any_matrix_vector_product_impl(self,rhs)
+        }
+     }
+
+impl<Row1 : RowVector<T=F1>,
+     Col1 : ColVector<T=F1>+ChangeT<Row1,Output = C1>+ChangeT<F3,Output=Col3>,
+     C1,
+     F1   : Mul<F2,Output=F3>, F2, F3:Zero,
+     Row2 : RowVector<T=F2>+ChangeT<F3,Output=Row3>,
+     Col2 : ColVector<Row2,Output = C2>,
+     C2,
+     Row3 : RowVector<T=F3>,
+     Col3 : ColVector<Row2,Output = C3>,
+     C3> AnyMatrixMatrixProduct<MatrixGeneric<Row2,Col2>> for MatrixGeneric<Row1,Col1>
+     where Self : AnyMatrixVectorProduct<Col2,Output=Col3> {
+        type Output=Out;
+        fn any_matrix_matrix_product(self, rhs:Rhs) -> Option<Out> {
+            any_matrix_matrix_product_impl(self,rhs)
+        }
 }
 
 // impl<Row : TryFromSuperContainer<usize, Row2>,

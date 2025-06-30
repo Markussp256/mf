@@ -1,5 +1,5 @@
 use crate::container::index::{column_major_index_iterator,row_major_index_iterator};
-use nalgebra::{allocator::Allocator, DefaultAllocator, Dim, Matrix, DMatrix, OMatrix, RawStorage, RawStorageMut, Scalar};
+use nalgebra::{allocator::Allocator, Const, DMatrix, DefaultAllocator, Dim, Matrix, OMatrix, OVector, Owned, RawStorage, RawStorageMut, RowVector, Scalar, Vector};
 use num_traits::Zero;
 use crate::*;
 use super::*;
@@ -413,4 +413,34 @@ impl<T : Scalar,
         index.is_elem_wise_strictly_smaller(&self.size()).then(||
             self[index].clone())
     }
+}
+
+impl<F:Scalar, 
+     R:Dim,
+     C:Dim> Map<OMatrix<F,Const<1>,C>,OMatrix<F,Const<1>,C>> for OMatrix<F,R,C>
+        where DefaultAllocator : Allocator<R, C>+Allocator<Const<1>, C> {
+        type Output=Self;
+        fn map(self, f:impl Fn(OMatrix<F,Const<1>,C>) -> OMatrix<F,Const<1>,C>) -> Self {
+            let nrows=self.nrows();
+            let rows:Vec<OMatrix<F,Const<1>,C>>=
+                (0..nrows).into_iter()
+                          .map(|i|f(self.row(i).into_owned()))
+                          .collect();
+            Self::from_rows(&rows)
+        }
+}
+
+impl<F:Scalar,
+     R:Dim,
+     C:Dim> Map<OVector<F,R>,OVector<F,R>> for OMatrix<F,R,C>
+        where DefaultAllocator : Allocator<R, C>+Allocator<R, Const<1>> {
+        type Output=Self;
+        fn map(self, f:impl Fn(OVector<F,R>) -> OVector<F,R>) -> Self {
+            let ncols=self.ncols();
+            let cols:Vec<OVector<F,R>>=
+                (0..ncols).into_iter()
+                          .map(|i|f(self.column(i).into_owned()))
+                          .collect();
+            Self::from_columns(&cols)
+        }
 }

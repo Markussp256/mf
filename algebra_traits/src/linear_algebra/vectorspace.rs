@@ -1,5 +1,5 @@
 use container_traits::for_static::TryPutAt;
-use container_traits::{IntoSum, Parameter};
+use container_traits::{IntoIter, IntoSum, Parameter};
 use utils::iter::IntoExactSizeIterator;
 use crate::metric::distance::TryDistance;
 use crate::*;
@@ -8,26 +8,22 @@ pub trait Vectorspace<F> :
     AdditiveGroup 
     + ScalarMul   <F>
     + TryScalarDiv<F,Error=DivError> {
-    fn linear_combination(vs:impl IntoIterator<Item=(F,Self)>) -> Self {
-        vs.into_iter()
+    fn linear_combination(vs:impl IntoIter<(F,Self)>) -> Self {
+        vs.into_iterator()
           .map(|(w,v)|v.scalar_mul(&w))
           .into_sum()
     }
 
     fn any_linear_combination(
-        fs:impl IntoIterator<Item=F>,
-        vs:impl IntoIterator<Item=Self>) -> Option<Self> {
-        let mut same_length=true;
-        let mut fs_iter=fs.into_iter();
-        let mut vs_iter=vs.into_iter();
-        let f_iter=||
-        match (fs_iter.next(),vs_iter.next()) {
-            (Some(f),Some(v)) => Some((f,v)),
-            (None,None) => None,
-            _ => { same_length=false; None}
-        };
-        let res=Self::linear_combination(std::iter::from_fn(f_iter));
-        same_length.then_some(res)
+        fs:impl IntoIter<F>,
+        vs:impl IntoIter<Self>) -> Option<Self> {
+        let fs_iter=fs.into_iterator();
+        let vs_iter=vs.into_iterator();
+        (vs_iter.len() == fs_iter.len()).then(||
+            fs_iter.zip(vs_iter)
+                   .map(|(fsi,vsi)|vsi.scalar_mul(&fsi))
+                   .into_sum()
+        )
     }
 }
 impl<F,

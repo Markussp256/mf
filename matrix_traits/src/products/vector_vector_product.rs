@@ -15,7 +15,7 @@ use crate::{ColVector, RowVector};
 // we do not implement it directly (provided method) because that would
 // put many constraints
 
-pub fn try_vector_vector_product_impl
+pub fn any_vector_vector_product_impl
     <F:Mul<F2,Output=F3>,
      F2,
      F3:Zero,
@@ -28,32 +28,24 @@ pub fn try_vector_vector_product_impl
                 .into_sum())
 }
 
-pub trait VectorVectorProduct<Rhs> {
+pub trait VectorVectorProduct<Rhs : ColVector> : RowVector {
     type Output;
-    fn vector_vector_product(self, rhs:Rhs) -> Self::Output;
+    fn vector_vector_product(self, rhs:Rhs) -> <Self as VectorVectorProduct<Rhs>>::Output;
 }
 
-pub trait TryVectorVectorProduct<Rhs> {
+pub trait TryVectorVectorProduct<Rhs : ColVector> : RowVector {
     type Output;
-    fn try_vector_vector_product(self, rhs:Rhs) -> Option<Self::Output>;
+    fn try_vector_vector_product(self, rhs:Rhs) -> Option<<Self as TryVectorVectorProduct<Rhs>>::Output>;
 }
 
 
-pub trait AnyVectorVectorProduct<Rhs> {
+pub trait AnyVectorVectorProduct<Rhs : ColVector> : RowVector {
     type Output;
-    fn any_vector_vector_product(self, rhs: Rhs) -> Option<Self::Output>;
+    fn any_vector_vector_product(self, rhs: Rhs) -> Option<<Self as AnyVectorVectorProduct<Rhs>>::Output>;
 }
 
-impl<Row: RowVector<T=T>,
-     Rhs: ColVector<T=T2>,
-     T:Mul<T2,Output=TR>,
-     T2,
-     TR:Zero> AnyVectorVectorProduct<Rhs> for Row {
-    type Output=TR;
-        fn any_vector_vector_product(self, rhs:Rhs) -> Option<TR> {
-            try_vector_vector_product_impl(self,rhs)
-    }
-}
+
+
 // macro_rules! row_col_vector {
 //     ($lhs:ident, $rhs:ident) => {
 //         $lhs.into_iter()

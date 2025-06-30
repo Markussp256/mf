@@ -4,10 +4,10 @@ use std::ops::Mul;
 use crate::*;
 
 use nalgebra::{
-    ComplexField, DMatrix, DVector, Dim, RawStorage, RowDVector, RowSVector, SMatrix, SVector, Scalar
+    ComplexField, Const, DMatrix, DVector, Dim, RawStorage, RowDVector, RowSVector, SMatrix, SVector, Scalar
 };
 
-use container_traits::{TryCommonLength, CommonLengthError, Get, LenNotEqualToRequiredLenError};
+use container_traits::{CommonLengthError, Get, LenNotEqualToRequiredLenError, Map, TryCommonLength};
 
 impl<F:Scalar> ColVector for DVector<F>    {}
 impl<F:Scalar> RowVector for RowDVector<F> {}
@@ -48,17 +48,32 @@ impl<F:Scalar+Mul<F2,Output=F3>,
      const N:usize> VectorVectorProduct<SVector<F2,N>> for RowSVector<F,N> {
         type Output=F3;
      
-        fn vector_vector_product(self, rhs:SVector<F2,N>) -> Self::Output {
-            try_vector_vector_product_impl(self,rhs).unwrap()
+        fn vector_vector_product(self, rhs:SVector<F2,N>) -> F3 {
+            any_vector_vector_product_impl(self,rhs).unwrap()
         }
 }
+
+impl<F:Scalar+Mul<F2,Output=F3>,
+     F2:Scalar,
+     F3:Scalar+Zero,
+     const N:usize> AnyVectorVectorProduct<SVector<F2,N>> for RowSVector<F,N> {
+        type Output=F3;
+     
+        fn any_vector_vector_product(self, rhs:SVector<F2,N>) -> Option<F3> {
+            any_vector_vector_product_impl(self,rhs)
+        }
+}
+
+
 
 impl<F:Scalar, 
      R:Dim,
      C:Dim,
      S:RawStorage<F,R,C>> IntoDynMatrix for nalgebra::Matrix<F,R,C,S> where Self : Matrix<T=F> {
         type Output=DMatrix<F>;
-     }
+}
+
+
 
 impl<F :Scalar+Mul<F2,Output=F3>,
      F2:Scalar,
@@ -68,7 +83,19 @@ impl<F :Scalar+Mul<F2,Output=F3>,
         type Output=SVector<F3,M>;
      
         fn matrix_vector_product(self, rhs:SVector<F2,N>) -> Self::Output {
-            try_matrix_vector_product_impl(self,rhs).unwrap()
+            any_matrix_vector_product_impl(self,rhs).unwrap()
+        }
+}
+
+impl<F :Scalar+Mul<F2,Output=F3>,
+     F2:Scalar,
+     F3:Scalar+Zero,
+     const M:usize,
+     const N:usize> AnyMatrixVectorProduct<SVector<F2,N>> for SMatrix<F,M,N> {
+        type Output=SVector<F3,M>;
+     
+        fn any_matrix_vector_product(self, rhs:SVector<F2,N>) -> Option<Self::Output> {
+            any_matrix_vector_product_impl(self,rhs)
         }
 }
 
@@ -81,7 +108,7 @@ impl<F:Scalar+Mul<F2,Output=F3>,
         type Output=SMatrix<F3,L,N>;
      
         fn matrix_matrix_product(self, rhs:SMatrix<F2,M,N>) -> Self::Output {
-            try_matrix_matrix_product_impl(self,rhs).unwrap()
+            any_matrix_matrix_product_impl(self,rhs).unwrap()
         }
 }
 
@@ -90,8 +117,18 @@ impl<F:Scalar+Mul<F2,Output=F3>,
      F3:Scalar+Zero> TryVectorVectorProduct<DVector<F2>> for RowDVector<F> {
         type Output=F3;
      
-        fn try_vector_vector_product(self, rhs:DVector<F2>) -> Option<Self::Output> {
-            try_vector_vector_product_impl(self,rhs)
+        fn try_vector_vector_product(self, rhs:DVector<F2>) -> Option<F3> {
+            any_vector_vector_product_impl(self,rhs)
+        }
+}
+
+impl<F:Scalar+Mul<F2,Output=F3>,
+     F2:Scalar,
+     F3:Scalar+Zero> AnyVectorVectorProduct<DVector<F2>> for RowDVector<F> {
+        type Output=F3;
+     
+        fn any_vector_vector_product(self, rhs:DVector<F2>) -> Option<F3> {
+            any_vector_vector_product_impl(self,rhs)
         }
 }
 
@@ -175,6 +212,14 @@ impl<F:Scalar> MatrixDynamicallySized for DMatrix<F> {}
 // impl<F:Scalar> BuildMatrix<DVector<F>> for RowDVector<F> {
 //     type Matrix=DMatrix<F>;
 // }
+
+impl<F:Scalar, const M:usize, const N:usize> FixedNumberOfCols for SMatrix<F,M,N> {
+    const NCOLS:usize = N;
+}
+
+impl<F:Scalar, const M:usize, const N:usize> FixedNumberOfRows for SMatrix<F,M,N> {
+    const NROWS:usize = M;
+}
 
 impl<F:Scalar, const M:usize, const N:usize> Matrix for SMatrix<F, M, N> {
     

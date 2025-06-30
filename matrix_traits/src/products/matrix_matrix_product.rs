@@ -1,25 +1,25 @@
 use std::ops::Mul;
-use container_traits::ChangeT;
 use num_traits::Zero;
 
-use crate::{ColVector, RowVector, Matrix, MatrixTryConstruct};
+use crate::{AnyMatrixVectorProduct, ColVector, Matrix, MatrixTryConstruct};
 
-use super::TryMatrixVectorProduct;
 
-pub trait MatrixMatrixProduct<Rhs=Self> {
-    type Output;
+pub trait MatrixMatrixProduct<Rhs : Matrix=Self> {
+    type Output : Matrix;
     fn matrix_matrix_product(self, rhs:Rhs) -> Self::Output;
 }
+
+
 
 // impl code using only method from matrix
 // we do not implement it directly (provided method) because that would
 // put many constraints
 
-pub fn try_matrix_matrix_product_impl
+pub fn any_matrix_matrix_product_impl
     <F1     : Mul<F2,Output=F3>,
      F2,
      F3     : Zero,
-     Lhs    : Clone+Matrix<T=F1>+TryMatrixVectorProduct<RhsCol,Output=Out::Col>,
+     Lhs    : Clone+Matrix<T=F1>+AnyMatrixVectorProduct<RhsCol,Output=Out::Col>,
      Rhs    : Matrix<T=F2,Col=RhsCol>,
      Out    : MatrixTryConstruct<T=F3>,
      RhsCol : ColVector<T=F2>>(lhs:Lhs, rhs:Rhs) -> Option<Out> {
@@ -28,7 +28,7 @@ pub fn try_matrix_matrix_product_impl
         let rhs_dims=rhs.matrix_dimensions();
         let res=Out::try_from_cols(
                 rhs.into_cols()
-                   .map(|col|lhs.clone().try_matrix_vector_product(col).unwrap()));
+                   .map(|col|lhs.clone().any_matrix_vector_product(col).unwrap()));
         match &res {
             Ok(r) => {
                 let out_dims=r.matrix_dimensions();
@@ -41,25 +41,21 @@ pub fn try_matrix_matrix_product_impl
 }
 
 // implementation is in trait matrix
-// as we can not describe 
 
-pub trait TryMatrixMatrixProduct<Rhs:Matrix> : Matrix {
+pub trait TryMatrixMatrixProduct<Rhs : Matrix=Self> {
     type Output : Matrix;
-    fn try_matrix_matrix_product<M:MatrixTryConstruct>(self, rhs:Rhs) -> Option<Self::Output>;
+    fn try_matrix_matrix_product(self, rhs:Rhs) -> Option<Self::Output>;
 }
 
-impl<F1     : Mul<F2,Output=F3>,
-     F2,
-     F3     : Zero,
-     Lhs    : Clone+Matrix<T=F1,Row=LhsRow>+TryMatrixVectorProduct<RhsCol,Output=OutCol>,
-     LhsRow : RowVector<T=F1>+ChangeT<F3,Output=OutRow>,
-     Rhs    : Matrix<T=F2,Col=RhsCol>,
-     RhsCol : ColVector<T=F2>> TryMatrixMatrixProduct<Rhs> for Lhs {
-    type Output = Out;
-    fn try_matrix_matrix_product<M:MatrixTryConstruct<T=F3>>(self, rhs:Rhs) -> Option<M> {
-        try_matrix_matrix_product_impl(self,rhs)
-    }
+pub trait AnyMatrixMatrixProduct<Rhs : Matrix=Self> {
+    type Output : Matrix;
+    fn any_matrix_matrix_product(self, rhs:Rhs) -> Option<Self::Output>;
 }
+
+
+// impl is for specific types
+
+
 
         // if self.ncols() != rhs.nrows() {
         //     return None;

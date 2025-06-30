@@ -18,6 +18,13 @@ type U2=(usize,usize);
 )]
 pub struct Wide<M:Matrix>(M);
 
+
+
+fn test_into_dyn<F:nalgebra::Scalar>(m:&Wide<nalgebra::DMatrix<F>>) -> nalgebra::DMatrix<F> {
+    use matrix_traits::IntoDynMatrix;
+    m.clone().into_dyn_matrix()
+}
+
 impl<M:Matrix> MatrixNotTall for Wide<M> {}
 impl<M:Matrix> MatrixWide    for Wide<M> {}
 

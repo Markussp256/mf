@@ -20,7 +20,7 @@ pub mod matrix_normal;
 pub use matrix_normal::MatrixNormal;
 
 pub mod matrix_shapes;
-pub use matrix_shapes::{MatrixNotTall, MatrixNotWide, MatrixTall, MatrixWide, MatrixSquare, MatrixSquareTryConstruct};
+pub use matrix_shapes::*;
 
 pub mod matrix_try_construct;
 pub use matrix_try_construct::MatrixTryConstruct;

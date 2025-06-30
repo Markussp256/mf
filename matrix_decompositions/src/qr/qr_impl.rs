@@ -22,14 +22,15 @@ fn clone_m<F:nalgebra::Scalar>(m:&nalgebra::DMatrix<F>) -> nalgebra::DMatrix<F> 
 macro_rules! impl_qr_tall {
     ($m:ty, $q:ty, $r:ty, $r_or_sr:ident $(where V : nalgebra::$tr:ident)?) => {
         impl<F : 'static+Clone+algebra_traits::Scalar+std::ops::Mul<V,Output=V> $(+nalgebra::$tr)?,
-             V : 'static+Clone+algebra_traits::TryDiv<Output=F>+num_traits::Zero+std::ops::Mul<F::RealType,Output=V>+algebra_traits::InnerProductSpace1d $(+nalgebra::$tr)?>
-              $crate::QR for $m {
+             V : 'static+Clone+std::ops::SubAssign<V>+algebra_traits::TryDiv<Output=F>+num_traits::Zero+std::ops::Mul<F::RealType,Output=V>+algebra_traits::InnerProductSpace1d $(+nalgebra::$tr)?>
+              $crate::QR for $m
+        where $q : matrix_traits::AnyMatrixMatrixProduct<$r,Output=$m> {
     type Q=matrix_wrappers::Stiefel<$q>;
     type R=matrix_wrappers::$r_or_sr<$r>;
     fn qr(self) -> (<Self as $crate::QR>::Q,<Self as $crate::QR>::R) {
         let (q,r,_)=$crate::qr::qr_impl_base::qr_impl_base(self);
         let q=matrix_traits::TryIntoMatrix::try_into_matrix(q).unwrap();
-        let r=matrix_traits::TryIntoMatrix::try_into_matrix(q).unwrap();
+        let r=matrix_traits::TryIntoMatrix::try_into_matrix(r).unwrap();
         (q,r)
     }
 }}}
@@ -41,11 +42,13 @@ macro_rules! impl_qr_non_tall_single {
         impl<F    : 'static+Clone+algebra_traits::$r_c_or_s+std::ops::Mul<V,Output=V> $( +nalgebra::$tr)?,
              V    : 'static+Clone+algebra_traits::TryDiv<Output=F>+std::ops::Mul<F::RealType,Output=V>+algebra_traits::InnerProductSpace1d $(+nalgebra::$tr)?>
              $crate::$o_or_u_qr for $m
-             where Self : matrix_traits::IntoDynMatrix<T=V> {
+             where Self : Clone+matrix_traits::IntoDynMatrix<T=V>,
+                    $q : matrix_traits::IntoDynMatrix<T=F>+Clone+matrix_traits::AnyMatrixMatrixProduct<$r,Output=$m>,
+                    $r : matrix_traits::IntoDynMatrix<T=V>+Clone {
     type Q=matrix_wrappers::[<Special $o_or_u_m>]<$q>;
     type R=matrix_wrappers::$r_or_sr<$r>;
     fn qr(self) -> (<Self as $crate::$o_or_u_qr>::Q, <Self as $crate::$o_or_u_qr>::R) {
-        use matrix_traits::TryIntoMatrix;
+        use matrix_traits::MatrixTryConstruct;
         let (q,r,nh)=$crate::qr::qr_impl_base(self);
         let (q,r)=if nh % 2 == 1 { // make special
             (q.try_neg_col(0).unwrap(),
@@ -139,17 +142,16 @@ mod impl_nalgebra {
     #[test]
     fn test_new_qr() {
         use algebra_traits::TryMaxNormOfEntries;
-        use matrix_traits::TryMatrixMatrixProduct;
+        use matrix_traits::AnyMatrixMatrixProduct;
         let m:SMatrix<f64,3,2>=nalgebra::matrix![1.0, 0.0; 0.0, 1.0; -1.0, 1.0];
         super::super::qr_impl_base::check_qr(m.clone());
         let (q,r)=super::super::QR::qr(m.clone());
         println!("{}",q);
         println!("{}",r);
-        let err:SMatrix<f64,3,2>=q.try_matrix_matrix_product::<SMatrix<f64,3,2>>(r).unwrap()-m;
+        let err:SMatrix<f64,3,2>=q.any_matrix_matrix_product(r).unwrap()-m;
         assert!(err.try_max_norm_of_entries().unwrap() < 1e-12);
     }
 }
-
 
 // impl<F,
 //      Row         : RowVectorTryConstruct<T=F>,

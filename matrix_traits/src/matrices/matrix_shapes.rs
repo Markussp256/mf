@@ -1,6 +1,16 @@
 
 use crate::{Matrix, MatrixTryConstruct};
 
+
+pub trait FixedNumberOfRows : Matrix {
+    const NROWS:usize;
+}
+
+pub trait FixedNumberOfCols : Matrix {
+    const NCOLS:usize;
+}
+
+
 pub trait MatrixNotTall : Matrix {}
 pub trait MatrixNotWide : Matrix {}
 

@@ -4,21 +4,20 @@ use algebra::Unit;
 use algebra_traits::{InnerProductSpace1d, Scalar, ScalarVector, TryDiv};
 
 use container_traits::{ChangeT, Inner, IntoContainer, Iter, StandardBasis, TryIntoContainer};
-use matrix_traits::{AlgebraMatrix, TryMatrixMatrixProduct, BlockDiagonal, ColVectorAnyConstruct, IntoDynMatrix, IntoMatrix, Matrix, MatrixDynamicallySized, TrySubMatrix};
+use matrix_traits::{AlgebraMatrix, AnyMatrixMatrixProduct, BlockDiagonal, ColVectorAnyConstruct, IntoDynMatrix, IntoMatrix, Matrix, MatrixDynamicallySized, TrySubMatrix};
 
 use super::householder_trafo::HouseholderTrafoGeneric;
-
 
 pub fn qr_impl_base
     <F    : Clone+Scalar+Mul<V,Output=V>,
      V    : Clone+TryDiv<V,Output=F>+Mul<F::RealType,Output=V>+InnerProductSpace1d,
-     M    : Clone+Matrix<T=V>+IntoDynMatrix<Output=MDV>,
-     MDV  : Clone+MatrixDynamicallySized<T=V>+IntoDynMatrix<Output=MDV>+ChangeT<F,Output=MDF>,
+     M    : Matrix<T=V>+IntoDynMatrix<Output=MDV>,
+     MDV  : MatrixDynamicallySized<T=V>+IntoDynMatrix<Output=MDV>+ChangeT<F,Output=MDF>,
      MDF  : AlgebraMatrix+MatrixDynamicallySized<T=F,Col=FCol>,
      FCol : ScalarVector+ColVectorAnyConstruct<T=F>+StandardBasis+Clone>(m:M) -> (MDF, MDV, usize)
      where MDV::Col : Clone + TryDiv<V,Output=FCol>,
-     HouseholderTrafoGeneric<FCol> : Matrix<T=F>+TryMatrixMatrixProduct<MDV>
-                                                +TryMatrixMatrixProduct<MDF> {
+     HouseholderTrafoGeneric<FCol> : Matrix<T=F>+AnyMatrixMatrixProduct<MDV, Output=MDV>
+                                                +AnyMatrixMatrixProduct<MDF, Output=MDF> {
         let mut m:MDV=m.into_matrix();
         let (nrows,ncols)=m.matrix_dimensions();
 
@@ -48,8 +47,9 @@ pub fn qr_impl_base
         let do_housholder=col0.iter().skip(1).any(|v:&V|!v.is_zero());
         let oh:Option<HouseholderTrafoGeneric<FCol>>=do_housholder.then(||{
             let h=HouseholderTrafoGeneric::try_froma2b(e0, oucol0.unwrap().1).unwrap();
+            m.map_cols(|col|h.clone().any_matrix_vector_product(col))
             m=h.clone()
-               .try_matrix_matrix_product::<MDV>(m.clone()).unwrap();
+               .any_matrix_matrix_product(m).unwrap(); // ::<MDV>
             h}
         );
 
@@ -62,7 +62,7 @@ pub fn qr_impl_base
         let q:MDF=BlockDiagonal::new(MDF::identity(1),qsub).into_matrix();
         let q=if let Some(h)=oh {{
             nh+=1;
-            h.try_matrix_matrix_product(q).unwrap()
+            h.any_matrix_matrix_product(q).unwrap()
         }} else { q };
 
         // construct R 
@@ -80,27 +80,28 @@ pub fn check_qr
     <F  : Clone+Scalar+Mul<V,Output=V>,
      V  : Clone+TryDiv<V,Output=F>+Mul<F::RealType,Output=V>+InnerProductSpace1d+algebra_traits::Tolerance+algebra_traits::Norm<NormT = NT>,
      NT : Clone + num_traits::Zero + PartialOrd,
-     M  : Clone+matrix_traits::MatrixTryConstruct<T=V>+IntoDynMatrix<Output=MDV>,
-     MDV: Clone+MatrixDynamicallySized<T=V>+ChangeT<F,Output=MDF>+IntoDynMatrix<Output=MDV>,
-     MDF: AlgebraMatrix+MatrixDynamicallySized<T=F,Col=FCol>+TryMatrixMatrixProduct<MDV>,
+     M  : Clone + matrix_traits::MatrixTryConstruct<T=V>+IntoDynMatrix<Output=MDV>,
+     MDV: MatrixDynamicallySized<T=V>+ChangeT<F,Output=MDF>+IntoDynMatrix<Output=MDV>,
+     MDF: AlgebraMatrix+MatrixDynamicallySized<T=F,Col=FCol>+AnyMatrixMatrixProduct<MDV,Output=M>,
      FCol : ScalarVector+ColVectorAnyConstruct<T=F>+StandardBasis+Clone>(m:M) -> bool 
      where MDV::Col : Clone+TryDiv<V,Output=FCol>,
-     HouseholderTrafoGeneric<FCol> : Matrix<T=F>+TryMatrixMatrixProduct<M>
-                                                +TryMatrixMatrixProduct<MDF> {
+     HouseholderTrafoGeneric<FCol> : Matrix<T=F>+AnyMatrixMatrixProduct<M,Output=M>
+                                                +AnyMatrixMatrixProduct<MDF,Output=MDF>
+                                                +AnyMatrixMatrixProduct<MDV,Output=MDV> {
         let (q,r,_)=qr_impl_base::<F,V,M, MDV, MDF,FCol>(m.clone());
-        let qr:M=q.try_matrix_matrix_product(r).unwrap();
+        let qr:M=q.any_matrix_matrix_product(r).unwrap();
         qr.is_close_to(m)
 }
 
 // fn my_mul<F   : Clone+Zero+Mul<Output=F>,
-//           Q   : Clone+MatrixTryConstruct<F=F>+TryMatrixVectorProduct<Col>+TryMatrixMatrixProduct<R>,
+//           Q   : Clone+MatrixTryConstruct<F=F>+AnyMatrixVectorProduct<Col>+AnyMatrixMatrixProduct<R>,
 //           R   : Clone+MatrixTryConstruct<F=F,Col=Col>+Transpose<Output=L>,
 //           L   : MatrixTryConstruct<F=F>+Transpose<Output=R>,
 //           Col : Clone+ColVectorAnyConstruct<T=F>>(q:Q,col:Col,r:R){
 //             // let qc=q.clone().try_matrix_vector_product(col);
 //             // let qr=q.try_matrix_matrix_product::<Q>(r);
 //             let r=RightTriangular::<R>::try_from_matrix(r).ok().unwrap();
-//             let qrr=<Q as TryMatrixMatrixProduct<RightTriangular<R>>>::try_matrix_matrix_product::<Q>(q,r);
+//             let qrr=<Q as AnyMatrixMatrixProduct<RightTriangular<R>>>::try_matrix_matrix_product::<Q>(q,r);
 //         }
 
 
@@ -119,7 +120,7 @@ pub fn check_qr
 //          +ChangeT<Row>
 //          +ChangeT<F,Output=Col>
 //          +ChangeT<MatrixRowDyn<F>>> QRBase for MatrixGeneric<Row,Col>
-// where HouseholderTrafoGeneric<Col> : Matrix<F=F>+TryMatrixMatrixProduct<Self>,
+// where HouseholderTrafoGeneric<Col> : Matrix<F=F>+AnyMatrixMatrixProduct<Self>,
 //                                    // +AnyMatrixMatrixProduct<MatrixDyn<F>>,
 //       MatrixColDyn<F> : ChangeT<Row>,
 //      <MatrixColDyn<F> as ChangeT<Row>>            ::Output : Clone+ColVectorAnyConstruct<T=Row>,

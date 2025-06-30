@@ -1,3 +1,6 @@
+use std::ops::Mul;
+use container_traits::ItemT;
+
 pub mod matrix_col_dyn;
 pub mod matrix_col_stat;
 
@@ -10,7 +13,7 @@ mod impl_display;
 use algebra::{Unit, VectorGeneric};
 
 use container_traits::{FromInner, IntoInner, LinearContainer};
-use matrix_traits::{ColVector, RowVector};
+use matrix_traits::{ColVector, RowVector, VectorVectorProduct};
 
 algebra::gen_vector!(MatrixColGeneric, MatrixColDyn, MatrixCol);
 algebra::gen_vector!(MatrixRowGeneric, MatrixRowDyn, MatrixRow);
@@ -26,6 +29,30 @@ pub type UnitMatrixRow<T,const N:usize>=Unit<MatrixRow<T,N>>;
 
 pub type UnitMatrixColDyn<T>=Unit<MatrixColDyn<T>>;
 pub type UnitMatrixRowDyn<T>=Unit<MatrixRowDyn<T>>;
+
+
+impl<F1 : Mul<F2,Output=F3>,F2,F3:Zero,
+     C1 : ItemT<F1>,
+     C2 : ItemT<F2>> AnyVectorVectorProduct<MatrixColGeneric<C2>> for MatrixRowGeneric<C1> {
+    type Output=F3;
+    fn any_vector_vector_product(self, rhs:MatrixColGeneric<C2>) -> Option<F3> {
+        any_vector_vector_product_impl(self,rhs)
+    }
+}
+
+impl<F1 : Mul<F2,Output=F3>,F2,F3:Zero, const N:usize> VectorVectorProduct<MatrixCol<F2,N>> for MatrixRow<F1,N> {
+    type Output = F3;
+    fn vector_vector_product(self, rhs:MatrixCol<F2,N>) -> F3 {
+        any_vector_vector_product_impl(self,rhs).unwrap()
+    }
+}
+
+impl<F1 : Mul<F2,Output=F3>,F2,F3:Zero> TryVectorVectorProduct<MatrixColDyn<F2>> for MatrixRowDyn<F1> {
+    type Output = F3;
+    fn try_vector_vector_product(self, rhs:MatrixCol<F2,N>) -> Option<F3> {
+        any_vector_vector_product_impl(self,rhs)
+    }
+}
 
 // algebra::gen_unit_types!(MatrixCol, matrixcol, ColVector, colvector);
 // algebra::gen_unit_types!(MatrixRow, matrixrow, RowVector, rowvector);

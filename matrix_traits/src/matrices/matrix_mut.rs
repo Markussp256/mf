@@ -2,6 +2,8 @@ use container_traits::ContainerMut;
 use super::Matrix;
 
 type U2=(usize,usize);
+
+
 //  IterMut<Self::T> + GetMut<(usize,usize),Self::T> 
 pub trait MatrixMut : ContainerMut<U2> + Matrix {
 

@@ -1,6 +1,6 @@
 use algebra_traits::Pow2;
 use container_traits::InstanceStructureDescriptor;
-use matrix_traits::{try_matrix_matrix_product_impl, try_matrix_vector_product_impl, AsBaseSquareMatrix, IntoBaseSquareMatrix, MatrixMatrixProduct, MatrixSquareTryConstruct, MatrixTryConstruct, MatrixVectorProduct, SquareStaticMatrix, StaticMatrix};
+use matrix_traits::{try_matrix_matrix_product_impl, try_matrix_vector_product_impl, AsBaseSquareMatrix, FixedNumberOfCols, IntoBaseSquareMatrix, MatrixMatrixProduct, MatrixSquareTryConstruct, MatrixTryConstruct, MatrixVectorProduct, SquareStaticMatrix, StaticMatrix};
 use num_traits::Zero;
 use std::ops::Mul;
 use super::MatrixGeneric;
@@ -12,6 +12,14 @@ use container_traits::{TryFromFn, for_static::FromFn};
 pub type Matrix<F, const M:usize, const N:usize>=MatrixGeneric<MatrixRow<F,N>,MatrixCol<F,M>>;
 
 type U2=(usize,usize);
+
+impl<F:'static, const M:uisze, const N:usize> FixedNumberOfCols for Matrix<F,M,N> {
+    const NCOLS:usize = N;
+}
+
+impl<F:'static, const M:uisze, const N:usize> FixedNumberOfRows for Matrix<F,M,N> {
+    const NROWS:usize = M;
+}
 
 impl<F:'static, const M:usize> SquareStaticMatrix for Matrix<F,M,M> {
     const M:usize = M;
@@ -70,7 +78,7 @@ macro_rules! impl_matrix_vector_product {
             const N:usize>  $tr0<$rhs<F2,N>> for Matrix<F,M,N> {
             $(type Output = $rhs<F3,M>;
             fn $fn(self, rhs:$rhs<F2,N> ) -> $rhs<F3,M> {
-                try_matrix_vector_product_impl(self, rhs).unwrap()
+                any_matrix_vector_product_impl(self, rhs).unwrap()
             })?
         }
     }
@@ -90,7 +98,7 @@ macro_rules! impl_product {
             const N:usize> $tr1<Matrix<F2,M,N>> for Matrix<F,L,M> {
             $(type Output = Matrix<F3,L,N>;
             fn $fn1(self, rhs:Matrix<F2,M,N>) -> Matrix<F3,L,N> {
-                try_matrix_matrix_product_impl(self, rhs).unwrap()
+                any_matrix_matrix_product_impl(self, rhs).unwrap()
             })?
         }
     };

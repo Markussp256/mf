@@ -1,12 +1,12 @@
-use algebra_traits::*;
 use algebra::unit_vector::Unit;
-use container_traits::{AnyFromContainer, Get, IndexedIter, IntoIndexedIter, IntoInner, IntoIter, ItemT, Iter, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
-use algebra_traits::ScalarVector;
+use container_traits::{Get, IndexedIter, IntoIndexedIter, IntoInner, IntoIter, ItemT, Iter, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
+use algebra_traits::*;
+use std::ops::Mul;
 use matrix_wrappers::{Hermitian, Symmetric, orthogonality::*};
 
 use utils::kronecker_delta::kron_delta;
 
-use matrix_traits::{AlgebraMatrix, AsBaseMatrix, IntoBaseMatrix, MatrixSquare, MatrixNotWide, MatrixNotTall, MatrixSquareTryConstruct, Matrix,RowVectorAnyConstruct,ColVector,ColVectorAnyConstruct, Transpose, TryFromMatrix};
+use matrix_traits::{any_matrix_matrix_product_impl, AlgebraMatrix, AnyMatrixMatrixProduct, AnyMatrixVectorProduct, AsBaseMatrix, ColVector, ColVectorAnyConstruct, ConjugateTranspose, IntoBaseMatrix, Matrix, MatrixNotTall, MatrixNotWide, MatrixSquare, MatrixSquareTryConstruct, MatrixTryConstruct, RowVector, RowVectorAnyConstruct, Transpose, TryFromMatrix, TryMatrixMatrixProduct, TryMatrixVectorProduct};
 use cachingmap::CachingMap;
 
 type U2=(usize,usize);
@@ -67,8 +67,7 @@ fn test_try_froma2b() {
 
 
 impl<F   : Clone+Scalar,
-     Row : RowVectorAnyConstruct<T=F>+Transpose<Output=Col>,
-     Col : ColVectorAnyConstruct<T=F>+Transpose<Output=Row>> Get<U2,F> for HouseholderTrafoGeneric<Col> {    
+     Col : ColVector<T=F>> Get<U2,F> for HouseholderTrafoGeneric<Col> {    
     fn get(&self, (i,j):U2) -> Option<&F> {
         let r=self.a.get(&(i,j));
         if r.is_some() {
@@ -90,30 +89,26 @@ impl<F   : Clone+Scalar,
 }
 
 impl<F   : Clone+Scalar,
-     Row : RowVectorAnyConstruct<T=F>+Transpose<Output=Col>,
-     Col : ColVectorAnyConstruct<T=F>+Transpose<Output=Row>> Iter<F> for HouseholderTrafoGeneric<Col> {
+     Col : ColVector<T=F>> Iter<F> for HouseholderTrafoGeneric<Col> {
     fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a F> where F:'a {
         container_traits::iter::impl_iter_from_get(self, (self.n(),self.n()))
     }
 }
 
 impl<F   : Clone+Scalar,
-     Row : RowVectorAnyConstruct<T=F>+Transpose<Output=Col>,
-     Col : ColVectorAnyConstruct<T=F>+Transpose<Output=Row>> IndexedIter<U2,F> for HouseholderTrafoGeneric<Col> {
+     Col : ColVector<T=F>> IndexedIter<U2,F> for HouseholderTrafoGeneric<Col> {
     fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a F)> where F:'a {
         container_traits::indexed_iter::impl_indexed_iter_from_get(self, (self.n(),self.n()))
     }
 }
 
-impl<F   : Clone+Scalar,
-     Row : RowVectorAnyConstruct<T=F>+Transpose<Output=Col>,
-     Col : ColVectorAnyConstruct<T=F>+Transpose<Output=Row>> ItemT for HouseholderTrafoGeneric<Col> {
+impl<F   : Scalar,
+     Col : ColVector<T=F>> ItemT for HouseholderTrafoGeneric<Col> {
     type T=F;
 }
 
 impl<F   : Clone+Scalar,
-     Row : RowVectorAnyConstruct<T=F>+Transpose<Output=Col>,
-     Col : ColVectorAnyConstruct<T=F>+Transpose<Output=Row>> TryIntoElement<U2,F> for HouseholderTrafoGeneric<Col> {
+     Col : ColVector<T=F>> TryIntoElement<U2,F> for HouseholderTrafoGeneric<Col> {
     fn try_into_element(self,index:U2) -> Option<F> {
         self.get(index)
             .cloned()
@@ -121,8 +116,7 @@ impl<F   : Clone+Scalar,
 }
 
 impl<F   : Clone+Scalar,
-     Row : RowVectorAnyConstruct<T=F>+Transpose<Output=Col>,
-     Col : ColVectorAnyConstruct<T=F>+Transpose<Output=Row>> IntoIter<F> for HouseholderTrafoGeneric<Col> {
+     Col : ColVector<T=F>> IntoIter<F> for HouseholderTrafoGeneric<Col> {
     fn into_iterator(self) -> impl ExactSizeIterator<Item=F> {
         let vs:Vec<F>=
             self.iter()
@@ -133,8 +127,7 @@ impl<F   : Clone+Scalar,
 }
 
 impl<F   : Clone+Scalar,
-     Row : RowVectorAnyConstruct<T=F>+Transpose<Output=Col>,
-     Col : ColVectorAnyConstruct<T=F>+Transpose<Output=Row>> IntoIndexedIter<U2,F> for HouseholderTrafoGeneric<Col> {
+     Col : ColVectorAnyConstruct<T=F>> IntoIndexedIter<U2,F> for HouseholderTrafoGeneric<Col> {
     fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(U2,F)> {
         let vs:Vec<(U2,F)>=
             self.indexed_iter()
@@ -145,8 +138,7 @@ impl<F   : Clone+Scalar,
 }
 
 impl<F   : Clone+Scalar,
-     Row : RowVectorAnyConstruct<T=F>+Transpose<Output=Col>,
-     Col : ColVectorAnyConstruct<T=F>+Transpose<Output=Row>> Size<U2> for HouseholderTrafoGeneric<Col> {
+     Col : ColVectorAnyConstruct<T=F>> Size<U2> for HouseholderTrafoGeneric<Col> {
     fn size(&self) -> U2 {
         let n=self.n();
         (n,n)
@@ -163,8 +155,7 @@ impl<F   : Clone+Scalar,
 }
 
 impl<F   : Clone+Scalar,
-     Row : RowVectorAnyConstruct<T=F>+Transpose<Output=Col>,
-     Col : ColVectorAnyConstruct<T=F>+Transpose<Output=Row>> NumberOfDegreesOfFreedom<F> for HouseholderTrafoGeneric<Col> {
+     Col : ColVectorAnyConstruct<T=F>> NumberOfDegreesOfFreedom<F> for HouseholderTrafoGeneric<Col> {
     fn ndofs(&self) -> usize {
         let n=self.n();
         n*n
@@ -235,38 +226,66 @@ impl<F:ComplexNumber,
     }
 }
 
-impl<F   : Clone+Scalar,
-     Col : ColVectorAnyConstruct<T=F>
-          +ScalarVector<T=F>
-          +Clone> HouseholderTrafoGeneric<Col> {
-    pub fn any_vector_mul<Col2 : ColVector<T=F>>(self, rhs:Col2) -> Option<Col> {
-        let col=self.u.into_inner();
-        let rhs:Col=Col::any_from_container(rhs).ok()?;
-        let sp=col.clone().try_scalar_product(rhs.clone())?;
+
+impl<F : Scalar+Mul<V,Output=V>,
+     V : Vectorspace<F>+MulI,
+     ColF : Clone+ColVector<T=F>+Map<F,V,Output=ColV>+ConjugateTranspose<Output=ColFH>,
+     ColFH: RowVector<T=F>,
+     ColV : Clone+ColVector<T=V>+ClosedTrySub> AnyMatrixVectorProduct<ColV> for HouseholderTrafoGeneric<ColF>
+    where Self : Matrix {
+    type Output=ColV;
+    fn any_matrix_vector_product(self, rhs:ColV) -> Option<ColV> {
+        if rhs.len() != self.n() {
+            return None;
+        }
+        let col_f:ColF=self.u.into_inner();
+        let sp= V::any_linear_combination(col_f.clone().conjugate_transpose(),rhs.clone())?;
         let fac=sp.muli(2);
-        rhs.try_sub(col.map(|v:F|v*fac.clone())).ok()
+        rhs.try_sub(col_f.map(|f:F|f*fac.clone())).ok()
+    }
+}
+
+impl<ColF : ColVector,
+     ColV : ColVector> TryMatrixVectorProduct<ColV> for HouseholderTrafoGeneric<ColF>
+    where Self : AnyMatrixVectorProduct<ColV,Output=ColV> {
+    type Output=ColV;
+    fn try_matrix_vector_product(self, rhs:ColV) -> Option<ColV> {
+        self.any_matrix_vector_product(rhs)
     }
 }
 
 
+impl<F    : Scalar+Mul<V,Output=V>,
+     V    : Vectorspace<F>,
+     ColF : ColVector<T=F>+Clone+Map<F,V,Output=M::Col>,
+     M    : MatrixTryConstruct<T=V>> AnyMatrixMatrixProduct<M> for HouseholderTrafoGeneric<ColF>
+    where Self : AnyMatrixVectorProduct<M::Col,Output=M::Col>+Matrix<T=F>+Clone {
+    type Output=M;
+    fn any_matrix_matrix_product(self, rhs:M) -> Option<M> {
+       any_matrix_matrix_product_impl(self, rhs)
+    }
+}
+
+impl<ColF : ColVector, M : Matrix> TryMatrixMatrixProduct<M> for HouseholderTrafoGeneric<ColF>
+    where Self : AnyMatrixMatrixProduct<M,Output=M> {
+    type Output=M;
+    fn try_matrix_matrix_product(self, rhs:M) -> Option<M> {
+       self.any_matrix_matrix_product(rhs)
+    }
+}
+
 // impl<F    : Clone+Scalar,
-//      Row  : RowVectorTryConstruct<T=F>,
-//      Col  : ColVectorTryConstruct<T=F>
-//            +TryScalarproduct<ScProdT =F>
-//            +TrySub<Output=Col>
-//            +Clone
-//            +ChangeT<Row,Output=C>
-//            +ChangeT<F,Output=Col>,
-//      C    : ColVectorTryConstruct<T=Row>,
-//      MRhs : Matrix<F=F,Row=Row>> TryMatrixMatrixProduct<MRhs> for HouseholderTrafoGeneric<Col>
-//     where Self : Matrix {
-//         fn try_matrix_matrix_product<M:MatrixTryConstruct<Col=Col>>(self, rhs:MRhs) -> Option<M> {
+//      Col  : ColVector<T=F>+ScalarVector<T=F>,
+//      Rhs  : MatrixTryConstruct> TryMatrixMatrixProduct<MRhs> for HouseholderTrafoGeneric<Col>
+//     where Self : TryMatrixVectorProduct<Rhs::Row,Output=Rhs::Row> {
+//         type Output=Rhs;
+//         fn try_matrix_matrix_product(self, rhs:MRhs) -> Option<M> {
 //             if self.n() != rhs.nrows() {
 //                 return None;
 //             }
-//             MatrixGeneric::try_from_cols(
+//             Rhs::try_from_cols(
 //                 rhs.into_cols()
-//                    .map(|c|self.clone().any_vector_mul(c).unwrap())).ok()
+//                    .map(|c|self.try_matrix_vector_product(c).unwrap())).ok()
 //         }
 // }
 // impl<Col:ColVector,M> TryMatrixMatrixProduct<M> for HouseholderTrafoGeneric<Col> where Self : AnyGeneralizedMatrixProduct<M,Output=M> {}

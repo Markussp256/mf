@@ -1,5 +1,5 @@
 use std::ops::Mul;
-use matrix_traits::{TryMatrixMatrixProduct, TryMatrixVectorProduct, ColVectorAnyConstruct, ConjugateTranspose, Matrix, MatrixSolveError, MatrixTryConstruct, Transpose};
+use matrix_traits::{TryMatrixVectorProduct, ColVectorAnyConstruct, ConjugateTranspose, Matrix, MatrixSolveError, MatrixTryConstruct, Transpose};
 use algebra_traits::{TryDiv,TrySolve, Scalar, ComplexNumber, RealNumber};
 use container_traits::ChangeT;
 
@@ -8,7 +8,7 @@ macro_rules! def_qr {
         pub trait $name : Matrix
             where Self::T : TryDiv,
             <Self::T as TryDiv>::Output : $tr+Mul<Self::T,Output=Self::T> {
-            type Q : Matrix<T=<Self::T as TryDiv>::Output> + TryMatrixMatrixProduct<Self::R>;
+            type Q : Matrix<T=<Self::T as TryDiv>::Output>;//  + AnyMatrixMatrixProduct<Self::R,Output=Self>
             type R : MatrixTryConstruct<T=Self::T>;
 
             fn qr(self) -> (Self::Q,Self::R);
@@ -18,7 +18,7 @@ macro_rules! def_qr {
              Mid : ColVectorAnyConstruct,
              Out : ColVectorAnyConstruct>(self, rhs:Rhs) -> Option<Out>
             where   Self::Q : ConjugateTranspose,
-                    <Self::Q as Transpose>::Output : TryMatrixVectorProduct<Rhs,T=<Self::T as TryDiv>::Output>,
+                    <Self::Q as Transpose>::Output : TryMatrixVectorProduct<Rhs,T=<Self::T as TryDiv>::Output, Output=Mid>,
                     <Self::T as TryDiv>::Output : Mul<Rhs::T,Output=Mid::T>,
                     Self::R : TrySolve<Mid, MatrixSolveError, Output=Out>,
                     // Mid::T  : TryDiv<Self::T,Output=Out::T>,
@@ -26,7 +26,7 @@ macro_rules! def_qr {
                     {
                 let (q,r)=self.qr();
                 let qt=q.conjugate_transpose();
-                let qtr=qt.try_matrix_vector_product::<Mid>(rhs)?;
+                let qtr=qt.try_matrix_vector_product(rhs)?;
                 r.try_solve(qtr).ok()
             }
         }

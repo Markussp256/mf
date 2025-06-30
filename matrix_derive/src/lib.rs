@@ -207,50 +207,64 @@ pub fn static_matrix_proc_macro(input: TokenStream) -> TokenStream {
 pub fn matrix_vector_product_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let tr = quote!{matrix_traits::MatrixVectorProduct<Rhs>};
+    let tr_try = quote!{matrix_traits::TryMatrixVectorProduct<Rhs>};
+    let tr_any = quote!{matrix_traits::AnyMatrixVectorProduct<Rhs>};
     let (generics, where_clause, [(ty, mut wt)])=
     preprocess_no_impl_add_gen_types(& mut input, vec!["Rhs"]);
     assert_eq!(wt.len(),1);
     let wt=wt.remove(0);
     quote! {
-        impl #generics #tr for #ty where #wt : #tr, #where_clause {
+        impl #generics #tr for #ty where #wt : #tr, Rhs : matrix_traits::ColVector, #where_clause {
             type Output=<#wt as #tr>::Output;
             fn matrix_vector_product(self, rhs:Rhs) -> <#wt as #tr>::Output {
                 self.0
                     .matrix_vector_product(rhs)
             }
         }
-    }.into()
-}
 
-/// requires also to implement TryGeneralizedMatrixProduct
-#[proc_macro_derive(TryMatrixVectorProduct)]
-pub fn try_matrix_vector_product_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr = quote!{matrix_traits::TryMatrixVectorProduct<Rhs>};
-    let (generics, where_clause, [(ty, mut wt)])=
-    preprocess_no_impl_add_gen_types(& mut input, vec!["Rhs"]);
-    assert_eq!(wt.len(),1);
-    let wt=wt.remove(0);
-    quote! {
-        impl #generics #tr for #ty where #wt : #tr, #where_clause {
-            type Output=<#wt as #tr>::Output;
-            fn try_matrix_vector_product(self, rhs:Rhs) -> Option<<#wt as #tr>::Output> {
+        impl #generics #tr_try for #ty where #wt : #tr_try, Rhs : matrix_traits::ColVector, #where_clause {
+            type Output=<#wt as #tr_try>::Output;
+            fn try_matrix_vector_product(self, rhs:Rhs) -> Option<<#wt as #tr_try>::Output> {
                 self.0
                     .try_matrix_vector_product(rhs)
             }
         }
+
+        impl #generics #tr_any for #ty where #wt : #tr_any, Rhs : matrix_traits::ColVector, #where_clause {
+            type Output=<#wt as #tr_any>::Output;
+            fn any_matrix_vector_product(self, rhs:Rhs) -> Option<<#wt as #tr_any>::Output> {
+                self.0
+                    .any_matrix_vector_product(rhs)
+            }
+        }
+
     }.into()
 }
+
+/// requires also to implement TryGeneralizedMatrixProduct
+// #[proc_macro_derive(TryMatrixVectorProduct)]
+// pub fn try_matrix_vector_product_proc_macro(input: TokenStream) -> TokenStream {
+//     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+//     let (generics, where_clause, [(ty, mut wt)])=
+//     preprocess_no_impl_add_gen_types(& mut input, vec!["Rhs"]);
+//     assert_eq!(wt.len(),1);
+//     let wt=wt.remove(0);
+//     quote! {
+
+//     }.into()
+// }
 
 #[proc_macro_derive(MatrixMatrixProduct)]
 pub fn matrix_matrix_product_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let tr =quote!{matrix_traits::MatrixMatrixProduct};
     let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
+    let tr_any=quote!{matrix_traits::AnyMatrixMatrixProduct};
     let (generics, where_clause, [(ty, wt),(ty1, wt1),(ty2, wt2)])=
     preprocess_no_impl(& mut input);
+    let mul_bound=quote!{<#ty as container_traits::ItemT>::T : std::ops::Mul<<#ty1 as container_traits::ItemT>::T>};
     quote! {
-        impl #generics #tr<#ty1> for #ty where #(#wt : #tr<#wt1,Output=#wt2>,)* #where_clause {
+        impl #generics #tr<#ty1> for #ty where #(#wt : #tr<#wt1,Output=#wt2>,)* #mul_bound, #where_clause {
             type Output=#ty2;
             fn matrix_matrix_product(self, rhs:#ty1) -> #ty2 {
                 #ty2(self.0
@@ -258,11 +272,20 @@ pub fn matrix_matrix_product_proc_macro(input: TokenStream) -> TokenStream {
             }
         }
 
-        impl #generics #tr_try<#ty1> for #ty where #(#wt : #tr_try<#wt1,Output=#wt2>,)* #where_clause {
+        impl #generics #tr_try<#ty1> for #ty where #(#wt : #tr_try<#wt1,Output=#wt2>,)* #mul_bound, #where_clause {
             type Output=#ty2;
             fn try_matrix_matrix_product(self, rhs:#ty1) -> Option<#ty2> {
                 self.0
                     .try_matrix_matrix_product(rhs.0)
+                    .map(|c|#ty2(c))
+            }
+        }
+
+        impl #generics #tr_any<#ty1> for #ty where #(#wt : #tr_any<#wt1,Output=#wt2>,)* #mul_bound, #where_clause {
+            type Output=#ty2;
+            fn any_matrix_matrix_product(self, rhs:#ty1) -> Option<#ty2> {
+                self.0
+                    .any_matrix_matrix_product(rhs.0)
                     .map(|c|#ty2(c))
             }
         }

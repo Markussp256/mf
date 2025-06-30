@@ -216,7 +216,7 @@ macro_rules! try_matrix_vector_impl {
         impl<F:'static+Mul<F2,Output=F3>,F2:Clone,F3:'static+Zero> $tr<MatrixColDyn<F2>> for MatrixDyn<F> {
             $(type Output = MatrixColDyn<F3>;
             fn $fn(self, rhs:MatrixColDyn<F2>) -> Option<MatrixColDyn<F3>> {
-                try_matrix_vector_product_impl(self,rhs)
+                any_matrix_vector_product_impl(self,rhs)
             })?
         }
     };
@@ -228,7 +228,7 @@ macro_rules! try_matrix_matrix_impl {
         impl<F:'static+Clone+Mul<F2,Output=F3>,F2:'static+Clone,F3:'static+Zero> $tr<MatrixDyn<F2>> for MatrixDyn<F> {
             $(type Output = MatrixDyn<F3>;
             fn $fn(self, rhs:MatrixDyn<F2>) -> Option<MatrixDyn<F3>> {
-                try_matrix_matrix_product_impl(self,rhs)
+                any_matrix_matrix_product_impl(self,rhs)
             })?
         }
     };
@@ -249,6 +249,13 @@ impl<F    :'static,
      C    :'static+ColVectorAnyConstruct<T=Row>> IntoDynMatrix for MatrixGeneric<Row,Col> {
         type Output=MatrixDyn<F>;
      }
+
+
+// #[test]
+// fn test_matrix_matrix_mul<F:Mul<V,Output=V>,V:Zero>(q:MatrixDyn<F>,r:MatrixDyn<V>) -> Option<MatrixDyn<V>> {
+//     use matrix_traits::AnyMatrixMatrixProduct;
+//     q.any_matrix_matrix_product(r)
+// }
 
 
 matrix_decompositions::impl_qr_tall!(MatrixDyn<V>, MatrixDyn<F>, MatrixDyn<V>, RightTriangular);

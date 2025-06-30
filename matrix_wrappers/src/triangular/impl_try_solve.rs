@@ -52,16 +52,18 @@ impl<F   : Clone+Zero+Mul<F2,Output=F3>,
 
 impl<M   : Matrix,
      Rhs : Clone+ClosedTrySub<Error=ERhs>+ColVectorAnyConstruct, ERhs:Debug,
-     Out : Clone+ClosedTrySub<Error=EOut>+ColVector, EOut:Debug> TrySolve<Rhs,MatrixSolveError> for RightTriangular<M>
+     Out : Clone+ClosedTrySub<Error=EOut>+ColVector, EOut:Debug>
+        TrySolve<Rhs,MatrixSolveError> for RightTriangular<M>
      where  M::T : Zero+Mul<Out::T,Output=Rhs::T>,
             Self : TrySolveApprox<Rhs,Output=Out>
-                  +TryMatrixVectorProduct<Out,T=M::T>
+                  +TryMatrixVectorProduct<Out,Output=Rhs>
+                  +Matrix<T=M::T>
                   +Clone {
     type Output=Out;
     fn try_solve(self, rhs:Rhs) -> Result<Out, MatrixSolveError> {
         let mut x=self.clone().try_solve_approx(rhs.clone())?;
         for _ in 0..5 {
-            let res:Rhs=self.clone().try_matrix_vector_product::<Rhs>(x.clone()).unwrap()
+            let res:Rhs=self.clone().try_matrix_vector_product(x.clone()).unwrap()
                             .try_sub(rhs.clone()).unwrap();
             x=x.try_sub(self.clone().try_solve_approx(res)?).unwrap();
         }
