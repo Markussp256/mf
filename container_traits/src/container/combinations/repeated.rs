@@ -101,11 +101,11 @@ impl<Index:ContainerIndex,T,C:TryIntoElement<Index,T>+Size<Index>> TryIntoElemen
 // }
 
 // impl<T : PartialEq,
-//      C : AnyFromVec<T>+TryAccept<T>> AnyFromVec<T> for Repeated<Index,C> {
-//     fn any_from_vec(v:Vec<T>) -> Option<Self> {
+//      C : TryFromVec<T>+TryAccept<T>> TryFromVec<T> for Repeated<Index,C> {
+//     fn try_from_vec(v:Vec<T>) -> Option<Self> {
 //         let c_len=Self::smallest_possible_c_len(v.iter())?;
 //         let reps=v.len()/c_len;
-//         let c=C::any_from_vec(crate::vec_op::crop(v,c_len)).unwrap();
+//         let c=C::try_from_vec(crate::vec_op::crop(v,c_len)).unwrap();
 //         Some(Self::new(c,reps))
 //     }
 // }

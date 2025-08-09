@@ -10,7 +10,7 @@ use crate::Vector;
 use crate::trafos::{Translation, SE};
 
 
-use matrix_wrappers::SkewSymmetricMatrix;
+use matrix::SkewSymmetricMatrix;
 use matrix::Matrix;
 
 use std::ops::Mul;
@@ -49,6 +49,14 @@ impl<F:Clone+RealNumber, V:Vectorspace<F>, const N:usize> Mul<F> for LogSE<F, V,
 
 impl<F:Clone+RealNumber, V:TryDiv<Output=F>+Vectorspace1d, const N:usize> TryDiv<F> for LogSE<F, V, N> {
     type Output = Self;
+    type Error  = DivError;
+
+    fn is_divable_by(&self,rhs:&F) -> Result<(),Self::Error> {
+        self.lnrot.is_scalar_divable_by(rhs)
+        .and(
+        self.t.is_scalar_divable_by(rhs))
+    }
+
     fn try_div(self, rhs: F) -> Result<Self::Output,DivError> {
         Ok(Self{
             lnrot: self.lnrot.try_scalar_div(&rhs)?,
@@ -161,6 +169,12 @@ macro_rules! impl_exp_log {
 
         impl<F:RealNumber+Mul<V,Output=V>, V:Clone+TryDiv<Output=F>+Vectorspace1d> TryLog for SE<F, V, $N> {
             type Output=LogSE<F, V, $N>;
+            type Error=LogError;
+            fn is_logable(&self) -> Result<(),LogError> {
+                self.rot()
+                    .is_logable()
+            }
+
             fn try_log(self) -> Result<Self::Output, LogError> {
                 let rot = self.rot();
                 let m: Matrix<F, $N, $N> = rot.clone().apply_fn(lndzm1);

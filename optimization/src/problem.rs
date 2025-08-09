@@ -1,8 +1,8 @@
 
 use num_traits::One;
-use container_traits::{for_dynamic::FromElement, AnyFromParameters, AnyParameters, Concat, Concatenated, IntoParameters, LinearContainerConstructError as LCCE};
+use container_traits::{FromElement, AnyFromParameters, AnyParameters, Concat, Concatenated, IntoParameters, LinearContainerConstructError as LCCE};
 
-use algebra_traits::{Norm, Scalar, ScalarMul, TrySub, TryAdd};
+use algebra_traits::{Norm, Scalar, ScalarMul, TryAdd, TrySub};
 
 use algebra::VectorDyn;
 
@@ -148,14 +148,20 @@ impl<F    : Scalar,
                     jac.into_rows()
                        .zip(weights().into_iter())
                        .map(|(r,wi)|r.scalar_mul(&F::from(wi)))).unwrap();
-            let res:VectorDyn<F>=y_dvec.clone().try_sub(into_dvec(f(x.clone()))).unwrap();
+            let res:VectorDyn<F>=y_dvec.clone().try_sub(into_dvec(f(x.clone())))
+                .map_err(|_|OptimizationError::<F,X>::Difference(y_dvec.clone(),into_dvec(f(x.clone()))))?;
             let wres=container_traits::vec_op::try_binary_operation(res.into(),weights().into(),|(r,w)|r*w).unwrap().into();
             let update=match super::try_solve_least_squares(wjac.clone(),wres) {
                 Some(update) => update,
                 None => { return Err(OptimizationError::MatrixNotFullRank(wjac, x)); }
             };
             if &update.clone().norm() < opts.target_cost() { break; }
-            x=from_dvec(into_dvec(x).clone().try_add(update).unwrap());
+            let lhs=into_dvec(x);
+            if lhs.is_addable_by(&update).is_ok() {
+                x=from_dvec(lhs.try_add(update).ok().unwrap());
+            } else {
+                return Err(OptimizationError::<F,X>::Sum(lhs,update));
+            }
             iter+=1;
         }
         if &iter == opts.max_iter() {

@@ -192,17 +192,17 @@ impl<T,A:ItemT<T=T>,B:ItemT<T=T>> ItemT for Concatenated<A,B> {
     type T=T;
 }
 
-impl<T, A : AnyFromVec<T,LCCE>+TryAccept<usize,T,LCCE>+Len,
-        B : AnyFromVec<T,LCCE>+TryAccept<usize,T,LCCE>>
-        AnyFromVec<T,LCCE> for Concatenated<A,B> {
-    fn any_from_vec(v:Vec<T>) -> Result<Self,LCCE> {
+impl<T, A : TryFromVec<T,LCCE>+TryAccept<usize,T,LCCE>+Len,
+        B : TryFromVec<T,LCCE>+TryAccept<usize,T,LCCE>>
+        TryFromVec<T,LCCE> for Concatenated<A,B> {
+    fn try_from_vec(v:Vec<T>) -> Result<Self,LCCE> {
         let index=
             Self::find_acceptable_splits(v.len(),|i|&v[i])
                 .next()
                 .ok_or(LCCE::DataDoesNotSatisfyRequiredPropertiesOfTargetContainer)?;
         let (va,vb)=crate::vec_op::split(v,index);
-        let a=A::any_from_vec(va)?;
-        let b=B::any_from_vec(vb)?;
+        let a=A::try_from_vec(va)?;
+        let b=B::try_from_vec(vb)?;
         Ok(Self::new(a,b))
     }
 }

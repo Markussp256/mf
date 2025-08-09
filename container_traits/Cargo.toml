@@ -7,7 +7,7 @@ edition = "2024"
 utils = { path="../utils" }
 
 paste = "1.0.15"
-nalgebra = { version = "0.33", optional = true }
+nalgebra = { version = "0.34", optional = true }
 num-traits= "0.2.15"
 thiserror = "2.0.7"
 

@@ -255,7 +255,7 @@ impl<F:Clone+RealNumber+Mul<V,Output=V>+Debug,
     where A::DistT   : Zero+Max+PartialOrd,
           V::ScProdT : Zero+Clone+Parameter<F> {
     fn from(se:SE3<F,V>) -> Self {
-        <Self as Transformation<F::RealType, Point3<A>>>::try_new(|x|<SE3<F,V> as Mul<Point3<A>>>::mul(se.clone(), x.clone())).unwrap()
+        <Self as Transformation<F::RealType, Point3<A>>>::try_new(|x|<SE3<F,V> as Mul<Point3<A>>>::mul(se.clone(), x.clone())).ok().unwrap()
     }
 }
 

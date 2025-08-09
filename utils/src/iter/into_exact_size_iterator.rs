@@ -40,6 +40,9 @@ impl<I:Iterator> ExactSizeIterator for WithExactSize<I> {
     // }
 }
 
+
+
+
 pub trait IntoExactSizeIterator : Sized+IntoIterator {
     fn into_exact_size_iter(self,len:usize) -> WithExactSize<Take<Self::IntoIter>> {
         WithExactSize::new(self.into_iter().take(len),len)

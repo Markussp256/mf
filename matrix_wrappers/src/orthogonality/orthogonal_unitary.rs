@@ -3,6 +3,7 @@ use container_traits::{TryAccept,  IntoInner};
 use matrix_traits::{AlgebraMatrix, MatrixConstructError, MatrixSquareTryConstruct, MatrixSquare, Transpose};
 
 use super::Stiefel;
+use crate::RightTriangular;
 
 type U2=(usize,usize);
 
@@ -18,7 +19,8 @@ macro_rules! def_orthogonal_or_unitary {
          derive_more::Index,
          matrix_derive::Identity,
          matrix_derive::Inherit,
-         matrix_derive::MatrixMatrixProduct,
+         matrix_derive::ClosedMatrixMatrixProduct,
+         matrix_derive::MatrixMatrixProductRightTriangular,
          matrix_derive::ClosedTranspose,
          matrix_derive::MatrixShape)]
         pub struct $uc<M:MatrixSquare>(M) where M::T : $tr;

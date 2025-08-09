@@ -1298,8 +1298,7 @@ pub fn standard_basis_proc_macro(input: TokenStream) -> TokenStream {
 }
 
 /// Implements [`container_traits::for_dynamic::FromVec`]
-///            [`container_traits::AnyFromVec`]
-///            [`container_traits::for_static::TryFromVec`]
+///            [`container_traits::TryFromVec`]
 ///
 /// # Example
 /// 
@@ -1322,18 +1321,11 @@ pub fn from_vec_proc_macro(input: TokenStream) -> TokenStream {
     let wt=&wt[0];
     let vec_tr=quote!(container_traits::for_dynamic::FromVec<TFromVec>);
 
-    let (generics_any,_, _)=preprocess_no_impl_add_gen_types::<1>(& mut input_any,vec!["TFromVec","ErrorFromVec"]);
-    let any_tr=quote!(container_traits::AnyFromVec<TFromVec,ErrorFromVec>);
+    let (generics_try,_, _)=preprocess_no_impl_add_gen_types::<1>(& mut input_any,vec!["TFromVec","ErrorFromVec"]);
     let try_tr=quote!{container_traits::TryFromVec<TFromVec,ErrorFromVec>};
     quote! {
-        impl #generics_any #any_tr for #ty where #wt : #any_tr, #wc {
-            fn any_from_vec(v:Vec<TFromVec>) -> Result<Self,ErrorFromVec> {
-                <#wt as #any_tr>::any_from_vec(v)
-                    .map(|s|Self(s))
-            }
-        }
 
-        impl #generics_any #try_tr for #ty where #wt : #try_tr, #wc {
+        impl #generics_try #try_tr for #ty where #wt : #try_tr, #wc {
             fn try_from_vec(v:Vec<TFromVec>) -> Result<Self,ErrorFromVec> {
                 <#wt as #try_tr>::try_from_vec(v)
                     .map(|s|Self(s))
@@ -2031,7 +2023,7 @@ pub fn container_dynamic_proc_macro(input: TokenStream) -> TokenStream {
 ///            [`container_traits::TryFromFn`]
 ///            [`container_traits::for_static::TryFromVec`]
 ///            [`container_traits::for_dynamic::FromVec`]
-///            [`container_traits::AnyFromVec`]
+///            [`container_traits::TryFromVec`]
 ///            [`container_traits::FromInner`]
 ///            [`container_traits::IntoInner`]
 ///            [`container_traits::Get`]

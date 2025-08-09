@@ -4,7 +4,8 @@ use algebra_traits::{TryScalarproduct, Scalar};
 
 type U2=(usize,usize);
 
-pub trait GramMatrix : AlgebraMatrix where Self::T : Clone+Scalar {
+pub trait GramMatrix : AlgebraMatrix
+    where Self::T   : Clone+Scalar {
     type Output : MatrixTryConstruct<T=Self::T>;
     fn gram_matrix(self) -> <Self as GramMatrix>::Output where Self::Col : TryScalarproduct<TryScProdT = Self::T> {
         let n=self.ncols();

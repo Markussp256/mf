@@ -4,6 +4,7 @@
 use std::ops::Sub;
 
 use algebra_traits::{Torsor, Scalar, TryDiv, Vectorspace1d};
+use utils::iter::IntoExactSizeIterator;
 use super::{Point, UnitVector};
 
 use container_traits::{IntoInner, Map};
@@ -32,7 +33,8 @@ impl<F:Scalar,
         let (pt,normal)=self.into_parts();
         V::linear_combination(normal
                                     .into_iter()
-                                    .zip((p-pt).into_iter()))
+                                    .zip((p-pt).into_iter())
+                                    .into_exact_size_iter(N))
     }
 
     pub fn proj(self, p:Point<A,N>) -> Point<A,N> where Self:Clone, A:Clone, V:Clone {

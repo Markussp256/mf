@@ -11,11 +11,12 @@ type U2=(usize,usize);
          algebra_derive::ScalarContainer,
          algebra_derive::Inv,
          container_derive::JustContainer,
+         container_derive::IntoInner,
          derive_more::AsRef,
          derive_more::Index,
          matrix_derive::Identity,
          matrix_derive::Inherit,
-         matrix_derive::MatrixMatrixProduct,
+         matrix_derive::ClosedMatrixMatrixProduct,
          matrix_derive::MatrixShape)]
 pub struct LeftTriangular<M:Matrix>(M) where M::T : Zero;
 

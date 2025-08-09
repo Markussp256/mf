@@ -2,10 +2,13 @@ use algebra::VectorDyn;
 use container_traits::{ChangeT, Empty, IndexOutOfBoundsError, IntoIter, IterMut, Len, LenNotEqualToRequiredLenError, OneElement, Pop, Push, TryInsert, TryRemove, Zeros};
 
 use either::Either;
-use matrix_traits::{try_matrix_matrix_product_impl, try_matrix_vector_product_impl, ColVectorAnyConstruct, FromMatrix, Matrix, MatrixConstruct, MatrixDynamic, MatrixTryConstruct, RowVectorAnyConstruct, IntoDynMatrix, TryMatrixMatrixProduct, TryMatrixVectorProduct};
+use matrix_traits::*;
+use matrix_wrappers::shaped::Square;
+
+
+
 use utils::{iter::IntoExactSizeIterator, IntoThis};
 
-use std::ops::Mul;
 use num_traits::Zero;
 
 use crate::{MatrixColDyn, MatrixRowDyn};
@@ -211,31 +214,6 @@ impl<F:'static> MatrixDynamic for MatrixDyn<F> {
     }
 }
 
-macro_rules! try_matrix_vector_impl {
-    ($tr:ident $(, $fn:ident)?) => {
-        impl<F:'static+Mul<F2,Output=F3>,F2:Clone,F3:'static+Zero> $tr<MatrixColDyn<F2>> for MatrixDyn<F> {
-            $(type Output = MatrixColDyn<F3>;
-            fn $fn(self, rhs:MatrixColDyn<F2>) -> Option<MatrixColDyn<F3>> {
-                any_matrix_vector_product_impl(self,rhs)
-            })?
-        }
-    };
-}
-try_matrix_vector_impl!(TryMatrixVectorProduct, try_matrix_vector_product);
-
-macro_rules! try_matrix_matrix_impl {
-    ($tr:ident $(, $fn:ident)?) => {
-        impl<F:'static+Clone+Mul<F2,Output=F3>,F2:'static+Clone,F3:'static+Zero> $tr<MatrixDyn<F2>> for MatrixDyn<F> {
-            $(type Output = MatrixDyn<F3>;
-            fn $fn(self, rhs:MatrixDyn<F2>) -> Option<MatrixDyn<F3>> {
-                any_matrix_matrix_product_impl(self,rhs)
-            })?
-        }
-    };
-}
-try_matrix_matrix_impl!(TryMatrixMatrixProduct, try_matrix_matrix_product);
-
-
 
 impl<F:'static,const M:usize,const N:usize> From<super::Matrix<F,M,N>> for MatrixDyn<F> {
     fn from(value: super::Matrix<F,M,N>) -> Self {
@@ -244,12 +222,14 @@ impl<F:'static,const M:usize,const N:usize> From<super::Matrix<F,M,N>> for Matri
 }
 
 impl<F    :'static,
-     Row  : RowVectorAnyConstruct<T=F>,
-     Col  : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-     C    :'static+ColVectorAnyConstruct<T=Row>> IntoDynMatrix for MatrixGeneric<Row,Col> {
+     Row  : RowVectorTryConstruct<T=F>,
+     Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+     C    :'static+ColVectorTryConstruct<T=Row>> IntoDynMatrix for MatrixGeneric<Row,Col> {
         type Output=MatrixDyn<F>;
      }
 
+
+pub type SquareMatrixDyn<F>=Square<MatrixDyn<F>>;
 
 // #[test]
 // fn test_matrix_matrix_mul<F:Mul<V,Output=V>,V:Zero>(q:MatrixDyn<F>,r:MatrixDyn<V>) -> Option<MatrixDyn<V>> {
@@ -257,8 +237,3 @@ impl<F    :'static,
 //     q.any_matrix_matrix_product(r)
 // }
 
-
-matrix_decompositions::impl_qr_tall!(MatrixDyn<V>, MatrixDyn<F>, MatrixDyn<V>, RightTriangular);
-matrix_decompositions::impl_qr_non_tall!(Wide<MatrixDyn<V>>,  SquareMatrixDyn<F>, Wide<MatrixDyn<V>>, RightTriangular);
-matrix_decompositions::impl_qr_non_tall!(SquareMatrixDyn<V>, SquareMatrixDyn<F>, SquareMatrixDyn<V>, SquareRightTriangular);
-     

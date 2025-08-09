@@ -1,6 +1,6 @@
 use num_traits::{Zero,One};
 
-use matrix_traits::{AlgebraMatrix, row_col::ColVectorAnyConstruct, MatrixConstructError, MatrixSquare, MatrixSquareTryConstruct, Transpose};
+use matrix_traits::{AlgebraMatrix, row_col::ColVectorTryConstruct, MatrixConstructError, MatrixSquare, MatrixSquareTryConstruct, Transpose};
 use algebra_traits::RealNumber;
 use utils::iter::IntoExactSizeIterator;
 use super::{Orthogonal, SpecialOrthogonal};
@@ -17,7 +17,7 @@ type U2=(usize,usize);
  derive_more::Index,
  matrix_derive::Identity,
  matrix_derive::Inherit,
- matrix_derive::MatrixMatrixProduct,
+ matrix_derive::ClosedMatrixMatrixProduct,
  matrix_derive::MatrixShape)]
 pub struct Homogeneous<M:MatrixSquare>(M) where M::T : RealNumber;
 
@@ -40,7 +40,7 @@ impl<M:MatrixSquare> Homogeneous<M> where M::T : RealNumber {
     }
 
     pub fn into_parts<M2 : MatrixSquareTryConstruct<T=M::T>+AlgebraMatrix+TryFromSuperContainer<U2,Self>,
-                      C  : ColVectorAnyConstruct<T=M::T>>(self) -> Option<(SpecialOrthogonal<M2>, C)> where M::T : Clone {
+                      C  : ColVectorTryConstruct<T=M::T>>(self) -> Option<(SpecialOrthogonal<M2>, C)> where M::T : Clone {
         let t=C::any_from_iter(None,self.translation_values()).ok()?;
         let so=self.try_into_rot().ok()?;
         Some((so,t))

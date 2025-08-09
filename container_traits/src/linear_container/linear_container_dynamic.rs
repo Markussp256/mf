@@ -1,9 +1,10 @@
-use crate::{TryInsert, Pop, Push, TryRemove};
+use crate::{Empty, TryInsert, Pop, Push, TryRemove};
 
 use super::{LinearContainerConstruct, LinearContainerConstructError};
 
 pub trait LinearContainerDynamic<E=LinearContainerConstructError>
     : LinearContainerConstruct<E>
+     +Empty
      +Push     <Self::T>
      +Pop      <Self::T>
      +Extend   <Self::T>
@@ -12,6 +13,7 @@ pub trait LinearContainerDynamic<E=LinearContainerConstructError>
 
 impl<T, E,
      C : LinearContainerConstruct<E,T=T>
+        +Empty
         +Push<T>
         +Pop<T>
         +Extend<T>

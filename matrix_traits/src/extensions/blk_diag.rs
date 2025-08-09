@@ -1,5 +1,5 @@
 use crate::Matrix;
-use container_traits::{AnyFromVec, Concatenated, ContainerIndex, Get, IndexedIter, IntoIndexedIter, IntoIter, ItemT, Iter, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
+use container_traits::{TryFromVec, Concatenated, ContainerIndex, Get, IndexedIter, IntoIndexedIter, IntoIter, ItemT, Iter, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
 use num_traits::Zero;
 use utils::iter::{ChainExactSize, IntoExactSizeIterator};
 
@@ -30,8 +30,8 @@ impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> BlockDiagonal<TL,BR> {
         let br_ncols=br.ncols();
         let tl_ncols=tl.ncols();
         let z=std::iter::repeat_with(F::zero);
-        let br_zero_row=move ||BR::Row::any_from_vec(z.take(br_ncols).collect()).unwrap();
-        let tl_zero_row=move ||TL::Row::any_from_vec(z.take(tl_ncols).collect()).unwrap();
+        let br_zero_row=move ||BR::Row::try_from_vec(z.take(br_ncols).collect()).unwrap();
+        let tl_zero_row=move ||TL::Row::try_from_vec(z.take(tl_ncols).collect()).unwrap();
         ChainExactSize::chain_exact_size(
             tl.into_rows()
                 .map(move |r|Concatenated::new(r,br_zero_row())),
@@ -155,8 +155,8 @@ impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> Matrix for BlockDiagonal<TL,BR> {
         let br_nrows=br.nrows();
         let tl_nrows=tl.nrows();
         let z=std::iter::repeat_with(F::zero);
-        let br_zero_col=move ||BR::Col::any_from_vec(z.take(br_nrows).collect()).unwrap();
-        let tl_zero_col=move ||TL::Col::any_from_vec(z.take(tl_nrows).collect()).unwrap();
+        let br_zero_col=move ||BR::Col::try_from_vec(z.take(br_nrows).collect()).unwrap();
+        let tl_zero_col=move ||TL::Col::try_from_vec(z.take(tl_nrows).collect()).unwrap();
         ChainExactSize::chain_exact_size(
             tl.into_cols()
               .map(move |c|Concatenated::new(c,br_zero_col())),

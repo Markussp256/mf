@@ -1,7 +1,7 @@
 use std::ops::Mul;
 use num_traits::Zero;
 
-use crate::{AnyMatrixVectorProduct, ColVector, Matrix, MatrixTryConstruct};
+use crate::{TryMatrixVectorProduct, ColVector, Matrix, MatrixTryConstruct};
 
 
 pub trait MatrixMatrixProduct<Rhs : Matrix=Self> {
@@ -15,11 +15,11 @@ pub trait MatrixMatrixProduct<Rhs : Matrix=Self> {
 // we do not implement it directly (provided method) because that would
 // put many constraints
 
-pub fn any_matrix_matrix_product_impl
+pub fn try_matrix_matrix_product_impl
     <F1     : Mul<F2,Output=F3>,
      F2,
      F3     : Zero,
-     Lhs    : Clone+Matrix<T=F1>+AnyMatrixVectorProduct<RhsCol,Output=Out::Col>,
+     Lhs    : Clone+Matrix<T=F1>+TryMatrixVectorProduct<RhsCol,Output=Out::Col>,
      Rhs    : Matrix<T=F2,Col=RhsCol>,
      Out    : MatrixTryConstruct<T=F3>,
      RhsCol : ColVector<T=F2>>(lhs:Lhs, rhs:Rhs) -> Option<Out> {
@@ -28,7 +28,7 @@ pub fn any_matrix_matrix_product_impl
         let rhs_dims=rhs.matrix_dimensions();
         let res=Out::try_from_cols(
                 rhs.into_cols()
-                   .map(|col|lhs.clone().any_matrix_vector_product(col).unwrap()));
+                   .map(|col|lhs.clone().try_matrix_vector_product(col).unwrap()));
         match &res {
             Ok(r) => {
                 let out_dims=r.matrix_dimensions();
@@ -40,16 +40,10 @@ pub fn any_matrix_matrix_product_impl
         res.ok()
 }
 
-// implementation is in trait matrix
 
 pub trait TryMatrixMatrixProduct<Rhs : Matrix=Self> {
     type Output : Matrix;
     fn try_matrix_matrix_product(self, rhs:Rhs) -> Option<Self::Output>;
-}
-
-pub trait AnyMatrixMatrixProduct<Rhs : Matrix=Self> {
-    type Output : Matrix;
-    fn any_matrix_matrix_product(self, rhs:Rhs) -> Option<Self::Output>;
 }
 
 

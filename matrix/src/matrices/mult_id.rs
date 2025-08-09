@@ -1,4 +1,4 @@
-use container_traits::{AnyFromIterator, AnyMap, ClosedMap, Get, IndexedIter, IntoIndexedIter, IntoIter, ItemT, Iter, LenTooSmallError, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryAccept, TryFromFn, TryIntoElement};
+use container_traits::{AnyFromIterator, TryMap, ClosedMap, Get, IndexedIter, IntoIndexedIter, IntoIter, ItemT, Iter, LenTooSmallError, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryAccept, TryFromFn, TryIntoElement};
 use num_traits::Zero;
 use std::ops::Mul;
 
@@ -97,7 +97,6 @@ impl<F:Zero> Matrix for MultId<F> {
 
 impl<F:Zero+PartialEq> TryAccept<U2,F,MatrixConstructError> for MultId<F> {
     fn try_accept<'a>(size:U2,f:impl Fn(U2) -> &'a F) -> Result<(),MatrixConstructError> where F: 'a {
-        let size=id.size();
         if size.0 != size.1 || (size == (0,0)) { return Err(MatrixConstructError::DimensionMismatch)}
         let n=size.0;
         let factor=f((0,0));
@@ -114,9 +113,9 @@ impl<F:Zero+PartialEq> TryAccept<U2,F,MatrixConstructError> for MultId<F> {
     }
 }
 
-impl<F:Zero,F2:Zero> AnyMap<F,F2,MatrixConstructError> for MultId<F> {
+impl<F:Zero,F2:Zero> TryMap<F,F2,MatrixConstructError> for MultId<F> {
     type Output = MultId<F2>;
-    fn any_map(self, f: impl Fn(F) -> F2) -> Result<MultId<F2>,MatrixConstructError> {
+    fn try_map(self, f: impl Fn(F) -> F2) -> Result<MultId<F2>,MatrixConstructError> {
         if !f(F::zero()).is_zero() {
             return Err(MatrixConstructError::DataDoesNotSatisfyRequiredPropertiesOfMatrixType);
         }
@@ -136,7 +135,7 @@ impl<F:Zero> AnyFromIterator<F,MatrixConstructError> for MultId<F> {
 }
 
 impl<F:Zero> TryFromFn<U2,F, MatrixConstructError> for MultId<F> {
-    fn try_from_fn(_:InstanceStructureDescriptor<Self,U2>, f:impl Fn(U2) -> F) -> Result<Self,MatrixConstructError> {
+    fn try_from_fn(_:U2, f:impl Fn(U2) -> F) -> Result<Self,MatrixConstructError> {
         Ok(Self::new(f((0,0))))
     }
 }
@@ -160,8 +159,9 @@ impl<F:Zero> From<F> for MultId<F> {
 
 impl<F:Zero+Clone+PartialEq> MultId<F> {
         // overwrites std::ops::Mul
-        pub fn mul<RHS:MatrixTryConstruct>(self,rhs:RHS) -> RHS where    F : Mul<RHS::T,Output=RHS::T>,
-                                                                       RHS : ClosedMap<RHS::T> {
+        pub fn mul<RHS:MatrixTryConstruct>(self,rhs:RHS) -> RHS
+        where    F : Mul<RHS::T,Output=RHS::T>,
+               RHS : ClosedMap<RHS::T> {
             rhs.map(|f2|self.factor.clone()*f2)
         }
 }

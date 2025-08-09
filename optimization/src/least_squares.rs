@@ -1,15 +1,19 @@
-use std::ops::Mul;
+use std::ops::{Mul,SubAssign};
 use algebra_traits::{InnerProductSpace1d, Scalar, TryDiv};
 
 use algebra::VectorDyn;
-use matrix::MatrixDyn;
+use matrix::{MatrixColDyn, MatrixDyn};
 
 use matrix_decompositions::QR;
 
 pub fn try_solve_least_squares<
     F : 'static+Scalar+Mul<V,Output=V>,
-    V : 'static+InnerProductSpace1d+Clone+TryDiv<Output=F>+Mul<F,Output=V>+Mul<F::RealType,Output=V>>(a:MatrixDyn<V>, b:VectorDyn<V>) -> Option<VectorDyn<F>> {
+    V : 'static+SubAssign+InnerProductSpace1d+Clone+TryDiv<Output=F>+Mul<F,Output=V>+Mul<F::RealType,Output=V>>(
+        a:MatrixDyn<V>,
+        b:VectorDyn<V>) -> Option<VectorDyn<F>> {
+    let b:MatrixColDyn<V>=b.try_into().unwrap();
     <MatrixDyn<V> as QR>::try_solve_least_squares(a, b)
+        .map(|c:MatrixColDyn<F>|c.into())
 }
 
 // 

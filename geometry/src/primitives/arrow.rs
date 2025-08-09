@@ -1,4 +1,4 @@
-use algebra_traits::{AddError, FloatOpError, SubError, TryAdd, TrySub};
+use algebra_traits::{AddError, SubError, TryAdd, TrySub};
 
 
 #[derive(Clone, Debug, PartialEq)]
@@ -31,11 +31,20 @@ impl<Point> Arrow<Point> {
 
 impl<Point:PartialEq> TryAdd<Point> for Arrow<Point> {
     type Output=Point;
+    type Error=AddError;
+    fn is_addable_by(&self,rhs:&Point) -> Result<(),Self::Error> {
+        if &self.foot == rhs {
+            Ok(())
+        } else {
+            Err(AddError::NotAvailableForProvidedInstances)
+        }
+    }
+
     fn try_add(self, rhs:Point) -> Result<Point,AddError> {
         if self.foot == rhs {
             Ok(self.head)
         } else {
-            Err(FloatOpError::operation_not_available().into())
+            Err(AddError::NotAvailableForProvidedInstances)
         }
     }
 }
@@ -50,22 +59,42 @@ impl<Point> std::ops::Neg for Arrow<Point> {
 
 impl<Point:PartialEq> TryAdd for Arrow<Point> {
     type Output=Self;
+    type Error=AddError;
+
+    fn is_addable_by(&self,rhs:&Self) -> Result<(),Self::Error> {
+        if self.head == rhs.foot {
+            Ok(())
+        } else {
+            Err(AddError::NotAvailableForProvidedInstances)
+        }
+    }
+
     fn try_add(self, rhs: Self) -> Result<Arrow<Point>,AddError> {
         if self.head == rhs.foot {
             Ok(Self::new(self.foot, rhs.head))
         } else {
-            Err(FloatOpError::operation_not_available().into())
+            Err(AddError::NotAvailableForProvidedInstances)
         }
     }
 }
 
 impl<Point:PartialEq> TrySub for Arrow<Point> {
     type Output=Self;
+    type Error=SubError;
+
+    fn is_subable_by(&self,rhs:&Self) -> Result<(),Self::Error> {
+        if self.head == rhs.head {
+            Ok(())
+        } else {
+            Err(SubError::NotAvailableForProvidedInstances)
+        }
+    }
+
     fn try_sub(self, rhs: Self) -> Result<Arrow<Point>,SubError> {
         if self.head == rhs.head {
             Ok(Self::new(self.foot, rhs.foot))
         } else {
-            Err(FloatOpError::operation_not_available().into())
+            Err(SubError::NotAvailableForProvidedInstances)
         }
     }
 }

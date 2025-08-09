@@ -427,6 +427,10 @@ macro_rules! quantity {
     
             impl<F:algebra_traits::RealNumber> algebra_traits::TryScalarDiv<F> for $dname<F> {
                 type Error=<Self as algebra_traits::TryDiv<F>>::Error;
+                fn is_scalar_divable_by(&self, rhs:&F) -> Result<(),Self::Error> {
+                    <Self as algebra_traits::TryDiv<F>>::is_divable_by(&self, rhs)
+                }
+
                 fn try_scalar_div(self, rhs:&F) -> Result<Self,Self::Error> {
                     <Self as algebra_traits::TryDiv<F>>::try_div(self, rhs.clone())
                 }

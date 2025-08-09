@@ -3,10 +3,10 @@ use std::ops::Neg;
 use algebra::Unit;
 use algebra_traits::Scalar;
 use container_traits::{TryAccept, Len, Get,  IntoInner};
-use matrix_traits::{matrix::AlgebraMatrix, ColVectorAnyConstruct, Matrix, MatrixConstructError, MatrixNotTall, MatrixNotWide, MatrixSquare, MatrixTall, MatrixTryConstruct, Transpose};
+use matrix_traits::{matrix::AlgebraMatrix, ColVectorTryConstruct, Matrix, MatrixConstructError, MatrixNotTall, MatrixNotWide, MatrixSquare, MatrixTall, MatrixTryConstruct, Transpose};
 
 use utils::kron_delta;
-
+use crate::RightTriangular;
 type U2=(usize,usize);
 
 #[derive(Clone, Debug, PartialEq,
@@ -17,7 +17,8 @@ type U2=(usize,usize);
          derive_more::AsRef,
          derive_more::Index,
          matrix_derive::Identity,
-         matrix_derive::MatrixMatrixProduct,
+         matrix_derive::ClosedMatrixMatrixProduct,
+         matrix_derive::MatrixMatrixProductRightTriangular,
          matrix_derive::Inherit)]
 pub struct Stiefel<M:Matrix>(M);
 
@@ -62,7 +63,7 @@ impl<F:Neg<Output=F>, M:MatrixTryConstruct<T=F>> Stiefel<M> {
     }
 }
 
-impl<F:Scalar, Col : ColVectorAnyConstruct<T=F>, M : AlgebraMatrix+MatrixTryConstruct<T=F,Col=Col>> TryFrom<Unit<Col>> for Stiefel<M> {
+impl<F:Scalar, Col : ColVectorTryConstruct<T=F>, M : AlgebraMatrix+MatrixTryConstruct<T=F,Col=Col>> TryFrom<Unit<Col>> for Stiefel<M> {
     type Error=Unit<Col>;
     fn try_from(value: Unit<Col>) -> Result<Self, Self::Error> {
         if M::try_accept((value.len(),1),|(i,_)|value.get(i).unwrap()).is_ok() {

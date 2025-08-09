@@ -1,4 +1,4 @@
-use nalgebra::{DMatrix,Scalar};
+use nalgebra::{DMatrix, Scalar};
 use crate::{for_dynamic::{Empty, OneElement}, OCTSize};
 
 type U2=(usize,usize);

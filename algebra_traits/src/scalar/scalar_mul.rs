@@ -38,22 +38,37 @@ impl_arr_vec!(ScalarDiv,scalar_div);
 
 pub trait TryScalarDiv<Field> : Sized {
     type Error;
+    fn is_scalar_divable_by(&self, f:&Field) -> Result<(),Self::Error>;
     fn try_scalar_div(self, f:&Field) -> Result<Self,Self::Error>;
 }
 
 impl<T:TryScalarDiv<F,Error=E>, E, F:Clone, const N:usize> TryScalarDiv<F> for [T;N]  {
     type Error=E;
+
+    fn is_scalar_divable_by(&self, f:&F) -> Result<(),E> {
+        for t in self {
+            t.is_scalar_divable_by(f)?
+        }
+        Ok(())
+    }
+
     fn try_scalar_div(self, f:&F) -> Result<Self,E> {
-        self.into_iter()
-            .map(|t|t.try_scalar_div(f))
-            .collect::<Result<Vec<T>,_>>()
-            .map(|v|v.try_into().ok().unwrap())
+        self.is_scalar_divable_by(f)?;
+        Ok(self.map(|t|t.try_scalar_div(f).ok().unwrap()))
     }
 }
 
 
 impl<T:TryScalarDiv<F,Error=E>, E, F:Clone> TryScalarDiv<F> for Vec<T> {
     type Error=E;
+
+    fn is_scalar_divable_by(&self, f:&F) -> Result<(),E> {
+        for t in self {
+            t.is_scalar_divable_by(f)?
+        }
+        Ok(())
+    }
+
     fn try_scalar_div(self, f:&F) -> Result<Self,E> {
         self.into_iter()
             .map(|t|t.try_scalar_div(f))

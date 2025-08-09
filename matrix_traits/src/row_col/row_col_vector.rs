@@ -2,13 +2,15 @@ use crate::{matrix_operations::Transpose, transpose::Transposed};
 use algebra::VectorGeneric;
 use container_traits::{Concatenated, LinearContainer, LinearContainerDynamic, LinearContainerMut, LinearContainerConstruct, LinearContainerTryConstruct};
 
+
+
 macro_rules! row_col_traits {
     ($r_or_c:ident) => {
         paste::paste!(
         pub trait [<$r_or_c Vector>] : Transpose + LinearContainer {}
 
-        pub trait [<$r_or_c VectorAnyConstruct>] : [<$r_or_c Vector>] + LinearContainerTryConstruct {}
-        impl<S:[<$r_or_c Vector>]+LinearContainerTryConstruct> [<$r_or_c VectorAnyConstruct>] for S {}
+        pub trait [<$r_or_c VectorTryConstruct>] : [<$r_or_c Vector>] + LinearContainerTryConstruct {}
+        impl<S:[<$r_or_c Vector>]+LinearContainerTryConstruct> [<$r_or_c VectorTryConstruct>] for S {}
 
         pub trait [<$r_or_c VectorConstruct>] : [<$r_or_c Vector>] + LinearContainerConstruct {}
         impl<S:[<$r_or_c Vector>]+LinearContainerConstruct> [<$r_or_c VectorConstruct>] for S {}

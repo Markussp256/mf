@@ -13,7 +13,7 @@ type U2=(usize,usize);
          matrix_derive::Identity,
          matrix_derive::Inherit,
          matrix_derive::ClosedTranspose,
-         matrix_derive::MatrixShape
+         matrix_derive::MatrixShape,
 )]
 pub struct Hermitian<M:MatrixSquare>(M) where M::T : Clone+ComplexNumber;
 

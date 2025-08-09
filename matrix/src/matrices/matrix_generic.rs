@@ -1,9 +1,10 @@
+use algebra_traits::{Conjugate, Scalar, TryScalarproduct};
 use num_traits::{One, Zero};
 
-use container_traits::{AnyFromIterator, AnyMap, ChangeT, CommonLengthError, FromFn, Get, IndexedIter,  IntoIndexedIter, IntoIter, ItemT, Iter, Len, LenTooSmallError, LinearContainerConstructError, Map, NumberOfDegreesOfFreedom, OCTSize, Size, SizeFromORef, TryAccept, TryCommonLength, TryFromFn, TryIntoElement};
-use matrix_traits::{row_col::*, AnyMatrixVectorProduct, AnyVectorVectorProduct, AsBaseMatrix, Identity, IntoBaseMatrix, Matrix, MatrixConstructError, MatrixTryConstruct, MatrixVectorProduct, Transpose};
+use container_traits::*;
+use matrix_traits::*;
 use std::fmt::Display;
-use std::ops::{Index,IndexMut};
+use std::ops::{Mul,Index,IndexMut};
 use utils::iter::IntoExactSizeIterator;
 
 type U2=(usize,usize);
@@ -104,9 +105,9 @@ impl<Row : Display,
 }
 
 impl<F,
-     Row : RowVectorAnyConstruct<T=F>,
-     Col : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-     C   : 'static+ColVectorAnyConstruct<T=Row>> container_traits::Get<U2,F> for MatrixGeneric<Row,Col> {
+     Row : RowVectorTryConstruct<T=F>,
+     Col : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+     C   : 'static+ColVectorTryConstruct<T=Row>> container_traits::Get<U2,F> for MatrixGeneric<Row,Col> {
     fn get(&self, (i,j):U2) -> Option<&F> {
         self.0
             .get(i)
@@ -115,27 +116,27 @@ impl<F,
 }
 
 impl<F,
-     Row  : RowVectorAnyConstruct<T=F>,
-     Col  : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-     C    : 'static+ColVectorAnyConstruct<T=Row>> Iter<F> for MatrixGeneric<Row,Col> {
+     Row  : RowVectorTryConstruct<T=F>,
+     Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+     C    : 'static+ColVectorTryConstruct<T=Row>> Iter<F> for MatrixGeneric<Row,Col> {
     fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a F> where F:'a {
         container_traits::impl_iter_from_get(self, self.size_private())
     }
 }
 
 impl<F,
-Row  : RowVectorAnyConstruct<T=F>,
-Col  : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-C    : 'static+ColVectorAnyConstruct<T=Row>> IndexedIter<U2,F> for MatrixGeneric<Row,Col> {
+Row  : RowVectorTryConstruct<T=F>,
+Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+C    : 'static+ColVectorTryConstruct<T=Row>> IndexedIter<U2,F> for MatrixGeneric<Row,Col> {
     fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a F)> where F:'a {
         container_traits::indexed_iter::impl_indexed_iter_from_get(self, self.size_private())
     }
 }
 
 impl<F,
-Row  : RowVectorAnyConstruct<T=F>,
-Col  : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-C    : 'static+ColVectorAnyConstruct<T=Row>> TryIntoElement<U2,F> for MatrixGeneric<Row,Col> {
+Row  : RowVectorTryConstruct<T=F>,
+Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+C    : 'static+ColVectorTryConstruct<T=Row>> TryIntoElement<U2,F> for MatrixGeneric<Row,Col> {
     fn try_into_element(self,index:U2) -> Option<F> {
         self.0
             .try_into_element(index.0)
@@ -144,9 +145,9 @@ C    : 'static+ColVectorAnyConstruct<T=Row>> TryIntoElement<U2,F> for MatrixGene
 }
 
 impl<F,
-Row  : RowVectorAnyConstruct<T=F>,
-Col  : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-C    : 'static+ColVectorAnyConstruct<T=Row>> IntoIter<F> for MatrixGeneric<Row,Col> {
+Row  : RowVectorTryConstruct<T=F>,
+Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+C    : 'static+ColVectorTryConstruct<T=Row>> IntoIter<F> for MatrixGeneric<Row,Col> {
     fn into_iterator(self) -> impl ExactSizeIterator<Item=F> {
         let len=self.len_private();
         self.0
@@ -158,9 +159,9 @@ C    : 'static+ColVectorAnyConstruct<T=Row>> IntoIter<F> for MatrixGeneric<Row,C
 }
 
 impl<F,
-Row  : RowVectorAnyConstruct<T=F>,
-Col  : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-C    : 'static+ColVectorAnyConstruct<T=Row>> IntoIndexedIter<U2,F> for MatrixGeneric<Row,Col> {
+Row  : RowVectorTryConstruct<T=F>,
+Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+C    : 'static+ColVectorTryConstruct<T=Row>> IntoIndexedIter<U2,F> for MatrixGeneric<Row,Col> {
     fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(U2,F)> {
         let len=self.len_private();
         self.0
@@ -173,18 +174,18 @@ C    : 'static+ColVectorAnyConstruct<T=Row>> IntoIndexedIter<U2,F> for MatrixGen
 }
 
 impl<F,
-     Row  : RowVectorAnyConstruct<T=F>,
-     Col  : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-     C    : 'static+ColVectorAnyConstruct<T=Row>> Size<U2> for MatrixGeneric<Row,Col> {
+     Row  : RowVectorTryConstruct<T=F>,
+     Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+     C    : 'static+ColVectorTryConstruct<T=Row>> Size<U2> for MatrixGeneric<Row,Col> {
     fn size(&self) -> U2 {
         self.size_private()
     }
 }
 
 impl<F,
-     Row  : RowVectorAnyConstruct<T=F>,
-     Col  : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-     C    : 'static+ColVectorAnyConstruct<T=Row>> OCTSize<U2> for MatrixGeneric<Row,Col> {
+     Row  : RowVectorTryConstruct<T=F>,
+     Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+     C    : 'static+ColVectorTryConstruct<T=Row>> OCTSize<U2> for MatrixGeneric<Row,Col> {
     const OCTSIZE:Option<U2> = match (Row::OCTSIZE, Col::OCTSIZE) {
         (Some(r),Some(c)) => Some((r,c)),
         _ => None
@@ -192,18 +193,18 @@ impl<F,
 }
 
 impl<F,
-     Row  : RowVectorAnyConstruct<T=F>,
-     Col  : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-     C    : 'static+ColVectorAnyConstruct<T=Row>> NumberOfDegreesOfFreedom<F> for MatrixGeneric<Row,Col> {
+     Row  : RowVectorTryConstruct<T=F>,
+     Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+     C    : 'static+ColVectorTryConstruct<T=Row>> NumberOfDegreesOfFreedom<F> for MatrixGeneric<Row,Col> {
     fn ndofs(&self) -> usize {
         self.len_private()    
     }
 }
 
 impl<F,
-     Row  : RowVectorAnyConstruct<T=F>,
-     Col  : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-     C    : 'static+ColVectorAnyConstruct<T=Row>> Matrix for MatrixGeneric<Row,Col> {
+     Row  : RowVectorTryConstruct<T=F>,
+     Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+     C    : 'static+ColVectorTryConstruct<T=Row>> Matrix for MatrixGeneric<Row,Col> {
     type Row=Row;
     type Col=Col;
 
@@ -220,16 +221,25 @@ impl<F,
                 .zip(row.into_iterator())
                 .for_each(|(c,ri)|c.push(ri));
         }
-        let cols=cols.map(|c|Self::Col::any_from_vec(c).unwrap());
+        let cols=cols.map(|c|Self::Col::try_from_vec(c).unwrap());
         cols.into_exact_size_iter(ncols)
     }
 }
+
+impl<F    : Clone+Scalar,
+     Row  : RowVectorTryConstruct<T=F>,
+     Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>+TryScalarproduct<TryScProdT=F>,
+     C    : 'static+ColVectorTryConstruct<T=Row>+Conjugate> AlgebraMatrix for MatrixGeneric<Row,Col> {
+    algebra_matrix_impl!();
+}
+
+
 
 impl<Row : Transpose<Output=RowT>,
      Col : Transpose<Output=ColT>+ChangeT<Row>,
      ColT,
      RowT : ChangeT<ColT,Output=C2>,
-     C2 : ColVectorAnyConstruct<T=ColT>>
+     C2 : ColVectorTryConstruct<T=ColT>>
     Transpose for MatrixGeneric<Row,Col>
     where                Self : Matrix<Row=Row,  Col=Col>, 
      MatrixGeneric<ColT,RowT> : Matrix<Row=ColT, Col=RowT>{
@@ -239,23 +249,22 @@ impl<Row : Transpose<Output=RowT>,
             self.into_cols()
                 .map(|c|c.transpose())
                 .collect();
-        MatrixGeneric::from_col_of_rows(C2::any_from_vec(cols_transposed).unwrap())
+        MatrixGeneric::from_col_of_rows(C2::try_from_vec(cols_transposed).unwrap())
     }
 }
 
 impl<F,
-     Row : RowVectorAnyConstruct<T=F>,
-     Col : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-     C   : ColVectorAnyConstruct<T=Row>> TryAccept<U2,F,MatrixConstructError> for MatrixGeneric<Row,Col> where Self : Matrix<T=F,Row=Row,Col=Col> {    
+     Row : RowVectorTryConstruct<T=F>,
+     Col : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+     C   : ColVectorTryConstruct<T=Row>> TryAccept<U2,F,MatrixConstructError> for MatrixGeneric<Row,Col> where Self : Matrix<T=F,Row=Row,Col=Col> {    
     
     fn try_accept<'a>(size:U2, f:impl Fn(U2) -> &'a F) -> Result<(),MatrixConstructError> where F : 'a {
-        let (nrows,ncols)=id.size();
-        for i in 0..nrows {
-            Row::try_accept(InstanceStructureDescriptor::Size(ncols),|j|f((i,j)))
+        for i in 0..size.0 {
+            Row::try_accept(size.1,|j|f((i,j)))
             .map_err(|_|MatrixConstructError::DataDoesNotSatisfyRequiredPropertiesOfMatrixType)?;
         }
-        for j in 0..ncols {
-            Col::try_accept(InstanceStructureDescriptor::Size(nrows),|i|f((i,j)))
+        for j in 0..size.1 {
+            Col::try_accept(size.0,|i|f((i,j)))
             .map_err(|_|MatrixConstructError::DataDoesNotSatisfyRequiredPropertiesOfMatrixType)?;
         }
         Ok(())
@@ -263,28 +272,25 @@ impl<F,
 }
 
 impl<F,
-     Row : RowVectorAnyConstruct<T=F>,
-     Col : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-     C   : ColVectorAnyConstruct<T=Row>> TryFromFn<U2,F,MatrixConstructError> for MatrixGeneric<Row,Col> where Self : Matrix<T=F,Row=Row,Col=Col> {
+     Row : RowVectorTryConstruct<T=F>,
+     Col : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+     C   : ColVectorTryConstruct<T=Row>> TryFromFn<U2,F,MatrixConstructError> for MatrixGeneric<Row,Col> where Self : Matrix<T=F,Row=Row,Col=Col> {
     fn try_from_fn(size:U2, f:impl Fn(U2) -> F) -> Result<Self,MatrixConstructError> {
-        let (nrows,ncols)=id.size();
-        let idc=InstanceStructureDescriptor::Size(nrows);
-        let idr=||InstanceStructureDescriptor::Size(ncols);
-        let orow=|i:usize|Row::try_from_fn(idr(),|j|f((i,j)));
-        for i in 0..nrows {
+        let orow=|i:usize|Row::try_from_fn(size.1,|j|f((i,j)));
+        for i in 0..size.0 {
             orow(i)
                 .map_err(|_|MatrixConstructError::DataDoesNotSatisfyRequiredPropertiesOfMatrixType)?;
         }
-        C::try_from_fn(idc,|i| orow(i).unwrap())
+        C::try_from_fn(size.1,|i| orow(i).unwrap())
             .map(|c|Self(c))
             .map_err(|_|MatrixConstructError::DataDoesNotSatisfyRequiredPropertiesOfMatrixType)
     }
 }
 
 impl<F,
-     Row : RowVectorAnyConstruct<T=F>,
-     Col : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-     C   : ColVectorAnyConstruct<T=Row>> AnyFromIterator<F,MatrixConstructError> for MatrixGeneric<Row,Col> where Self : Matrix<T=F,Row=Row,Col=Col> {
+     Row : RowVectorTryConstruct<T=F>,
+     Col : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+     C   : ColVectorTryConstruct<T=Row>> AnyFromIterator<F,MatrixConstructError> for MatrixGeneric<Row,Col> where Self : Matrix<T=F,Row=Row,Col=Col> {
     fn any_take_away<I:    Iterator<Item=F>>(oref:Option<&Self>, iter:& mut I) -> Result<Self,MatrixConstructError> {
         let sz=Self::size_from_oref(oref);
         let len=sz.0*sz.1;
@@ -301,9 +307,9 @@ impl<F,
 }
 
 impl<F,
-     Row : RowVectorAnyConstruct<T=F>,
-     Col : ColVectorAnyConstruct<T=F>+ChangeT<Row,Output=C>,
-     C   : ColVectorAnyConstruct<T=Row>> MatrixTryConstruct for MatrixGeneric<Row,Col> where Self : Matrix<T=F,Row=Row,Col=Col> {
+     Row : RowVectorTryConstruct<T=F>,
+     Col : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+     C   : ColVectorTryConstruct<T=Row>> MatrixTryConstruct for MatrixGeneric<Row,Col> where Self : Matrix<T=F,Row=Row,Col=Col> {
     fn try_from_rows(rows:impl ExactSizeIterator<Item=Self::Row>) -> Result<Self,MatrixConstructError> {
         let rows:Vec<Self::Row>=rows.collect();
         if let Err(CommonLengthError::NotAllHaveSameLength(vs)) = Self::Row::try_common_length(rows.iter()) {
@@ -331,28 +337,28 @@ impl<F,
 }
 
 impl<F,F2,
-     Row : RowVectorAnyConstruct<T=F>+AnyMap<F,F2,LinearContainerConstructError,Output=Row2>,
-     Row2: RowVectorAnyConstruct<T=F2>,
-     Col : ColVectorAnyConstruct<T=F>+AnyMap<F,F2,LinearContainerConstructError,Output=Col2>+ChangeT<Row,Output=C>,
-     Col2: ColVectorAnyConstruct<T=F>+ChangeT<Row2,Output=C2>,
-     C   : ColVectorAnyConstruct<T=Row>+AnyMap<Row,Row2,LinearContainerConstructError,Output=C2>,
-     C2  : ColVectorAnyConstruct<T=Row2>> AnyMap<F,F2,MatrixConstructError> for MatrixGeneric<Row,Col> where Self : Matrix<T=F,Row=Row,Col=Col> {    
+     Row : RowVectorTryConstruct<T=F>+TryMap<F,F2,LinearContainerConstructError,Output=Row2>,
+     Row2: RowVectorTryConstruct<T=F2>,
+     Col : ColVectorTryConstruct<T=F>+TryMap<F,F2,LinearContainerConstructError,Output=Col2>+ChangeT<Row,Output=C>,
+     Col2: ColVectorTryConstruct<T=F>+ChangeT<Row2,Output=C2>,
+     C   : ColVectorTryConstruct<T=Row>+TryMap<Row,Row2,LinearContainerConstructError,Output=C2>,
+     C2  : ColVectorTryConstruct<T=Row2>> TryMap<F,F2,MatrixConstructError> for MatrixGeneric<Row,Col> where Self : Matrix<T=F,Row=Row,Col=Col> {    
     type Output=MatrixGeneric<Row2,Col2>;
-    fn any_map(self,f:impl Fn(F) -> F2) -> Result<Self::Output,MatrixConstructError> {
+    fn try_map(self,f:impl Fn(F) -> F2) -> Result<Self::Output,MatrixConstructError> {
         Ok(MatrixGeneric(
             self.0
-                .any_map(|r:Row|r.any_map(&f).ok().unwrap())
+                .try_map(|r:Row|r.try_map(&f).ok().unwrap())
                 .unwrap()))
     }
 }
 
 impl<F, FOut,
-     Row    : RowVectorAnyConstruct<T=F>+Map<F,FOut,Output=RowOut>,
-     RowOut : RowVectorAnyConstruct<T=FOut>,
-     Col    : ColVectorAnyConstruct<T=F>+Map<F,FOut,Output=ColOut>+ChangeT<Row,Output=C>,
-     ColOut : ColVectorAnyConstruct<T=FOut>+ChangeT<RowOut,Output=COut>,
-     C      : 'static+ColVectorAnyConstruct<T=Row>,
-     COut   : 'static+ColVectorAnyConstruct<T=RowOut>> Map<F,FOut> for MatrixGeneric<Row,Col> {
+     Row    : RowVectorTryConstruct<T=F>+Map<F,FOut,Output=RowOut>,
+     RowOut : RowVectorTryConstruct<T=FOut>,
+     Col    : ColVectorTryConstruct<T=F>+Map<F,FOut,Output=ColOut>+ChangeT<Row,Output=C>,
+     ColOut : ColVectorTryConstruct<T=FOut>+ChangeT<RowOut,Output=COut>,
+     C      : 'static+ColVectorTryConstruct<T=Row>,
+     COut   : 'static+ColVectorTryConstruct<T=RowOut>> Map<F,FOut> for MatrixGeneric<Row,Col> {
         type Output=MatrixGeneric<RowOut,ColOut>;
      
         fn map(self, f:impl Fn(F) -> FOut) -> Self::Output {
@@ -401,20 +407,19 @@ impl<F,
      Col : ColVectorConstruct<T=F>+ChangeT<Row,Output=C>,
      C   : 'static+ColVectorConstruct<T=Row>> FromFn<U2,F> for MatrixGeneric<Row,Col> {
         fn from_fn(size:U2,f:impl Fn(U2) -> F) -> Self {
-            let (nrows,ncols)=id.size();
-            Self(C::from_fn(InstanceStructureDescriptor::Size(nrows),
-                |i|Row::from_fn(InstanceStructureDescriptor::Size(ncols),|j|f((i,j)))))
+            Self(C::from_fn(size.0,
+                |i|Row::from_fn(size.1,|j|f((i,j)))))
         }
 }
 
 impl<F   : Zero+One,
-     Row : RowVectorConstruct<T=F>,
-     Col : ColVectorConstruct<T=F>+ChangeT<Row,Output=C>,
-     C   : 'static+ColVectorConstruct<T=Row>> Identity for MatrixGeneric<Row,Col> {
+     Row : RowVectorTryConstruct<T=F>+Transpose<Output=Col>,
+     Col : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
+     C   : 'static+ColVectorTryConstruct<T=Row>> Identity for MatrixGeneric<Row,Col> {
     fn identity(n:usize) -> Self {
-        Self::from_fn(
-            InstanceStructureDescriptor::Size((n,n)),
-            |(i,j)|utils::kron_delta(i, j))
+        Self::try_from_fn(
+            (n,n),
+            |(i,j)|utils::kron_delta(i, j)).unwrap()
     }
 }
 
@@ -438,31 +443,31 @@ impl<F,
 }
 
 
-impl<Row : AnyVectorVectorProduct<Rhs,Output=F3>,
+impl<Row : TryVectorVectorProduct<Rhs,Output=F3>,
+     F3  : Zero,
      Rhs : ColVector+Clone,
-     Col : ChangeT<Row,Output = C>+ChangeT<F3,Output=Out>,
-     Out : ColVector,
-     C> AnyMatrixVectorProduct<Rhs> for MatrixGeneric<Row,Col> where Self : Matrix {
+     Col : ColVector<T=Row::T>+ChangeT<Row>+ChangeT<F3,Output=Out>,
+     Out : ColVectorTryConstruct<T=F3>> TryMatrixVectorProduct<Rhs> for MatrixGeneric<Row,Col> where Self : Matrix<Row=Row,Col=Col> { // where Self : Matrix<Row=Row,Col=Col>
         type Output=Out;
-        fn any_matrix_vector_product(self, rhs:Rhs) -> Option<Out> {
-            any_matrix_vector_product_impl(self,rhs)
+        fn try_matrix_vector_product(self, rhs:Rhs) -> Option<Out> {
+            try_matrix_vector_product_impl(self,rhs)
         }
      }
 
 impl<Row1 : RowVector<T=F1>,
-     Col1 : ColVector<T=F1>+ChangeT<Row1,Output = C1>+ChangeT<F3,Output=Col3>,
-     C1,
+     Col1 : ColVector<T=F1>+ChangeT<F3,Output=Col3>+ChangeT<Row1>,
      F1   : Mul<F2,Output=F3>, F2, F3:Zero,
      Row2 : RowVector<T=F2>+ChangeT<F3,Output=Row3>,
-     Col2 : ColVector<Row2,Output = C2>,
-     C2,
+     Col2 : ColVector<T=F2>+ChangeT<Row2>,
      Row3 : RowVector<T=F3>,
-     Col3 : ColVector<Row2,Output = C3>,
-     C3> AnyMatrixMatrixProduct<MatrixGeneric<Row2,Col2>> for MatrixGeneric<Row1,Col1>
-     where Self : AnyMatrixVectorProduct<Col2,Output=Col3> {
-        type Output=Out;
-        fn any_matrix_matrix_product(self, rhs:Rhs) -> Option<Out> {
-            any_matrix_matrix_product_impl(self,rhs)
+     Col3 : ColVector<T=F3>+ChangeT<Row3>> TryMatrixMatrixProduct<MatrixGeneric<Row2,Col2>> for MatrixGeneric<Row1,Col1>
+     where 
+     MatrixGeneric<Row1,Col1> : Matrix<T=F1,Row=Row1,Col=Col1>+TryMatrixVectorProduct<Col2,Output=Col3>+Clone,
+     MatrixGeneric<Row2,Col2> : Matrix<T=F2,Row=Row2,Col=Col2>,
+     MatrixGeneric<Row3,Col3> : MatrixTryConstruct<T=F3,Row=Row3,Col=Col3> {
+        type Output=MatrixGeneric<Row3,Col3>;
+        fn try_matrix_matrix_product(self, rhs:MatrixGeneric<Row2,Col2>) -> Option<MatrixGeneric<Row3,Col3>> {
+            try_matrix_matrix_product_impl(self,rhs)
         }
 }
 

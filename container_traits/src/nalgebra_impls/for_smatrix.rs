@@ -1,5 +1,5 @@
 use nalgebra::{Scalar, SMatrix};
-use crate::{for_static::*, ContainerConstructError, LenTooSmallError, Map, OCTSize};
+use crate::{for_static::*, ContainerConstructError, LenTooSmallError, OCTSize};
 
 type U2=(usize,usize);
 
@@ -48,14 +48,4 @@ impl<T : Scalar,
     }
 
     crate::try_from_iter_impl!(T, ContainerConstructError<U2>);
-}
-
-
-impl<T : Scalar,
-     const M:usize,
-     const N:usize,
-     const O:usize,
-     const P:usize> Map<SMatrix<T,M,N>,SMatrix<T,M,N>>  for SMatrix<T,O,P> {
-    
-    
 }

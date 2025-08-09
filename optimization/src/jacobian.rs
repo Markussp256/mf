@@ -1,6 +1,6 @@
 use super::{from_dvec, into_dvec, FiniteDifference};
 
-use container_traits::{for_dynamic::Len, AnyParameters, ContainerConstructError, IntoParameters};
+use container_traits::{Len, AnyParameters, ContainerConstructError, IntoParameters};
 
 use algebra_traits::Scalar;
 use algebra::VectorDyn;
@@ -65,7 +65,7 @@ use matrix_traits::TryMatrixVectorProduct;
 fn test_jacobian_id() {
     use algebra_traits::TrySub;
     use algebra::Vector3;
-    use matrix_traits::MatrixConstruct;
+    use matrix_traits::Identity;
     let f = |x: Vector3<f64>| x.clone();
     let jac = jacobian(f, Vector3::from([1.0, 2.3, 4.5]), FiniteDifference::default());
     assert!(jac.try_sub(MatrixDyn::<f64>::identity(3)).unwrap()
@@ -74,11 +74,11 @@ fn test_jacobian_id() {
 
 #[test]
 fn test_jacobian_lin() {
-    use algebra::{Vector2,Vector3};
+    use algebra::Vector3;
     use matrix::Matrix;
     use matrix_traits::TryFromMatrix;
     let m:Matrix<f64,2,3> = matrix::matrix![1.0,2.0,3.0;4.0,5.0,6.0];
-    let f = |x: Vector3<f64>|  m.clone().try_matrix_vector_product::<Vector2<f64>>(x).unwrap();
+    let f = |x: Vector3<f64>|  m.clone().try_matrix_vector_product(x).unwrap();
     let jac=jacobian(f, Vector3::<f64>::from([1.0, 2.3, 4.5]), FiniteDifference::default());
     let jac = Matrix::<f64,2,3>::try_from_matrix(jac).ok().unwrap();
     assert!((jac - m).try_max_norm_of_entries().unwrap() < 1e-6);

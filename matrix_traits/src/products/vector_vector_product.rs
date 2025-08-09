@@ -15,15 +15,15 @@ use crate::{ColVector, RowVector};
 // we do not implement it directly (provided method) because that would
 // put many constraints
 
-pub fn any_vector_vector_product_impl
+pub fn try_vector_vector_product_impl
     <F:Mul<F2,Output=F3>,
      F2,
      F3:Zero,
      Lhs:RowVector<T=F>,
      Rhs:ColVector<T=F2>>(lhs:Lhs,rhs:Rhs) -> Option<F3> {
         (lhs.len() == rhs.len()).then(||
-              lhs.into_vec().into_iter()
-                .zip(rhs.into_vec().into_iter())
+              lhs.into_iterator()
+                .zip(rhs.into_iterator())
                 .map(|(ai,bi)|ai*bi)
                 .into_sum())
 }
@@ -37,13 +37,6 @@ pub trait TryVectorVectorProduct<Rhs : ColVector> : RowVector {
     type Output;
     fn try_vector_vector_product(self, rhs:Rhs) -> Option<<Self as TryVectorVectorProduct<Rhs>>::Output>;
 }
-
-
-pub trait AnyVectorVectorProduct<Rhs : ColVector> : RowVector {
-    type Output;
-    fn any_vector_vector_product(self, rhs: Rhs) -> Option<<Self as AnyVectorVectorProduct<Rhs>>::Output>;
-}
-
 
 
 // macro_rules! row_col_vector {

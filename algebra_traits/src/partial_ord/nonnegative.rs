@@ -1,4 +1,4 @@
-use std::fmt::{Debug,Display};
+use std::fmt::Display;
 use crate::{metric::TryDistance, TryAdd, TrySub, Distance, Max, Sqrt, TryLog, TryPow, TrySqrt};
 
 use std::ops::{Add,Div,Mul,Neg,Sub};
@@ -208,21 +208,23 @@ impl<T:Display> Display for Nonnegative<T> {
 }
 
 // assumes the only reason try_sqrt doesnt work is because it can be negative
-impl<T:TrySqrt<Error=E>,E:Debug> Sqrt for Nonnegative<T> {
+impl<T:TrySqrt> Sqrt for Nonnegative<T> {
     type Output=<T as TrySqrt>::Output;
     fn sqrt(self) -> Self::Output {
         self.0
             .try_sqrt()
+            .ok()
             .unwrap()
     }
 }
 
-impl<T:TryPow<T,Error=E>,E:Debug> Pow<Nonnegative<T>> for Nonnegative<T> {
+impl<T:TryPow<T>> Pow<Nonnegative<T>> for Nonnegative<T> {
     type Output=Nonnegative<<T as TryPow<T>>::Output>;
     fn pow(self, t:Nonnegative<T>) -> Self::Output {
         Nonnegative(
             self.0
                 .try_pow(t.0)
+                .ok()
                 .unwrap())
     }
 }

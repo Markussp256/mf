@@ -1,6 +1,6 @@
 use container_traits::{AnyFromIterator, Container, IntoIter, Map, TryIntoElement};
 use num_traits::{Zero,One};
-use algebra_traits::{TryScalarproduct, Conjugate, Distance, Scalar, Tolerance};
+use algebra_traits::{Conjugate, Distance, Tolerance};
 use crate::row_col::*;
 use super::MatrixTryConstruct;
 use utils::{iter::IntoExactSizeIterator, kronecker_delta::kron_delta};
@@ -9,8 +9,8 @@ type U2=(usize,usize);
 
 // can be dynamic or static sized
 pub trait Matrix : Container<U2> {
-    type Row:RowVectorAnyConstruct<T=Self::T>;
-    type Col:ColVectorAnyConstruct<T=Self::T>;
+    type Row:RowVectorTryConstruct<T=Self::T>;
+    type Col:ColVectorTryConstruct<T=Self::T>;
 
     // not possible because matrix is maybe not saved rowwise
     // fn rows(&self) -> impl Iterator<Item=&Self::Row>;
@@ -122,26 +122,38 @@ pub fn impl_map
      Row : RowVector<T=F>+Map<F,F2,Output=RowOut>, 
      F2,
      Out:MatrixTryConstruct<T=F2,Row=RowOut>,
-     RowOut:RowVectorAnyConstruct<T=F2>>(m:M,f:impl Fn(F) -> F2) -> Out {
+     RowOut:RowVectorTryConstruct<T=F2>>(m:M,f:impl Fn(F) -> F2) -> Out {
         Out::try_from_rows(
             m.into_rows()
                 .map(|r|r.map(&f))
         ).unwrap()
 }
 
-pub trait AlgebraMatrix
-    : Matrix
-     +Conjugate {
+pub trait AlgebraMatrix : Matrix + Conjugate {
     // fails if index out of bounds
     fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Option<Self::T> where Self::T:Clone;
 }
 
-impl<F : Scalar,
-     M : Matrix<T=F>
-        +Conjugate> AlgebraMatrix for M where Self::Col : TryScalarproduct<TryScProdT = Self::T> {
-            fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Option<Self::T> where Self::T:Clone,  {
-                let c0=self.col(j0)?;
-                let c1=self.col(j1)?;
-                c0.try_scalar_product(c1)
-            }
+// requires Self::Col : TryScalarproduct<TryScProdT = Self::T>
+#[macro_export]
+macro_rules! algebra_matrix_impl {
+    () => {
+        fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Option<<Self as container_traits::ItemT>::T> where <Self as container_traits::ItemT>::T : Clone
+        {
+            <Self::Col as algebra_traits::TryScalarproduct>::try_scalar_product(
+                self.col(j0)?,
+                self.col(j1)?)
         }
+    };
+}
+
+
+// impl<F : Scalar,
+//      M : Matrix<T=F>
+//         +Conjugate> AlgebraMatrix for M where Self::Col : TryScalarproduct<TryScProdT = Self::T> {
+//             fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Option<Self::T> where Self::T:Clone,  {
+//                 let c0=self.col(j0)?;
+//                 let c1=self.col(j1)?;
+//                 c0.try_scalar_product(c1)
+//             }
+//         }

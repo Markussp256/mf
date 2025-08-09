@@ -4,7 +4,7 @@ pub use qr_def::{QR, UnitaryQR, OrthogonalQR};
 pub mod householder_trafo;
 pub use householder_trafo::HouseholderTrafoGeneric;
 
-mod qr_impl_base;
-use qr_impl_base::qr_impl_base;
+pub mod qr_impl_base;
+pub use qr_impl_base::QRImplBase;
 
 mod qr_impl;

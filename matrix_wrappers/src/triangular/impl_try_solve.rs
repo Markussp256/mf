@@ -1,9 +1,8 @@
 use std::ops::{Mul, Sub};
-use std::fmt::Debug;
 use num_traits::Zero;
 use algebra_traits::{ClosedTrySub, TryDiv, TrySolve};
 use container_traits::{ChangeT, Get, IntoIter, IntoSum, LensNotEqualError, LinearContainerTryConstruct};
-use matrix_traits::{TryMatrixVectorProduct, ColVector, ColVectorAnyConstruct, Matrix, MatrixNotRegularError, MatrixSolveError};
+use matrix_traits::{TryMatrixVectorProduct, ColVector, ColVectorTryConstruct, Matrix, MatrixNotRegularError, MatrixSolveError};
 
 use super::RightTriangular;
 
@@ -46,13 +45,13 @@ impl<F   : Clone+Zero+Mul<F2,Output=F3>,
             // let desired=b.get(i).unwrap().clone();
             x[i]=(bi-current).try_div(aii).map_err(|_|MatrixNotRegularError)?;
         }
-        Ok(Out::any_from_vec(x).unwrap())
+        Ok(Out::try_from_vec(x).unwrap())
     }
 }
 
 impl<M   : Matrix,
-     Rhs : Clone+ClosedTrySub<Error=ERhs>+ColVectorAnyConstruct, ERhs:Debug,
-     Out : Clone+ClosedTrySub<Error=EOut>+ColVector, EOut:Debug>
+     Rhs : Clone+ClosedTrySub+ColVectorTryConstruct,
+     Out : Clone+ClosedTrySub+ColVector>
         TrySolve<Rhs,MatrixSolveError> for RightTriangular<M>
      where  M::T : Zero+Mul<Out::T,Output=Rhs::T>,
             Self : TrySolveApprox<Rhs,Output=Out>
@@ -64,8 +63,8 @@ impl<M   : Matrix,
         let mut x=self.clone().try_solve_approx(rhs.clone())?;
         for _ in 0..5 {
             let res:Rhs=self.clone().try_matrix_vector_product(x.clone()).unwrap()
-                            .try_sub(rhs.clone()).unwrap();
-            x=x.try_sub(self.clone().try_solve_approx(res)?).unwrap();
+                            .try_sub(rhs.clone()).ok().unwrap();
+            x=x.try_sub(self.clone().try_solve_approx(res)?).ok().unwrap();
         }
         Ok(x)
     }

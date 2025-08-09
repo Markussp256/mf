@@ -6,14 +6,14 @@ use matrix_wrappers::{Hermitian, Symmetric, orthogonality::*};
 
 use utils::kronecker_delta::kron_delta;
 
-use matrix_traits::{any_matrix_matrix_product_impl, AlgebraMatrix, AnyMatrixMatrixProduct, AnyMatrixVectorProduct, AsBaseMatrix, ColVector, ColVectorAnyConstruct, ConjugateTranspose, IntoBaseMatrix, Matrix, MatrixNotTall, MatrixNotWide, MatrixSquare, MatrixSquareTryConstruct, MatrixTryConstruct, RowVector, RowVectorAnyConstruct, Transpose, TryFromMatrix, TryMatrixMatrixProduct, TryMatrixVectorProduct};
+use matrix_traits::{try_matrix_matrix_product_impl, AlgebraMatrix, TryMatrixMatrixProduct, TryMatrixVectorProduct, AsBaseMatrix, ColVector, ColVectorTryConstruct, ConjugateTranspose, IntoBaseMatrix, Matrix, MatrixNotTall, MatrixNotWide, MatrixSquare, MatrixSquareTryConstruct, MatrixTryConstruct, RowVector, RowVectorTryConstruct, Transpose, TryFromMatrix};
 use cachingmap::CachingMap;
 
 type U2=(usize,usize);
 
 #[derive(Clone,
          Debug)]
-pub struct HouseholderTrafoGeneric<Col:ColVector>{
+pub struct HouseholderTrafoGeneric<Col:ColVector> {
     u:Unit<Col>, // trafo is x -> x - 2 * <x,u> *u
     a:CachingMap<U2,Col::T> // cashed matrix values
 }
@@ -127,7 +127,7 @@ impl<F   : Clone+Scalar,
 }
 
 impl<F   : Clone+Scalar,
-     Col : ColVectorAnyConstruct<T=F>> IntoIndexedIter<U2,F> for HouseholderTrafoGeneric<Col> {
+     Col : ColVectorTryConstruct<T=F>> IntoIndexedIter<U2,F> for HouseholderTrafoGeneric<Col> {
     fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(U2,F)> {
         let vs:Vec<(U2,F)>=
             self.indexed_iter()
@@ -138,7 +138,7 @@ impl<F   : Clone+Scalar,
 }
 
 impl<F   : Clone+Scalar,
-     Col : ColVectorAnyConstruct<T=F>> Size<U2> for HouseholderTrafoGeneric<Col> {
+     Col : ColVectorTryConstruct<T=F>> Size<U2> for HouseholderTrafoGeneric<Col> {
     fn size(&self) -> U2 {
         let n=self.n();
         (n,n)
@@ -146,8 +146,8 @@ impl<F   : Clone+Scalar,
 }
 
 impl<F   : Clone+Scalar,
-     Row : RowVectorAnyConstruct<T=F>+Transpose<Output=Col>,
-     Col : ColVectorAnyConstruct<T=F>+Transpose<Output=Row>> OCTSize<U2> for HouseholderTrafoGeneric<Col> {
+     Row : RowVectorTryConstruct<T=F>+Transpose<Output=Col>,
+     Col : ColVectorTryConstruct<T=F>+Transpose<Output=Row>> OCTSize<U2> for HouseholderTrafoGeneric<Col> {
     const OCTSIZE:Option<U2> = match Row::OCTSIZE {
         Some(n) => Some((n,n)),
         None => None
@@ -155,40 +155,38 @@ impl<F   : Clone+Scalar,
 }
 
 impl<F   : Clone+Scalar,
-     Col : ColVectorAnyConstruct<T=F>> NumberOfDegreesOfFreedom<F> for HouseholderTrafoGeneric<Col> {
+     Col : ColVectorTryConstruct<T=F>> NumberOfDegreesOfFreedom<F> for HouseholderTrafoGeneric<Col> {
     fn ndofs(&self) -> usize {
         let n=self.n();
         n*n
     }
 }
 
+// RowVectorTryConstruct<T=F>+
+// ColVectorTryConstruct<T=F>+
 
 impl<F   : Clone+Scalar,
-     Row : RowVectorAnyConstruct<T=F>+Transpose<Output=Col>,
-     Col : ColVectorAnyConstruct<T=F>+Transpose<Output=Row>> Matrix for HouseholderTrafoGeneric<Col> {
-        
+     Row : RowVectorTryConstruct<T=F>+Transpose<Output=Col>,
+     Col : ColVectorTryConstruct<T=F>+Transpose<Output=Row>> Matrix for HouseholderTrafoGeneric<Col> {
+
         type Row=Row;
-     
+
         type Col=Col;
-     
+
         fn nrows(&self) -> usize {
             self.n()
         }
-     
+
         fn ncols(&self) -> usize {
             self.n()
         }
-     
+
         fn into_rows(self) -> impl ExactSizeIterator<Item=Self::Row> {
-            let n=self.n();
-            let row=move |i|Row::any_from_iter(None,(0..n).map(|j|self.get((i,j)).unwrap().clone())).unwrap();
-            (0..n).map(row)
+            (0..self.n()).map(move |i|self.row(i).unwrap())
         }
-     
+
         fn into_cols(self) -> impl ExactSizeIterator<Item=Self::Col> {
-            let n=self.n();
-            let col=move |j|Col::any_from_iter(None,(0..n).map(|i|self.get((i,j)).unwrap().clone())).unwrap();
-            (0..n).map(col)
+            (0..self.n()).map(move |i|self.col(i).unwrap())
         }
 }
 
@@ -231,10 +229,10 @@ impl<F : Scalar+Mul<V,Output=V>,
      V : Vectorspace<F>+MulI,
      ColF : Clone+ColVector<T=F>+Map<F,V,Output=ColV>+ConjugateTranspose<Output=ColFH>,
      ColFH: RowVector<T=F>,
-     ColV : Clone+ColVector<T=V>+ClosedTrySub> AnyMatrixVectorProduct<ColV> for HouseholderTrafoGeneric<ColF>
+     ColV : Clone+ColVector<T=V>+ClosedTrySub> TryMatrixVectorProduct<ColV> for HouseholderTrafoGeneric<ColF>
     where Self : Matrix {
     type Output=ColV;
-    fn any_matrix_vector_product(self, rhs:ColV) -> Option<ColV> {
+    fn try_matrix_vector_product(self, rhs:ColV) -> Option<ColV> {
         if rhs.len() != self.n() {
             return None;
         }
@@ -245,34 +243,19 @@ impl<F : Scalar+Mul<V,Output=V>,
     }
 }
 
-impl<ColF : ColVector,
-     ColV : ColVector> TryMatrixVectorProduct<ColV> for HouseholderTrafoGeneric<ColF>
-    where Self : AnyMatrixVectorProduct<ColV,Output=ColV> {
-    type Output=ColV;
-    fn try_matrix_vector_product(self, rhs:ColV) -> Option<ColV> {
-        self.any_matrix_vector_product(rhs)
-    }
-}
 
 
 impl<F    : Scalar+Mul<V,Output=V>,
      V    : Vectorspace<F>,
      ColF : ColVector<T=F>+Clone+Map<F,V,Output=M::Col>,
-     M    : MatrixTryConstruct<T=V>> AnyMatrixMatrixProduct<M> for HouseholderTrafoGeneric<ColF>
-    where Self : AnyMatrixVectorProduct<M::Col,Output=M::Col>+Matrix<T=F>+Clone {
+     M    : MatrixTryConstruct<T=V>> TryMatrixMatrixProduct<M> for HouseholderTrafoGeneric<ColF>
+    where Self : TryMatrixVectorProduct<M::Col,Output=M::Col>+Matrix<T=F>+Clone {
     type Output=M;
-    fn any_matrix_matrix_product(self, rhs:M) -> Option<M> {
-       any_matrix_matrix_product_impl(self, rhs)
+    fn try_matrix_matrix_product(self, rhs:M) -> Option<M> {
+       try_matrix_matrix_product_impl(self, rhs)
     }
 }
 
-impl<ColF : ColVector, M : Matrix> TryMatrixMatrixProduct<M> for HouseholderTrafoGeneric<ColF>
-    where Self : AnyMatrixMatrixProduct<M,Output=M> {
-    type Output=M;
-    fn try_matrix_matrix_product(self, rhs:M) -> Option<M> {
-       self.any_matrix_matrix_product(rhs)
-    }
-}
 
 // impl<F    : Clone+Scalar,
 //      Col  : ColVector<T=F>+ScalarVector<T=F>,

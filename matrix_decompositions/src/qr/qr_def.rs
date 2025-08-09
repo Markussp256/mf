@@ -1,7 +1,10 @@
 use std::ops::Mul;
-use matrix_traits::{TryMatrixVectorProduct, ColVectorAnyConstruct, ConjugateTranspose, Matrix, MatrixSolveError, MatrixTryConstruct, Transpose};
+use matrix_traits::{TryMatrixVectorProduct, ColVectorTryConstruct, ConjugateTranspose, Matrix, MatrixSolveError, MatrixTryConstruct, Transpose};
 use algebra_traits::{TryDiv,TrySolve, Scalar, ComplexNumber, RealNumber};
 use container_traits::ChangeT;
+
+
+
 
 macro_rules! def_qr {
     ($name:ident, $tr:ident) => {
@@ -14,9 +17,9 @@ macro_rules! def_qr {
             fn qr(self) -> (Self::Q,Self::R);
 
             fn try_solve_least_squares
-            <Rhs : ColVectorAnyConstruct+ChangeT<Mid::T,Output=Mid>,
-             Mid : ColVectorAnyConstruct,
-             Out : ColVectorAnyConstruct>(self, rhs:Rhs) -> Option<Out>
+            <Rhs : ColVectorTryConstruct+ChangeT<Mid::T,Output=Mid>,
+             Mid : ColVectorTryConstruct,
+             Out : ColVectorTryConstruct>(self, rhs:Rhs) -> Option<Out>
             where   Self::Q : ConjugateTranspose,
                     <Self::Q as Transpose>::Output : TryMatrixVectorProduct<Rhs,T=<Self::T as TryDiv>::Output, Output=Mid>,
                     <Self::T as TryDiv>::Output : Mul<Rhs::T,Output=Mid::T>,

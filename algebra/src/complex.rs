@@ -326,6 +326,10 @@ impl<R:Clone+Field> Pow2 for Complex<R> {
 
 impl<T:RealNumber> TryScalarDiv<T> for Complex<T> {
     type Error=DivError;
+    fn is_scalar_divable_by(&self, f:&T) -> Result<(),Self::Error> {
+        self.0.is_scalar_divable_by(f)
+    }
+
     fn try_scalar_div(self, f:&T) -> Result<Self,DivError> {
         self.0
             .try_scalar_div(f)
@@ -351,6 +355,10 @@ impl<R:RealNumber> ScalarMul<Self> for Complex<R> {
 
 impl<R:Clone+RealNumber> TryScalarDiv<Self> for Complex<R> {
     type Error = DivError;
+    fn is_scalar_divable_by(&self, f:&Self) -> Result<(),Self::Error> {
+        <Self as TryDiv>::is_divable_by(&self, f)
+    }
+
     fn try_scalar_div(self, f:&Self) -> Result<Self,DivError> {
         <Self as TryDiv>::try_div(self, f.clone())
     }

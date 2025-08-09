@@ -14,6 +14,7 @@ type U2=(usize,usize);
          algebra_derive::ScalarContainer,
          algebra_derive::TryDiv,
          algebra_derive::One,
+         container_derive::ChangeT,
          container_derive::ContainerMut,
          derive_more::Index,
          derive_more::IndexMut,
@@ -23,7 +24,8 @@ type U2=(usize,usize);
          matrix_derive::Matrix,
          matrix_derive::MatrixTryConstruct,
          matrix_derive::MatrixVectorProduct,
-         matrix_derive::MatrixMatrixProduct,
+         matrix_derive::ClosedMatrixMatrixProduct,
+         matrix_derive::AlgebraMatrix,
          matrix_derive::Transpose)]
 pub struct Square<M:Matrix>(M);
 

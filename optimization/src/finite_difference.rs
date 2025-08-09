@@ -27,8 +27,8 @@ impl<F> FiniteDifference<F> {
         let h = self.step.clone().into_inner();
         let hc=||h.clone();
 
-        let subdiv=|u:Y,v,w|u.try_sub(v).unwrap()
-                                                                         .try_div(w).unwrap();
+        let subdiv=|u:Y,v,w|u.try_sub(v).ok().unwrap()
+                                                                  .try_div(w).ok().unwrap();
         match self.fdm {
             FiniteDifferenceMethod::Forward =>  subdiv(f(hc()), f0.clone(), hc()),
             FiniteDifferenceMethod::Backward => subdiv(f0.clone(), f(-hc()), hc()),

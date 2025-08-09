@@ -1,4 +1,4 @@
-use container_traits::{AnyFromVec, LinearContainerConstructError};
+use container_traits::{TryFromVec, LinearContainerConstructError};
 use num_traits::{Zero,One};
 
 use super::{MatrixSquare, MatrixSquareTryConstruct};
@@ -26,7 +26,7 @@ pub trait MatrixDiagonal : MatrixSquare where Self::T : Zero {}
 
 
 
-pub trait MatrixDiagonalTryConstruct : MatrixDiagonal + MatrixSquareTryConstruct + Sized + AnyFromVec<Self::T,LinearContainerConstructError> where Self::T : Zero {
+pub trait MatrixDiagonalTryConstruct : MatrixDiagonal + MatrixSquareTryConstruct + Sized + TryFromVec<Self::T,LinearContainerConstructError> where Self::T : Zero {
 
     // provided
 
@@ -35,7 +35,7 @@ pub trait MatrixDiagonalTryConstruct : MatrixDiagonal + MatrixSquareTryConstruct
             <Self::T as Zero>::zero)
                 .take(len)
                 .collect();
-        Self::any_from_vec(vs)
+        Self::try_from_vec(vs)
             .map_err(|_|MatrixConstructError::DimensionMismatch)
     }
 
@@ -44,8 +44,8 @@ pub trait MatrixDiagonalTryConstruct : MatrixDiagonal + MatrixSquareTryConstruct
             <Self::T as One>::one)
                 .take(len)
                 .collect();
-        Self::any_from_vec(vs)
+        Self::try_from_vec(vs)
             .map_err(|_|MatrixConstructError::DimensionMismatch)
     }
 }
-impl<F:Zero, M:MatrixDiagonal<T=F>+MatrixSquareTryConstruct+Sized+AnyFromVec<F,LinearContainerConstructError>> MatrixDiagonalTryConstruct for M {}
+impl<F:Zero, M:MatrixDiagonal<T=F>+MatrixSquareTryConstruct+Sized+TryFromVec<F,LinearContainerConstructError>> MatrixDiagonalTryConstruct for M {}

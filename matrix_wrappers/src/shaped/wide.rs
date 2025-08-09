@@ -9,6 +9,7 @@ type U2=(usize,usize);
          Debug,
          PartialEq,
          algebra_derive::ScalarContainer,
+         container_derive::ChangeT,
          container_derive::ContainerMut,
          container_derive::IntoInner,
          derive_more::AsRef,
@@ -17,13 +18,6 @@ type U2=(usize,usize);
          matrix_derive::Inherit,
 )]
 pub struct Wide<M:Matrix>(M);
-
-
-
-fn test_into_dyn<F:nalgebra::Scalar>(m:&Wide<nalgebra::DMatrix<F>>) -> nalgebra::DMatrix<F> {
-    use matrix_traits::IntoDynMatrix;
-    m.clone().into_dyn_matrix()
-}
 
 impl<M:Matrix> MatrixNotTall for Wide<M> {}
 impl<M:Matrix> MatrixWide    for Wide<M> {}

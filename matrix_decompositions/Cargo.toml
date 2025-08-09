@@ -18,18 +18,19 @@ algebra          = { path = "../algebra" }
 utils            = { path = "../utils" }
 container_traits = { path = "../container_traits" }
 container_derive = { path = "../container_derive" }
+# matrix           = { path = "../matrix" }
 matrix_traits    = { path = "../matrix_traits" }
 matrix_derive    = { path = "../matrix_derive" }
 matrix_wrappers  = { path = "../matrix_wrappers" }
 cachingmap = "0.2.1"
 
 # optional
-nalgebra = { version = "0.33", optional = true}
+nalgebra = { version = "0.34", optional = true}
 either = "1.13.0"
 
 [dev-dependencies]
 num= "0.4.3"
-nalgebra = { version = "0.33" }
+nalgebra = { version = "0.34" }
 
 
 [features]

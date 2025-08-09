@@ -3,6 +3,7 @@ use container_traits::{Parameter,Iter};
 use geometry_traits::transformation::*;
 
 use num_traits::Zero;
+use utils::iter::IntoExactSizeIterator;
 use vector_and_affine_spaces::Basis;
 
 use std::{fmt::Debug, ops::Mul};
@@ -106,7 +107,7 @@ impl<const DIMX:usize,
     fn apply(&self, v:X) -> Y {
         let (basis,images)=self.clone().into_parts();
         let coords=basis.clone().find_coordinates(v);
-        Y::linear_combination(coords.into_iter().zip(images))
+        Y::linear_combination(coords.into_iter().zip(images).into_exact_size_iter(DIMX))
     }
 
     fn try_approx_with_weights(orig_imag_pairs:Vec<(F::RealType,X,Y)>) -> Result<Self,ApproximationTrafoError> {

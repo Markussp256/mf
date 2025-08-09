@@ -951,14 +951,19 @@ pub fn try_div_to_self_proc_macro(input: TokenStream) -> TokenStream {
 pub fn try_scalar_div_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let tr=parse_quote!{algebra_traits::TryScalarDiv<Field>};
-    let fn_name=parse_quote!{try_scalar_div};
+    let fn_name_try=parse_quote!{try_scalar_div};
+    let self_subs=self_subfields(& mut input);
     let (generics, wc, [(ty, wt)],implementation)=
-        DeriveHelper::new(& mut input, &tr,&fn_name)
+        DeriveHelper::new(& mut input, &tr,&fn_name_try)
             .add_gen_types(vec!["Field","ETryScalarDiv"])
             .binary_const_rhs::<1>(true,&parse_quote!{f});
     quote! {
         impl #generics #tr for #ty where #(#wt : algebra_traits::TryScalarDiv<Field,Error=ETryScalarDiv>,)* #wc  {
             type Error=ETryScalarDiv;
+            fn is_scalar_divable_by(&self, f:&Field) -> Result<(),ETryScalarDiv> {
+                #(<#wt as #tr>::is_scalar_divable_by(& #self_subs,f)?; )*
+                Ok(())
+            }
             fn try_scalar_div(self, f:&Field) -> Result<Self,ETryScalarDiv> {
                 #implementation
             }

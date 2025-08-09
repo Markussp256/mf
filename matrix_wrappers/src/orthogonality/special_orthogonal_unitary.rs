@@ -2,13 +2,14 @@
 // we would need to compute determinant which requires QR which requires matrix_wrappers, hence a circular dependency
 
 use algebra::{quaternion::ProjectiveQuaternion, Quaternion};
+use algebra_traits::{Exp, TryLog};
 use num_traits::{Zero,One};
 
-use matrix_traits::{matrix_shapes::{Matrix33,Matrix44}, AlgebraMatrix, ChangeDim, ColVector, IntoBaseSquareMatrix, MatrixConstructError, MatrixMatrixProduct, MatrixMut, MatrixSquare, MatrixSquareTryConstruct, MatrixVectorProduct, Transpose};
+use matrix_traits::{matrix_shapes::{Matrix33,Matrix44}, AlgebraMatrix, ChangeDim, ColVector, IntoBaseSquareMatrix, MatrixConstructError, MatrixMatrixProduct, MatrixMut, MatrixSquare, MatrixSquareTryConstruct, MatrixVectorProduct, Transpose, TryFromMatrix};
 use matrix_traits::identity::for_static::Identity;
 use algebra_traits::{AdditiveGroup, ClosedTryInv, ComplexNumber, RealNumber, ScalarVector, Scalar, TryInv};
 use super::{Homogeneous, Orthogonal, Stiefel, Unitary};
-use crate::{SkewSymmetric, SkewSymmetricPart};
+use crate::{SkewSymmetric, SkewSymmetricPart, RightTriangular};
 use container_traits::{for_static::{FromFn, TryFromParameters}, Get, IntoInner, IntoParameters, TryFromIterator};
 use std::fmt::Debug;
 
@@ -32,7 +33,8 @@ macro_rules! def_orthogonal_or_unitary {
               matrix_derive::AsBaseSquareMatrix,
               matrix_derive::Matrix,
               matrix_derive::MatrixVectorProduct,
-              matrix_derive::MatrixMatrixProduct,
+              matrix_derive::ClosedMatrixMatrixProduct,
+              matrix_derive::MatrixMatrixProductRightTriangular,
               matrix_derive::ClosedTranspose,
               matrix_derive::StaticMatrix,
               matrix_derive::MatrixShape)]
@@ -210,4 +212,36 @@ where M::T             : Clone+RealNumber,
         Ok(skew2special(m))
     }
     container_traits::try_from_parameters_impl!(M::T,MatrixConstructError);
+}
+
+impl<M    : AlgebraMatrix+MatrixSquare+TryLog<Output=MLog>,
+     MLog : MatrixSquareTryConstruct> TryLog for SpecialOrthogonal<M>
+     where M::T    : RealNumber,
+           MLog::T : RealNumber {
+    type Output=SkewSymmetric<MLog>;
+    type Error = <M as TryLog>::Error;
+
+    fn is_logable(&self) -> Result<(),Self::Error> {
+        self.0
+            .is_logable()
+    }
+
+    fn try_log(self) -> Result<Self::Output,Self::Error> {
+        self.0
+            .try_log()
+            .map(|m|SkewSymmetric::<MLog>::try_new(m).unwrap())
+    }
+}
+
+
+impl<M    : MatrixSquare+Exp<Output=MExp>,
+     MExp : AlgebraMatrix+MatrixSquareTryConstruct> Exp for SkewSymmetric<M>
+     where M::T    : RealNumber,
+           MExp::T : RealNumber {
+    type Output=SpecialOrthogonal<MExp>;
+
+    fn exp(self) -> Self::Output {
+        let o=Orthogonal::<MExp>::try_from_matrix(self.into_inner().exp()).ok().unwrap();
+        SpecialOrthogonal::<MExp>::try_new(o,MExp::T::one()).ok().unwrap()
+    }
 }

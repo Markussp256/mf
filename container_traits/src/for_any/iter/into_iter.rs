@@ -4,10 +4,16 @@
 // we call the function into_iterator to distinguish from the fn into_iter
 // which is typically implemented
 
-use utils::iter::IntoExactSizeIterator;
+use utils::iter::{IntoExactSizeIterator, WithExactSize};
 
 pub trait IntoIter<T> {
     fn into_iterator(self) -> impl ExactSizeIterator<Item=T>;
+}
+
+impl<I:Iterator<Item=T>,T> IntoIter<T> for WithExactSize<I> {
+    fn into_iterator(self) -> impl ExactSizeIterator<Item=T> {
+        self
+    }
 }
 
 macro_rules! iter_impl {

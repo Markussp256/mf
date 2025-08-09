@@ -1,6 +1,3 @@
-pub mod any_from_vec;
-pub use any_from_vec::AnyFromVec;
-
 pub mod as_x_slice;
 pub use as_x_slice::{AsSlice,AsMutSlice};
 

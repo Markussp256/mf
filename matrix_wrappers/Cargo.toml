@@ -22,7 +22,7 @@ matrix_traits    = { path = "../matrix_traits" }
 matrix_derive    = { path = "../matrix_derive" }
 
 # optional
-nalgebra = { version = "0.33", optional = true}
+nalgebra = { version = "0.34", optional = true}
 either = "1.13.0"
 
 [dev-dependencies]

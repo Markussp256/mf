@@ -1,3 +1,4 @@
+use algebra::VectorDyn;
 use matrix::MatrixDyn;
 
 use super::ProblemBuilderError;
@@ -14,6 +15,12 @@ pub enum OptimizationError<F:'static, X, EX=LCCE> {
 
     #[error("Could not compute distance of {0} to {1}")]
     DifferentOutputDimensions(X, X),
+
+    #[error("Could not compute sum of {0} and {1}")]
+    Sum(VectorDyn<F>, VectorDyn<F>),
+
+    #[error("Could not compute difference of {0} and {1}")]
+    Difference(VectorDyn<F>, VectorDyn<F>),
 
     #[error("Matrix {0} representing the derivative of the provided function at {1} does not have full rank")]
     MatrixNotFullRank(MatrixDyn<F>, X),

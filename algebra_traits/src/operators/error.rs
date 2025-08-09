@@ -22,6 +22,8 @@ macro_rules! impl_from {
     };
 }
 
+
+
 #[derive(Clone,Debug,Error,PartialEq)]
 pub enum DetError {
     #[error("matherror during computation of determinant")]
@@ -71,6 +73,9 @@ impl_from!(SqrtError);
 
 #[derive(Clone,Debug,Error,PartialEq)]
 pub enum AddError {
+    #[error("addition not available for the provided instances")]
+    NotAvailableForProvidedInstances,
+
     #[error("adding error: {0}")]
     FloatOp(FloatOpError)
 }
@@ -79,6 +84,9 @@ impl_from!(AddError);
 
 #[derive(Clone,Debug,Error,PartialEq)]
 pub enum SubError {
+    #[error("subtraction not available for the provided instances")]
+    NotAvailableForProvidedInstances,
+
     #[error("subtraction error: {0}")]
     FloatOp(FloatOpError)
 }
@@ -87,6 +95,9 @@ impl_from!(SubError);
 
 #[derive(Clone,Debug,Error,PartialEq)]
 pub enum MulError {
+    #[error("multiplication not available for the provided instances")]
+    NotAvailableForProvidedInstances,
+
     #[error("multiplication error: {0}")]
     FloatOp(FloatOpError)
 }

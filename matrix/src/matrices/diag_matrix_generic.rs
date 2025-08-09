@@ -1,9 +1,11 @@
 
+use std::ops::Mul;
+use num_traits::{Zero,One};
+
 use algebra_traits::{Det,MulError,DivError,FloatOpError};
 use algebra::{EnhancedArray, EnhancedVec, Vector, VectorDyn};
 use container_traits::for_static::TryFromIterator;
-use num_traits::{Zero,One};
-use container_traits::{AnyFromIterator, AnyFromVec, AnyMap, ContainerIndex, Get, IndexedIter,  IntoIndexedIter, IntoIter, IntoProduct, ItemT, Iter, Len, LenTooSmallError, LinearContainer, LinearContainerTryConstruct, LinearContainerConstructError, Map, NumberOfDegreesOfFreedom, OCTSize, Size, SizeFromORef, TryAccept, TryFromFn, TryIntoElement, TryPutAt, Zeros};
+use container_traits::{AnyFromIterator, TryFromVec, TryMap, ContainerIndex, Get, IndexedIter,  IntoIndexedIter, IntoIter, IntoProduct, ItemT, Iter, Len, LenTooSmallError, LinearContainer, LinearContainerTryConstruct, LinearContainerConstructError, Map, NumberOfDegreesOfFreedom, OCTSize, Size, SizeFromORef, TryAccept, TryFromFn, TryIntoElement, TryPutAt, Zeros};
 use utils::iter::{InterLeave, RepeatN,};
 
 use crate::row_col::{MatrixColGeneric, MatrixRowGeneric};
@@ -54,10 +56,18 @@ macro_rules! impl_try {
       paste::paste!(
       impl<C:LinearContainerTryConstruct<T=F>,F:Zero+std::ops::$tr<Output=F>> algebra_traits::[<Try $tr>] for DiagonalMatrixGeneric<C> {
          type Output=Self;
+         type Error=[<$tr Error>];
+         fn [<is_ $fn able_by>](&self, rhs:&Self) -> Result<(), [<$tr Error>]> {
+            container_traits::LenNotEqualToRequiredLenError::try_new(self.n(),rhs.n())
+               .map_err(|lnee|{
+                  let float_error:FloatOpError=lnee.into();
+                  <FloatOpError as Into<[<$tr Error>]>>::into(float_error)
+               })
+         }
          fn [<try_ $fn>](self,rhs:Self) -> Result<Self::Output, [<$tr Error>]> {
-            if self.n() != rhs.n() { return Err([<$tr Error>]::FloatOp(FloatOpError::not_same_dim()))}
+            self.[<is_ $fn able_by>](&rhs)?;
             Ok(Self::new(
-                  C::any_from_vec(
+                  C::try_from_vec(
                   self.diag
                       .into_iterator()
                       .zip(rhs.diag.into_iterator())
@@ -209,8 +219,8 @@ matrix_traits::impl_matrixii_one_param!(DiagonalMatrix, Zero, 1,2,3,4,5,6,7,8,9)
 
 impl<C:LinearContainerTryConstruct<T=F>+TryPutAt<usize,F>,F:Zero> TryAccept<U2,F,MatrixConstructError> for DiagonalMatrixGeneric<C> {
     fn try_accept<'a>(size:U2,f:impl Fn(U2) -> &'a F) -> Result<(),MatrixConstructError> where F: 'a {
-         let (nrows,ncols)=id.size();
-         if nrows == ncols {
+         let (nrows,ncols)=size;
+         if nrows != ncols {
             return Err(MatrixConstructError::DimensionMismatch);
          }
          for i in 0..nrows {
@@ -225,16 +235,16 @@ impl<C:LinearContainerTryConstruct<T=F>+TryPutAt<usize,F>,F:Zero> TryAccept<U2,F
 }
 
 impl<F : Zero, FOut : Zero,
-     C    : LinearContainerTryConstruct<T=F>+AnyMap<F,FOut,LinearContainerConstructError,Output=COut>,
-     COut : LinearContainerTryConstruct<T=FOut>> AnyMap<F,FOut,MatrixConstructError> for DiagonalMatrixGeneric<C> {
+     C    : LinearContainerTryConstruct<T=F>+TryMap<F,FOut,LinearContainerConstructError,Output=COut>,
+     COut : LinearContainerTryConstruct<T=FOut>> TryMap<F,FOut,MatrixConstructError> for DiagonalMatrixGeneric<C> {
     type Output=DiagonalMatrixGeneric<COut>;
 
-    fn any_map(self, f:impl Fn(F) -> FOut) -> Result<Self::Output,MatrixConstructError> {
+    fn try_map(self, f:impl Fn(F) -> FOut) -> Result<Self::Output,MatrixConstructError> {
         if self.n() > 1 && !f(F::zero()).is_zero() {
             Err(MatrixConstructError::DataDoesNotSatisfyRequiredPropertiesOfMatrixType)
         } else {
             self.diag
-                .any_map(f)
+                .try_map(f)
                 .map(|cout|DiagonalMatrixGeneric::new(cout))
                 .map_err(|_|MatrixConstructError::DataDoesNotSatisfyRequiredPropertiesOfMatrixType)
         }
@@ -267,16 +277,15 @@ impl<C : LinearContainerTryConstruct<T=F>, F : Zero> AnyFromIterator<F,MatrixCon
 }
 
 impl<C : LinearContainerTryConstruct<T=F>, F : Zero> TryFromFn<U2,F,MatrixConstructError> for DiagonalMatrixGeneric<C> {
-   fn try_from_fn(id:InstanceStructureDescriptor<Self,U2>,f:impl Fn(U2) -> F) -> Result<Self,MatrixConstructError> {
-      let (nrows,ncols)=id.size();
-      for i in 0..nrows {
-         for j in 0..ncols {
+   fn try_from_fn(size:U2,f:impl Fn(U2) -> F) -> Result<Self,MatrixConstructError> {
+      for i in 0..size.0 {
+         for j in 0..size.1 {
             if i != j && !f((i,j)).is_zero() {
                return Err(MatrixConstructError::DataDoesNotSatisfyRequiredPropertiesOfMatrixType);
             }
          }
       }
-      C::try_from_fn(InstanceStructureDescriptor::Size(nrows), |i|f((i,i)))
+      C::try_from_fn(size.0, |i|f((i,i)))
          .map(|c|DiagonalMatrixGeneric::new(c))
          .map_err(|_|MatrixConstructError::DataDoesNotSatisfyRequiredPropertiesOfMatrixType)
    }
@@ -300,9 +309,9 @@ impl<C:LinearContainerTryConstruct<T=F>+TryPutAt<usize,F>,F:Zero> MatrixSquareTr
 
 impl<C:LinearContainerTryConstruct<T=F>+TryPutAt<usize,F>,F:Zero> MatrixDiagonal for DiagonalMatrixGeneric<C> {}
 
-impl<C:LinearContainerTryConstruct<T=F>+TryPutAt<usize,F>,F:Zero> AnyFromVec<F,LinearContainerConstructError> for DiagonalMatrixGeneric<C> {
-   fn any_from_vec(vs:Vec<F>) -> Result<Self,LinearContainerConstructError> {
-      C::any_from_vec(vs)
+impl<C:LinearContainerTryConstruct<T=F>+TryPutAt<usize,F>,F:Zero> TryFromVec<F,LinearContainerConstructError> for DiagonalMatrixGeneric<C> {
+   fn try_from_vec(vs:Vec<F>) -> Result<Self,LinearContainerConstructError> {
+      C::try_from_vec(vs)
          .map(|c|Self::new(c))
    }
 }
@@ -326,7 +335,7 @@ impl<F> Zeros<usize,F> for DiagonalMatrixDyn<F> {
 
 macro_rules! diag_times_vector {
    ($name:ident) => {
-         impl<F:std::ops::Mul<Output=F>, const N:usize> MatrixVectorProduct<$name<F,N>> for DiagonalMatrix<F,N> {
+         impl<F:Zero+Mul<Output=F>, const N:usize> MatrixVectorProduct<$name<F,N>> for DiagonalMatrix<F,N> {
             type Output=$name<F,N>;
             fn matrix_vector_product(self, rhs:$name<F,N>) ->$name<F,N> {
                  <$name<F,N> as TryFromIterator<F,LinearContainerConstructError>>::try_from_iter(
@@ -343,7 +352,7 @@ diag_times_vector!(MatrixCol);
 
 macro_rules! try_diag_times_vector {
    ($name:ident) => {
-         impl<F:std::ops::Mul<Output=F>> TryMatrixVectorProduct<$name<F>> for DiagonalMatrixDyn<F> {
+         impl<F:Zero+Mul<Output=F>> TryMatrixVectorProduct<$name<F>> for DiagonalMatrixDyn<F> {
             type Output=$name<F>;
             fn try_matrix_vector_product(self, rhs:$name<F>) -> Option<$name<F>> {
                  (self.diag.len() == rhs.len()).then(||
@@ -360,7 +369,7 @@ try_diag_times_vector!(VectorDyn);
 try_diag_times_vector!(MatrixColDyn);
 
 
-impl<F:Zero+std::ops::Mul<Output=F>,const N:usize> MatrixMatrixProduct<Self> for DiagonalMatrix<F,N> {
+impl<F:Zero+Mul<Output=F>,const N:usize> MatrixMatrixProduct<Self> for DiagonalMatrix<F,N> {
     type Output=Self;
 
     fn matrix_matrix_product(self, rhs:Self) -> Self {
@@ -383,7 +392,7 @@ macro_rules! impl_mul_diag {
 
     ($t:ty, $f:ident, $m:ident, $n:ident $(,$ns:ident)*) => {
          
-         impl<$f:'static+Clone+Zero+std::ops::Mul<Output=$f>
+         impl<$f:'static+Clone+Zero+Mul<Output=$f>
                   +algebra_traits::ScalarMul<$f> $(, const $ns:usize)*>
                matrix_traits::MatrixMatrixProduct<$crate::DiagonalMatrix<$f,N>> for $t {
             type Output=$t;

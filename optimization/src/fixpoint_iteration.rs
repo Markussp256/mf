@@ -41,7 +41,7 @@ pub fn fix_point_iteration_with_termination_condition<X:Clone>(
 }
 
 
-pub fn fix_point_iteration_try_distance<X:Clone+TryDistance<DistT=D>, D : Clone+PartialOrd>(
+pub fn fix_point_iteration_try_distance<X:Clone+TryDistance<TryDistT=D>, D : Clone+PartialOrd>(
     xstart:X,
     f:impl Fn(X) -> X,
     tol:Nonnegative<D>,

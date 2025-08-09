@@ -1,8 +1,8 @@
 
 
-use crate::{ColVector, ColVectorAnyConstruct, Matrix};
+use crate::{ColVector, ColVectorTryConstruct, Matrix};
 
-use super::vector_vector_product::AnyVectorVectorProduct;
+use super::vector_vector_product::TryVectorVectorProduct;
 
 pub trait MatrixVectorProduct<Rhs : ColVector> : Matrix {
     type Output : ColVector;
@@ -13,16 +13,16 @@ pub trait MatrixVectorProduct<Rhs : ColVector> : Matrix {
 // we do not implement it directly (provided method) because that would
 // put many constraints
 
-pub fn any_matrix_vector_product_impl
+pub fn try_matrix_vector_product_impl
     <F3,
      Lhs    : Matrix<Row=LhsRow>,
-     LhsRow : AnyVectorVectorProduct<Rhs,Output=F3> ,
+     LhsRow : TryVectorVectorProduct<Rhs,Output=F3> ,
      Rhs    : Clone+ColVector,
-     Out    : ColVectorAnyConstruct<T=F3>>(lhs:Lhs,rhs:Rhs) -> Option<Out> {
+     Out    : ColVectorTryConstruct<T=F3>>(lhs:Lhs,rhs:Rhs) -> Option<Out> {
     if lhs.ncols() != rhs.len() { return None; }
-    Out::any_from_vec(
+    Out::try_from_vec(
         lhs.into_rows()
-           .map(|r|r.any_vector_vector_product(rhs.clone()).unwrap())
+           .map(|r|r.try_vector_vector_product(rhs.clone()).unwrap())
            .collect()).ok()
 }
 

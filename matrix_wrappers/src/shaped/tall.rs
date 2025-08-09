@@ -10,6 +10,7 @@ type U2=(usize,usize);
          Debug,
          PartialEq,
          algebra_derive::ScalarContainer,
+         container_derive::ChangeT,
          container_derive::ContainerMut,
          container_derive::IntoInner,
          derive_more::AsRef,

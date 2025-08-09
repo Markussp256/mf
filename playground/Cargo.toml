@@ -19,7 +19,7 @@ derive_more = { version = "2.0.1", features = ["full"]}
 # matrix_derive = { path="../matrix_derive" }
 # matrix_traits = { path="../matrix_traits" }
 # measurements = "0.11.0"
-nalgebra = { version = "0.33"}
+nalgebra = { version = "0.34"}
 num-traits = "0.2.19"
 paste = "1.0.15"
 # phys_units = { path="../phys_units", features = ["measurements_support", "simple_si_units_support"]}

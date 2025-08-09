@@ -335,8 +335,14 @@ macro_rules! impl_only_float {
 
         impl TryScalarDiv<$f> for $f {
             type Error=DivError;
-            fn try_scalar_div(self, rhs:&$f) -> Result<$f,DivError> {
+
+            fn is_scalar_divable_by(&self, rhs:&$f) -> Result<(),DivError> {
                 DivisionByZeroError::try_new(rhs)?;
+                Ok(())
+            }
+
+            fn try_scalar_div(self, rhs:&$f) -> Result<$f,DivError> {
+                self.is_scalar_divable_by(rhs)?;
                 Ok(self / rhs.clone())
             }
         }

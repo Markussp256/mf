@@ -5,8 +5,10 @@ use super::{ray::RayGeneric, Point, Vector};
 use crate::{trafos::{Translation, SE}, UnitVector};
 use std::ops::{Sub, Div, Mul};
 
-use matrix_wrappers::{OrthogonalMatrix, SpecialOrthogonalMatrix};
+use matrix::{OrthogonalMatrix, SpecialOrthogonalMatrix};
 use matrix_traits::{Matrix, MatrixTryConstruct, matrix_operations::identity::for_static::Identity};
+
+
 
 #[derive(Clone, Debug)]
 pub struct FrameGeneric<F:RealNumber, A:'static, const N:usize> {
@@ -19,7 +21,7 @@ pub type Frame=FrameGeneric<f64, f64, 3>;
 impl<F:'static+Clone+RealNumber+Zero+One, A:Origin, const N:usize> Default for FrameGeneric<F, A, N> {
     fn default() -> Self {
         Self{position: Point::<A,N>::origin(),
-             orientation: OrthogonalMatrix::identity()}
+             orientation: OrthogonalMatrix::<F,N>::identity()}
     }
 }
 

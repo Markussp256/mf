@@ -9,6 +9,3 @@ pub use identity::Identity;
 
 pub mod transpose;
 pub use transpose::{Transpose, ConjugateTranspose};
-
-pub mod solve;
-pub use solve::TrySolveMatrixSystem;
