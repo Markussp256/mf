@@ -814,11 +814,7 @@ dependencies = [
 name = "playground"
 version = "0.1.0"
 dependencies = [
- "algebra_derive",
- "algebra_traits",
  "cachingmap",
- "container_derive",
- "container_traits",
  "derive_more",
  "itertools",
  "nalgebra",
