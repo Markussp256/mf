@@ -1,7 +1,4 @@
 
-pub mod diag_matrix_generic;
-pub use diag_matrix_generic::{DiagonalMatrixDyn, DiagonalMatrixGeneric, DiagonalMatrix};
-
 pub mod matrix_dyn;
 pub use matrix_dyn::{MatrixDyn,SquareMatrixDyn};
 

@@ -8,11 +8,13 @@ use container_traits::{for_static::X, FromContainer, Map, Parameter};
 
 use matrix_traits::{identity::for_static::Identity, IntoMatrix, MatrixDynamic, MatrixVectorProduct, Transpose, TryIntoMatrix};
 
-use matrix::{row_col::{MatrixCol2, MatrixCol3}, Matrix, Matrix2, MatrixDyn};
+use matrix::{row_col::{MatrixCol,MatrixCol2, MatrixCol3}, Matrix, Matrix2, MatrixDyn};
 
-use matrix_decompositions::qr::{OrthogonalQR, HouseholderTrafo};
+use matrix_decompositions::qr::{OrthogonalQR,HouseholderTrafoGeneric};
 
-use matrix_wrappers::SpecialOrthogonalMatrix;
+use matrix::SpecialOrthogonalMatrix;
+
+type HouseholderTrafo<T,const N:usize>=HouseholderTrafoGeneric<MatrixCol<T,N>>;
 
 use utils::IntoThis;
 use vector_and_affine_spaces::SubSpaceDyn;
@@ -198,7 +200,7 @@ impl<A : Clone+Sub<Output=V>+Torsor+Parameter<F>+ConstElement,
 
 #[test]
 fn test_from_se3() {
-    use matrix_wrappers::{OrthogonalMatrix, SpecialOrthogonalMatrix};
+    use matrix::{OrthogonalMatrix, SpecialOrthogonalMatrix};
     use matrix_traits::TryFromMatrix;
     use phys_units::Radians;
     use algebra_traits::Tolerance;

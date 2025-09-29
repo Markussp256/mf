@@ -1,6 +1,6 @@
-use crate::*;
+use container_traits::*;
 
-use crate::LinearContainerConstructError as LCCE;
+use container_traits::LinearContainerConstructError as LCCE;
 
 use utils::iter::ChainExactSize;
 
@@ -9,7 +9,7 @@ pub struct Concatenated<A,B>(A,B);
 
 pub type Concatenated3<A,B,C>=Concatenated<Concatenated<A,B>,C>;
 
-use crate::for_dynamic::Concat;
+use container_traits::for_dynamic::Concat;
 
 impl<A,B> Concatenated<A,B> {
     pub fn new(a:A,b:B) -> Self {
@@ -137,8 +137,9 @@ impl<A : for_static::NumberOfDegreesOfFreedom<T>,
     const NDOFS: usize = A::NDOFS + B::NDOFS;
 }
 
-impl<T,A:TryIntoElement<usize,T>+Len,B:TryIntoElement<usize,T>> TryIntoElement<usize,T> for Concatenated<A,B> {
-    fn try_into_element(self,index:usize) -> Option<T> {
+impl<T,A:TryIntoElement<usize,T>+Len,B:TryIntoElement<usize,T>+Len> TryIntoElement<usize,T> for Concatenated<A,B> {
+    fn try_into_element(self,index:usize) -> Result<T,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&self.len(),&index)?;
         let a_len=self.0.len();
         if index < a_len {
             self.0.try_into_element(index)
@@ -150,8 +151,9 @@ impl<T,A:TryIntoElement<usize,T>+Len,B:TryIntoElement<usize,T>> TryIntoElement<u
 
 impl<T,
      A : Get<usize, T>+Len,
-     B : Get<usize, T>> Get<usize,T> for Concatenated<A,B> {
-    fn get(&self, index:usize) -> Option<&T> {
+     B : Get<usize, T>+Len> Get<usize,T> for Concatenated<A,B> {
+    fn get(&self, index:usize) -> Result<&T,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&self.len(),&index)?;
         let a_len=self.0.len();
         if index < a_len {
             self.0.get(index)
@@ -200,7 +202,7 @@ impl<T, A : TryFromVec<T,LCCE>+TryAccept<usize,T,LCCE>+Len,
             Self::find_acceptable_splits(v.len(),|i|&v[i])
                 .next()
                 .ok_or(LCCE::DataDoesNotSatisfyRequiredPropertiesOfTargetContainer)?;
-        let (va,vb)=crate::vec_op::split(v,index);
+        let (va,vb)=container_traits::vec_op::split(v,index);
         let a=A::try_from_vec(va)?;
         let b=B::try_from_vec(vb)?;
         Ok(Self::new(a,b))
@@ -252,8 +254,9 @@ impl<T,T2,A:TryMap<T,T2,LCCE, Output=A2>,A2,B:TryMap<T,T2,LCCE,Output=B2>,B2> Tr
 
 impl<T,
      A : GetMut<usize,T>+Len,
-     B : GetMut<usize,T>> GetMut<usize,T> for Concatenated<A,B> {
-    fn get_mut(&mut self, index:usize) -> Option<&mut T> {
+     B : GetMut<usize,T>+Len> GetMut<usize,T> for Concatenated<A,B> {
+    fn get_mut(&mut self, index:usize) -> Result<&mut T,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&self.len(),&index)?;
         let a_len=self.0.len();
         if index < a_len {
             self.0.get_mut(index)
@@ -287,10 +290,12 @@ impl<A:Empty,B:Empty> Empty for Concatenated<A,B> {
     fn empty() -> Self {
         Self::new(A::empty(),B::empty())
     }
+}
 
+impl<A:IsEmpty,B:IsEmpty> IsEmpty for Concatenated<A,B> {
     fn is_empty(&self) -> bool {
-        self.0.is_empty()
-     && self.1.is_empty()
+        self.0.is_empty() &&
+        self.1.is_empty()
     }
 }
 
@@ -303,7 +308,7 @@ impl<T,
         Ok(Self::new(a,b))
     }
 
-    crate::any_from_iter_impl!(T);
+    any_from_iter_impl!(T);
 }
 
 impl<T,
@@ -315,10 +320,10 @@ impl<T,
         Ok(Self::new(a,b))
     }
 
-    crate::any_from_parameters_impl!(T);
+    any_from_parameters_impl!(T);
 }
 
-impl<T,A:Pop<T>,B:Pop<T>+Empty> Pop<T> for Concatenated<A,B> {
+impl<T,A:Pop<T>,B:Pop<T>+IsEmpty> Pop<T> for Concatenated<A,B> {
     fn pop(& mut self) -> Option<T> {
         if self.1.is_empty() {
             self.0.pop()
@@ -333,3 +338,4 @@ impl<T,A,B:Push<T>> Push<T> for Concatenated<A,B> {
         self.1.push(t)
     }
 }
+

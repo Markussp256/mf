@@ -114,7 +114,9 @@ macro_rules! impl_point {
             derive_more::Index,
             derive_more::IndexMut,
         )]
-        pub struct $pname<T, const N: usize>(algebra::EnhancedArray<T, N>);
+        pub struct PointGen<C>(C);
+
+        pub type $pname<T, const N: usize>=PointGen<algebra::EnhancedArray<T, N>>;
 
         $crate::point::impl_point_or_vector!($pname);
         // container_traits_static_impl!($pname);

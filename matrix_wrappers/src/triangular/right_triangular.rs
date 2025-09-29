@@ -1,7 +1,6 @@
 use std::ops::Neg;
-
-use container_traits::TryAccept;
-use matrix_traits::{Matrix, MatrixConstructError, MatrixTryConstruct, Transpose, TryFromMatrix};
+use container_traits::{Iter, TryAccept};
+use matrix_traits::{Matrix, MatrixConstructError, MatrixTryConstruct, Transpose, TryFromMatrix, TryPushCol, TryPushRow};
 use num_traits::Zero;
 
 use crate::shaped::square::Square;
@@ -12,19 +11,25 @@ type U2=(usize,usize);
          algebra_derive::ScalarContainer,
          algebra_derive::Inv,
          container_derive::JustContainer,
+         container_derive::NewUnchecked,
          container_derive::IntoInner,
          derive_more::AsRef,
          derive_more::Index,
          matrix_derive::Identity,
          matrix_derive::Inherit,
          matrix_derive::ClosedMatrixMatrixProduct,
-         matrix_derive::MatrixShape
+         matrix_derive::MatrixShape,
+         matrix_derive::PopRow,
+         matrix_derive::PopCol
 )]
 pub struct RightTriangular<M:Matrix>(M) where M::T : Zero;
 
 // crate::macros::as_matrix_into_matrix!(RightTriangular);
 
 pub type SquareRightTriangular<M>=RightTriangular<Square<M>>;
+
+
+
 
 impl<F : Zero,
      M : MatrixTryConstruct<T=F>+Transpose<Output=Mt>,
@@ -62,5 +67,33 @@ impl<F:Neg<Output=F>+Zero, M:MatrixTryConstruct<T=F>> RightTriangular<M> {
         self.0
             .try_neg_col(j)
             .map(|m|Self(m))
+    }
+}
+
+impl<F:Zero, M : Matrix<T=F>+TryPushRow> TryPushRow for RightTriangular<M> {
+    type Output=RightTriangular<<M as TryPushRow>::Output>;
+    fn try_push_row(self,row:M::Row) -> Result<RightTriangular<<M as TryPushRow>::Output>, M::Row> {
+        if !row.iter()
+               .take(self.nrows())
+               .all(|v|v.is_zero()) {
+            return Err(row);
+        }
+        self.0
+            .try_push_row(row)
+            .map(|m|RightTriangular(m))
+    }
+}
+
+impl<F:Zero, M : Matrix<T=F>+TryPushCol> TryPushCol for RightTriangular<M> {
+    type Output=RightTriangular<<M as TryPushCol>::Output>;
+    fn try_push_col(self,col:M::Col) -> Result<RightTriangular<<M as TryPushCol>::Output>, M::Col> {
+        if !col.iter()
+               .skip(self.ncols()+1)
+               .all(|v|v.is_zero()) {
+            return Err(col);
+        }
+        self.0
+            .try_push_col(col)
+            .map(|m|RightTriangular(m))
     }
 }

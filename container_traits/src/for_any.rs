@@ -4,6 +4,12 @@ pub use as_x_slice::{AsSlice,AsMutSlice};
 pub mod change_t;
 pub use change_t::ChangeT;
 
+pub mod change_dim;
+pub use change_dim::ChangeDim;
+
+pub mod change_len;
+pub use change_len::ChangeLen;
+
 pub mod enumerate;
 pub use enumerate::Enumerate;
 
@@ -46,6 +52,9 @@ pub use last::Last;
 pub mod map;
 pub use map::{Map,ClosedMap};
 
+pub mod new_unchecked;
+pub use new_unchecked::NewUnchecked;
+
 pub mod reverse;
 pub use reverse::Reverse;
 
@@ -57,3 +66,6 @@ pub use try_into_element::TryIntoElement;
 
 pub mod try_map;
 pub use try_map::{TryMap,TryClosedMap};
+
+pub mod try_map_i;
+pub use try_map_i::TryMapI;

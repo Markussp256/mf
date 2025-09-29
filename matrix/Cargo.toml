@@ -21,7 +21,7 @@ container_derive      = { path = "../container_derive" }
 matrix_traits         = { path = "../matrix_traits" }
 matrix_derive         = { path = "../matrix_derive" }
 matrix_wrappers       = { path = "../matrix_wrappers" }
-
+matrix_decompositions = { path = "../matrix_decompositions" }
 
 # optional
 nalgebra = { version = "0.34", optional = true}

@@ -1,5 +1,6 @@
 
-use container_traits::{ClosedMap, Concatenated, Cropped, ItemT, Map};
+use container_traits::{ClosedMap, ItemT, Map};
+use container::{Concatenated,Cropped};
 
 pub trait Conjugate {
     fn conjugate(self) -> Self;

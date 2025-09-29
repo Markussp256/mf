@@ -1,55 +1,25 @@
-use container_traits::{AnyFromIterator, Container, IntoIter, Map, TryIntoElement};
-use num_traits::{Zero,One};
+use container_traits::{AnyFromIterator, Container, IndexOutOfBoundsError, IntoIter, Map, TryIntoElement};
 use algebra_traits::{Conjugate, Distance, Tolerance};
 use crate::row_col::*;
 use super::MatrixTryConstruct;
-use utils::{iter::IntoExactSizeIterator, kronecker_delta::kron_delta};
-
+use utils::iter::IntoExactSizeIterator;
+use super::MatrixView;
 type U2=(usize,usize);
 
 // can be dynamic or static sized
-pub trait Matrix : Container<U2> {
+pub trait Matrix : MatrixView + Container<U2> {
     type Row:RowVectorTryConstruct<T=Self::T>;
     type Col:ColVectorTryConstruct<T=Self::T>;
-
-    // not possible because matrix is maybe not saved rowwise
-    // fn rows(&self) -> impl Iterator<Item=&Self::Row>;
-
-    // not possible because matrix is maybe not saved colwise
-    // fn cols(&self) -> impl Iterator<Item=&Self::Col>;
 
     fn into_rows(self) -> impl ExactSizeIterator<Item=Self::Row>;
     fn into_cols(self) -> impl ExactSizeIterator<Item=Self::Col>;
 
     // provided methods
 
-    fn nrows(&self) -> usize {
-        self.size()
-            .0
-    }
-
-    fn ncols(&self) -> usize {
-        self.size()
-            .1
-    }
-
-    fn matrix_dimensions(&self) -> (usize,usize) {
-        (self.nrows(), self.ncols())
-    }
-
-    fn len(&self) -> usize {
-        self.nrows() * self.ncols()
-    }
-
-    fn is_square(&self) -> bool {
-        self.nrows() == self.ncols()
-    }
-
-    fn is_close_to(self, rhs:impl Matrix<T=Self::T>) -> bool
+    fn into_is_close_to(self, rhs:impl Matrix<T=Self::T>) -> bool
     where Self::T : Distance+Tolerance, 
          <Self::T as Distance>::DistT : PartialOrd {
-        assert!(self.matrix_dimensions() == rhs.matrix_dimensions(),
-               "matrices do not have the same dimensions and can therefore not be compared");
+        assert_eq!(self.matrix_dimensions(), rhs.matrix_dimensions());
         self.into_iterator()
             .zip(rhs.into_iterator())
             .all(|(l,r)|l.is_close_to(r))
@@ -58,23 +28,17 @@ pub trait Matrix : Container<U2> {
     // not possible because matrix is maybe not saved rowwise
     // fn get_row(&self, i:usize) -> Option<&Self::Row>
 
-    fn row(&self, i:usize) -> Option<Self::Row> where Self::T : Clone {
-        (i < self.nrows()).then(||
-            Self::Row::any_from_iter(None,(0..self.ncols()).map(|j|self.get((i,j)).unwrap().clone())).ok().unwrap())
+    fn row(&self, i:usize) -> Result<Self::Row, IndexOutOfBoundsError<usize>> where Self::T : Clone {
+        IndexOutOfBoundsError::try_new(&self.nrows(),&i)?;
+        Ok(Self::Row::any_from_iter(None,(0..self.ncols()).map(|j|self.get((i,j)).unwrap().clone())).ok().unwrap())
     }
 
     // not possible because matrix is maybe not saved colwise
     // fn get_col(&self, j:usize) -> Option<&Self::Col>
 
-    fn col(&self, j:usize) -> Option<Self::Col> where Self::T : Clone {
-        (j < self.ncols()).then(||
-        Self::Col::any_from_iter(None, (0..self.nrows()).map(|i|self.get((i,j)).unwrap().clone())).ok().unwrap())
-    }
-
-    fn diagonal(&self) -> impl ExactSizeIterator<Item=&Self::T> {
-        let min=Ord::min(self.ncols(),self.nrows());
-        (0..min).into_iter()
-                .map(|i|self.get((i,i)).unwrap())
+    fn col(&self, j:usize) -> Result<Self::Col,IndexOutOfBoundsError<usize>> where Self::T : Clone {
+        IndexOutOfBoundsError::try_new(&self.ncols(),&j)?;
+        Ok(Self::Col::any_from_iter(None, (0..self.nrows()).map(|i|self.get((i,j)).unwrap().clone())).ok().unwrap())
     }
 
     fn into_diagonal(self) -> impl ExactSizeIterator<Item=Self::T> {
@@ -83,18 +47,6 @@ pub trait Matrix : Container<U2> {
             .enumerate()
             .map(|(j,r)|r.try_into_element(j).unwrap())
             .take(min)
-    }
-
-    fn is_a_zero_matrix(&self) -> bool where Self::T : Zero {
-        self.iter()
-            .all(Zero::is_zero)
-    }
-
-    fn is_an_identity_matrix(&self) -> bool where Self::T : Zero+One+PartialEq {
-        self.is_square()
-        && 
-        self.indexed_iter()
-            .all(|((i,j),aij)| aij == &kron_delta(i,j)) 
     }
 }
 
@@ -131,29 +83,18 @@ pub fn impl_map
 
 pub trait AlgebraMatrix : Matrix + Conjugate {
     // fails if index out of bounds
-    fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Option<Self::T> where Self::T:Clone;
+    fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Result<Self::T,IndexOutOfBoundsError<usize>> where Self::T:Clone;
 }
 
 // requires Self::Col : TryScalarproduct<TryScProdT = Self::T>
 #[macro_export]
 macro_rules! algebra_matrix_impl {
     () => {
-        fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Option<<Self as container_traits::ItemT>::T> where <Self as container_traits::ItemT>::T : Clone
+        fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Result<Self::T,container_traits::IndexOutOfBoundsError<usize>> where Self::T : Clone
         {
-            <Self::Col as algebra_traits::TryScalarproduct>::try_scalar_product(
+            Ok(<Self::Col as algebra_traits::TryScalarproduct>::try_scalar_product(
                 self.col(j0)?,
-                self.col(j1)?)
+                self.col(j1)?).unwrap())
         }
     };
 }
-
-
-// impl<F : Scalar,
-//      M : Matrix<T=F>
-//         +Conjugate> AlgebraMatrix for M where Self::Col : TryScalarproduct<TryScProdT = Self::T> {
-//             fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Option<Self::T> where Self::T:Clone,  {
-//                 let c0=self.col(j0)?;
-//                 let c1=self.col(j1)?;
-//                 c0.try_scalar_product(c1)
-//             }
-//         }

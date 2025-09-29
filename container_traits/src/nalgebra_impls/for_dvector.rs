@@ -1,14 +1,33 @@
-use nalgebra::{Scalar, DVector,RowDVector};
-use crate::{for_dynamic::*, for_dyn_and_stat::*, IntoVec, IndexOutOfBoundsError};
+use nalgebra::{Const, Dyn, DVector, MatrixView, MatrixViewMut, RowDVector, DVectorView, DVectorViewMut, Scalar};
+use crate::{for_dynamic::*, for_dyn_and_stat::*, ChangeLen, IntoVec, IndexOutOfBoundsError};
 use num_traits::{Zero,One};
 
 use crate::ContainerConstructError;
 
 type U2=(usize,usize);
 type CCE=ContainerConstructError<U2>;
+type RowDVectorView   <'a,T>=MatrixView   <'a,T,Const<1>,Dyn>;
+type RowDVectorViewMut<'a,T>=MatrixViewMut<'a,T,Const<1>,Dyn>;
+
+macro_rules! impl_vector_view {
+    ($name:ident $(, $lt:lifetime )?) => {
+
+        impl<$($lt,)? T:Scalar> IsEmpty for $name<$($lt,)?T> {
+            fn is_empty(&self) -> bool {
+                $name::is_empty(&self)
+            }
+        }
+
+        impl<$($lt,)?T : Scalar> OCTSize<usize> for $name<$($lt,)?T> {
+            const OCTSIZE:Option<usize>=None;
+        }
+    };
+}
 
 macro_rules! impl_vector {
     ($name:ident) => {
+
+        impl_vector_view!($name);
 
         impl<T:Scalar> Concat for $name<T> {
             fn concat(self, rhs:Self) -> Self {
@@ -22,14 +41,6 @@ macro_rules! impl_vector {
             fn empty() -> Self {
                 $name::from_vec(Vec::new())
             }
-
-            fn is_empty(&self) -> bool {
-                $name::is_empty(&self)
-            }
-        }
-
-        impl<T : Scalar> OCTSize<usize> for $name<T> {
-            const OCTSIZE:Option<usize>=None;
         }
 
         impl<T:Scalar> OneElement<T> for $name<T> {
@@ -80,3 +91,16 @@ macro_rules! impl_vector {
 }
 impl_vector!(DVector);
 impl_vector!(RowDVector);
+impl_vector_view!(DVectorView, 'a);
+impl_vector_view!(RowDVectorView, 'a);
+impl_vector_view!(DVectorViewMut, 'a);
+impl_vector_view!(RowDVectorViewMut, 'a);
+
+
+impl<T : Scalar> ChangeLen for DVector<T> {
+    type Output<const L:usize> = nalgebra::SVector<T,L>;
+}
+
+impl<T : Scalar> ChangeLen for RowDVector<T> {
+    type Output<const L:usize> = nalgebra::RowSVector<T,L>;
+}

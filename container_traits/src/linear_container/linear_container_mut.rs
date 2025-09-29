@@ -1,10 +1,10 @@
-use super::LinearContainer;
+use super::LinearContainerView;
 
 use crate::ContainerMut;
 
 pub trait LinearContainerMut
-    : LinearContainer
+    : LinearContainerView
      +ContainerMut<usize> {}
 
-impl<C : LinearContainer
+impl<C : LinearContainerView
         +ContainerMut<usize>> LinearContainerMut for C {}

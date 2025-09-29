@@ -96,21 +96,21 @@ impl<Index,T> ItemT for ContainerSparse<Index,T> {
 }
 
 impl<Index:ContainerIndex,T> Get<Index,T> for ContainerSparse<Index,T> {
-    fn get(&self, index:Index) -> Option<&T> {
-        (index.is_elem_wise_strictly_smaller(&self.size)).then(||
-        self.bm
-            .get(&index)
-            .unwrap_or(&self.default))
+    fn get(&self, index:Index) -> Result<&T,IndexOutOfBoundsError<Index>> {
+        IndexOutOfBoundsError::try_new(&self.size(),&index)?;
+        Ok(self.bm
+               .get(&index)
+               .unwrap_or(&self.default))
     }
 }
 
 impl<Index:ContainerIndex,T> TryIntoElement<Index,T> for ContainerSparse<Index,T> {
-    fn try_into_element(self,index:Index) -> Option<T> {
+    fn try_into_element(self,index:Index) -> Result<T,IndexOutOfBoundsError<Index>> {
         let (mut bm,default, size)=self.into_parts();
-        (index.is_elem_wise_strictly_smaller(&size)).then(||
-            bm
-              .remove(&index)
-              .unwrap_or(default))
+        IndexOutOfBoundsError::try_new(&size,&index)?;
+        Ok(bm
+            .remove(&index)
+            .unwrap_or(default))
     }
 }
 

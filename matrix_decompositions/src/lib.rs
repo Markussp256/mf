@@ -1,5 +1,5 @@
 pub mod eig;
-// pub use eig::Eig;
+pub use eig::*;
 
 pub mod qr;
-pub use qr::{QR,OrthogonalQR,UnitaryQR};
+pub use qr::*;

@@ -1,0 +1,33 @@
+use crate::{Get, IndexedIter, ItemT, Iter, NumberOfDegreesOfFreedom, OCTSize, Size, SizeFromORef};
+
+pub trait ContainerView<Index>
+          : Sized
+           +NumberOfDegreesOfFreedom<Self::T>
+           +Size           <Index>
+           +OCTSize        <Index>
+           +SizeFromORef   <Index>
+           +Get            <Index,Self::T>
+           +IndexedIter    <Index,Self::T>
+           +Iter           <      Self::T>
+           +ItemT {}
+
+
+impl<T,Index,
+     C : Sized
+        +NumberOfDegreesOfFreedom<T>
+        +Size           <Index>
+        +OCTSize        <Index>
+        +SizeFromORef   <Index>  
+        +Get            <Index,T>
+        +IndexedIter    <Index,T>
+        +Iter           <      T>
+        +ItemT              <T=T>> ContainerView<Index> for C {}
+
+// impl<T>               Container<T> for Vec<T> {}
+// impl<T,const N:usize> Container<T> for [T;N]  {}
+// impl<T>               Container for Vec<T> {
+//     type T=T;
+// }
+// impl<T,const N:usize> Container for [T;N]  {
+//     type T=T;
+// }

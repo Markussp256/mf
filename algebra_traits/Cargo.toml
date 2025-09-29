@@ -15,6 +15,7 @@ crate-type = ["lib"]
 [dependencies]
 
 algebra_derive =   { path = "../algebra_derive" }
+container        = { path = "../container" }
 container_derive = { path = "../container_derive" }
 container_traits = { path = "../container_traits" }
 utils =            { path = "../utils"}

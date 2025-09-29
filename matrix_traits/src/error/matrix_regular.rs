@@ -1,5 +1,13 @@
 use std::fmt::Display;
 
+#[derive(Clone, Debug, thiserror::Error, PartialEq)]
+pub struct MatrixRegularError;
+
+impl Display for MatrixRegularError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "matrix is regular")
+    }
+}
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq)]
 pub struct MatrixNotRegularError;

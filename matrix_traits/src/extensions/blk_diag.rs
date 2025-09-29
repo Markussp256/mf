@@ -1,5 +1,5 @@
-use crate::Matrix;
-use container_traits::{TryFromVec, Concatenated, ContainerIndex, Get, IndexedIter, IntoIndexedIter, IntoIter, ItemT, Iter, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
+use crate::{Matrix, MatrixView};
+use container_traits::{Concatenated, ContainerIndex, Get, IndexOutOfBoundsError, IndexedIter, IntoIndexedIter, IntoIter, ItemT, Iter, NumberOfDegreesOfFreedom, OCTSize, Size, TryFromVec, TryIntoElement};
 use num_traits::Zero;
 use utils::iter::{ChainExactSize, IntoExactSizeIterator};
 
@@ -9,13 +9,13 @@ type U2=(usize,usize);
 // br=bottom right
 #[derive(Clone, Debug, PartialEq,
           algebra_derive::ScalarContainer)]
-pub struct BlockDiagonal<TL:Matrix, BR:Matrix<T=TL::T>> where TL::T : Zero {
+pub struct BlockDiagonal<TL:MatrixView, BR:MatrixView<T=TL::T>> where TL::T : Zero {
     tl:TL,
     br:BR,
     zero:TL::T
 }
 
-impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> BlockDiagonal<TL,BR> {
+impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> BlockDiagonal<TL,BR> {
     pub fn new        (tl:TL, br:BR) -> Self     { Self{tl, br, zero:F::zero()} }
     pub fn into_parts ( self)        -> (TL, BR) { (self.tl, self.br)}
         fn nrows_total(&self)        -> usize    { self.tl.nrows()+self.br.nrows() }
@@ -41,8 +41,8 @@ impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> BlockDiagonal<TL,BR> {
 }
 
 
-impl<F:Zero, TL:Matrix<T=F>, BR:Matrix<T=F>> Get<U2,F> for BlockDiagonal<TL,BR> {
-    fn get(&self,(i,j):U2) -> Option<&F> {
+impl<F:Zero, TL:MatrixView<T=F>, BR:MatrixView<T=F>> Get<U2,F> for BlockDiagonal<TL,BR> {
+    fn get(&self,(i,j):U2) -> Result<&F,IndexOutOfBoundsError<U2>> {
         let (tl_nrows,tl_ncols) =self.tl.matrix_dimensions();
         if i < tl_nrows &&
            j < tl_ncols {
@@ -54,41 +54,41 @@ impl<F:Zero, TL:Matrix<T=F>, BR:Matrix<T=F>> Get<U2,F> for BlockDiagonal<TL,BR> 
         } else if 
            i < self.nrows_total() &&
            j < self.ncols_total() {
-            Some(&self.zero)
+            Ok(&self.zero)
         } else {
-            None
+            Err(IndexOutOfBoundsError::new(&self.size(),&(i,j)))
         }
     }
 }
 
-impl<F:Zero, TL:Matrix<T=F>, BR:Matrix<T=F>> Iter<F> for BlockDiagonal<TL,BR> {
+impl<F:Zero, TL:MatrixView<T=F>, BR:MatrixView<T=F>> Iter<F> for BlockDiagonal<TL,BR> {
     fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a F> where F:'a {
         container_traits::for_any::iter::iter::impl_iter_from_get(self, self.size_total())
     }
 }
 
-impl<F:Zero, TL:Matrix<T=F>, BR:Matrix<T=F>> IndexedIter<U2,F> for BlockDiagonal<TL,BR> {
+impl<F:Zero, TL:MatrixView<T=F>, BR:MatrixView<T=F>> IndexedIter<U2,F> for BlockDiagonal<TL,BR> {
     fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a F)> where F:'a {
         container_traits::indexed_iter::impl_indexed_iter_from_get(self, self.size_total())
     }
 }
 
-impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> ItemT for BlockDiagonal<TL,BR> {
+impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> ItemT for BlockDiagonal<TL,BR> {
     type T=F;
 }
 
 impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> TryIntoElement<U2,F> for BlockDiagonal<TL,BR> {
-    fn try_into_element(self,index:U2) -> Option<F> {
+    fn try_into_element(self,index:U2) -> Result<F,IndexOutOfBoundsError<U2>> {
         let stldim=self.tl.matrix_dimensions();
         let sdim=stldim.elem_wise_add(self.br.matrix_dimensions());
+        IndexOutOfBoundsError::try_new(&sdim,&index)?;
         if        index.is_elem_wise_strictly_smaller(&stldim) {
             self.tl
                 .try_into_element(index)
-        } else if index.is_elem_wise_strictly_smaller(&sdim) {
-            index.try_elem_wise_sub(stldim)
-                 .and_then(|d|self.br.try_into_element(d))
+        } else if index.is_elem_wise_larger_eq(&stldim) {
+            self.br.try_into_element(index.try_elem_wise_sub(stldim).unwrap())
         } else {
-            None
+            Ok(self.zero)
         }
     }
 }
@@ -114,7 +114,7 @@ impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> IntoIndexedIter<U2,F> for BlockDiago
     }
 }
 
-impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> Size<U2> for BlockDiagonal<TL,BR> {
+impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> Size<U2> for BlockDiagonal<TL,BR> {
     fn size(&self) -> U2 {
         self.tl.size()
             .elem_wise_add(
@@ -122,18 +122,29 @@ impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> Size<U2> for BlockDiagonal<TL,BR> {
     }
 }
 
-impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> OCTSize<U2> for BlockDiagonal<TL,BR> {
+impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> OCTSize<U2> for BlockDiagonal<TL,BR> {
     const OCTSIZE:Option<U2> = match (TL::OCTSIZE,BR::OCTSIZE) {
         (Some((r0,c0)),Some((r1,c1))) => Some((r0+r1,c0+c1)),
         _ => None
     };
 }
 
-impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> NumberOfDegreesOfFreedom<F> for BlockDiagonal<TL,BR> {
+impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> NumberOfDegreesOfFreedom<F> for BlockDiagonal<TL,BR> {
     fn ndofs(&self) -> usize {
         self.tl.ndofs()
        +self.br.ndofs()
     }
+}
+
+impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> MatrixView for BlockDiagonal<TL,BR> {
+    
+    type RowView=Concatenated<TL::RowView,BR::RowView>;
+
+    type ColView=Concatenated<TL::ColView,BR::ColView>;
+
+    fn nrows(&self) -> usize { self.nrows_total() }
+
+    fn ncols(&self) -> usize { self.ncols_total() }
 }
 
 impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> Matrix for BlockDiagonal<TL,BR> {
@@ -141,10 +152,6 @@ impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> Matrix for BlockDiagonal<TL,BR> {
     type Row=Concatenated<TL::Row,BR::Row>;
 
     type Col=Concatenated<TL::Col,BR::Col>;
-
-    fn nrows(&self) -> usize { self.nrows_total() }
-
-    fn ncols(&self) -> usize { self.ncols_total() }
 
     fn into_rows(self) -> impl ExactSizeIterator<Item=Self::Row> {
         self.into_rows_impl()

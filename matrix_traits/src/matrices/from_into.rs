@@ -13,5 +13,5 @@ pub use into_dyn_matrix::IntoDynMatrix;
 pub mod try_from_into_matrix;
 pub use try_from_into_matrix::{TryFromMatrix,TryIntoMatrix};
 
-pub mod try_submatrirx;
-pub use try_submatrirx::TrySubMatrix;
+pub mod try_into_sub_matrirx;
+pub use try_into_sub_matrirx::{TryIntoSubMatrix,TryIntoSubMatrixDyn};

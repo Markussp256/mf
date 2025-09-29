@@ -38,4 +38,4 @@ pub mod try_put_at;
 pub use try_put_at::TryPutAt;
 
 pub mod xyz;
-pub use xyz::{X,Y,Z};
+pub use xyz::{X,Y,Z,EX,EY,EZ};

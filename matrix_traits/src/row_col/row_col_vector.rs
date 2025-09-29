@@ -1,13 +1,24 @@
 use crate::{matrix_operations::Transpose, transpose::Transposed};
 use algebra::VectorGeneric;
-use container_traits::{Concatenated, LinearContainer, LinearContainerDynamic, LinearContainerMut, LinearContainerConstruct, LinearContainerTryConstruct};
+use container_traits::{
+    Concatenated,
+    LinearContainer,
+    LinearContainerView,
+    LinearContainerDynamic,
+    LinearContainerMut,
+    LinearContainerConstruct,
+    LinearContainerTryConstruct};
 
 
 
 macro_rules! row_col_traits {
     ($r_or_c:ident) => {
         paste::paste!(
-        pub trait [<$r_or_c Vector>] : Transpose + LinearContainer {}
+        
+        pub trait [<$r_or_c VectorView>] : LinearContainerView {}
+
+        pub trait [<$r_or_c Vector>] : [<$r_or_c VectorView>]+Transpose + LinearContainer {}
+        impl<S:[<$r_or_c VectorView>]+Transpose+LinearContainer> [<$r_or_c Vector>] for S {}
 
         pub trait [<$r_or_c VectorTryConstruct>] : [<$r_or_c Vector>] + LinearContainerTryConstruct {}
         impl<S:[<$r_or_c Vector>]+LinearContainerTryConstruct> [<$r_or_c VectorTryConstruct>] for S {}
@@ -15,15 +26,15 @@ macro_rules! row_col_traits {
         pub trait [<$r_or_c VectorConstruct>] : [<$r_or_c Vector>] + LinearContainerConstruct {}
         impl<S:[<$r_or_c Vector>]+LinearContainerConstruct> [<$r_or_c VectorConstruct>] for S {}
 
-        pub trait [<$r_or_c VectorMut>] : [<$r_or_c Vector>] + LinearContainerMut {}
-        impl<S:[<$r_or_c Vector>]+LinearContainerMut> [<$r_or_c VectorMut>] for S {}
+        pub trait [<$r_or_c VectorMut>] : [<$r_or_c VectorView>] + LinearContainerMut {}
+        impl<S:[<$r_or_c VectorView>]+LinearContainerMut> [<$r_or_c VectorMut>] for S {}
 
         pub trait [<$r_or_c VectorDynamic>] : [<$r_or_c Vector>] + LinearContainerDynamic {}
         impl<S:[<$r_or_c Vector>]+LinearContainerDynamic> [<$r_or_c VectorDynamic>] for S {}
 
         impl<T,
-             A:[<$r_or_c Vector>]<T=T>,
-             B:[<$r_or_c Vector>]<T=T>> [<$r_or_c Vector>] for Concatenated<A,B> {}
+             A:[<$r_or_c VectorView>]<T=T>,
+             B:[<$r_or_c VectorView>]<T=T>> [<$r_or_c VectorView>] for Concatenated<A,B> {}
         );
     };
 }
@@ -44,7 +55,7 @@ impl<A : Transpose<Output=AT>,AT,
 
 
 
-impl<C:LinearContainer> Transpose for VectorGeneric<C> {
+impl<C:LinearContainerView> Transpose for VectorGeneric<C> {
     type Output=Transposed<Self>;
 
     fn transpose(self) -> Self::Output {
@@ -52,4 +63,4 @@ impl<C:LinearContainer> Transpose for VectorGeneric<C> {
     }
 }
 
-impl<C:LinearContainer> ColVector for VectorGeneric<C> {}
+impl<C:LinearContainerView> ColVectorView for VectorGeneric<C> {}

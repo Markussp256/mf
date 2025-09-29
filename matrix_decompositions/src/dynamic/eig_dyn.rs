@@ -33,7 +33,7 @@ macro_rules! eig {
 
         impl<F:Clone+$tr> $name<F> {
 
-            pub fn new(a:impl NormalMatrix<F>) -> Self {
+            pub fn new(a:impl MatrixNormal<F>) -> Self {
                 let a:SquareMatrixDyn<F>=a.into();
                 // let (q,r)=Schur::try_new(a).ok().unwrap().into_parts();
                 // let d=DiagonalMatrixDyn::try_from(r.into_square()).ok().unwrap();

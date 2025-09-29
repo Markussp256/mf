@@ -1,12 +1,16 @@
+use crate::IndexOutOfBoundsError;
+
 pub trait TryIntoElement<Index,T> : Sized {
-    fn try_into_element(self,index:Index) -> Option<T>;
+    fn try_into_element(self,index:Index) -> Result<T,IndexOutOfBoundsError<Index>>;
 }
 
 macro_rules! impl_try_into_element {
     () => {
-        fn try_into_element(self,index:usize) -> Option<T> {
-            self.into_iter()
-                .nth(index)       
+        fn try_into_element(self,index:usize) -> Result<T,IndexOutOfBoundsError<usize>> {
+            IndexOutOfBoundsError::try_new(&self.len(),&index)?;
+            Ok(self.into_iter()
+                  .nth(index)
+                  .unwrap())
         }
     }
 }

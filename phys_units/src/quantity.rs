@@ -182,7 +182,7 @@ macro_rules! base_impl {
             }
         }
 
-        impl<F:algebra_traits::RealNumber> algebra_traits::Max for $name<F> {
+        impl<F:Clone+algebra_traits::RealNumber> algebra_traits::Max for $name<F> {
             fn max<'a>(&'a self, rhs:&'a Self) -> &'a Self {
                 if self > rhs {
                     self

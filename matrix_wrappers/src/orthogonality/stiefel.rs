@@ -1,9 +1,9 @@
 use std::ops::Neg;
 
 use algebra::Unit;
-use algebra_traits::Scalar;
+use algebra_traits::{Conjugate, Scalar};
 use container_traits::{TryAccept, Len, Get,  IntoInner};
-use matrix_traits::{matrix::AlgebraMatrix, ColVectorTryConstruct, Matrix, MatrixConstructError, MatrixNotTall, MatrixNotWide, MatrixSquare, MatrixTall, MatrixTryConstruct, Transpose};
+use matrix_traits::{matrix::AlgebraMatrix, ColVectorTryConstruct, Matrix, MatrixConstructError, MatrixNormal, MatrixNotTall, MatrixNotWide, MatrixSquare, MatrixTall, MatrixTryConstruct, Transpose};
 
 use utils::kron_delta;
 use crate::RightTriangular;
@@ -13,14 +13,17 @@ type U2=(usize,usize);
          algebra_derive::Conjugate,
          algebra_derive::Neg,
          container_derive::IntoInner,
+         container_derive::Inner,
          container_derive::JustContainer,
+         container_derive::NewUnchecked,
          derive_more::AsRef,
          derive_more::Index,
          matrix_derive::Identity,
          matrix_derive::ClosedMatrixMatrixProduct,
          matrix_derive::MatrixMatrixProductRightTriangular,
-         matrix_derive::Inherit)]
-pub struct Stiefel<M:Matrix>(M);
+         matrix_derive::Inherit,
+         matrix_derive::PopCol)]
+pub struct Stiefel<M:MatrixView>(M);
 
 pub type SquareStiefel<M> = Stiefel<crate::Square<M>>;
 
@@ -29,6 +32,8 @@ impl<M:Matrix>        MatrixNotWide for Stiefel<M> {}
 impl<M:MatrixNotTall> MatrixNotTall for Stiefel<M> {}
 impl<M:MatrixSquare>  MatrixSquare  for Stiefel<M> {}
 impl<M:MatrixTall>    MatrixTall    for Stiefel<M> {}
+
+impl<M:MatrixSquare+Conjugate>  MatrixNormal  for Stiefel<M> {}
 
 impl<M:Matrix+Transpose<Output=Mt>,Mt> Transpose for Stiefel<M> {
     type Output=Mt;

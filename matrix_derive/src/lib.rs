@@ -12,6 +12,25 @@ fn preprocess4matrix(input:& mut DeriveInput) -> (proc_macro2::TokenStream, Punc
     (generics, where_clause, ty, wt)
 }
 
+#[proc_macro_derive(MatrixView)]
+pub fn matrix_view_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let (generics, where_clause, ty, wt) = preprocess4matrix(&mut input);
+    let tr=quote!{matrix_traits::MatrixView};
+    quote! {
+        impl #generics #tr for #ty where #wt : #tr, #where_clause {
+            type RowView=#wt::RowView;
+            type ColView=#wt::ColView;
+            fn nrows(&self) -> usize {
+                <#wt as #tr>::nrows(&self.0)
+            }
+            fn ncols(&self) -> usize {
+                <#wt as #tr>::ncols(&self.0)
+            }
+        }
+    }.into()
+}
+
 #[proc_macro_derive(Matrix)]
 pub fn matrix_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
@@ -21,12 +40,6 @@ pub fn matrix_proc_macro(input: TokenStream) -> TokenStream {
         impl #generics #tr for #ty where #wt : #tr, #where_clause {
             type Row=#wt::Row;
             type Col=#wt::Col;
-            fn nrows(&self) -> usize {
-                <#wt as #tr>::nrows(&self.0)
-            }
-            fn ncols(&self) -> usize {
-                <#wt as #tr>::ncols(&self.0)
-            }
             fn into_rows(self) -> impl ExactSizeIterator<Item=Self::Row> {
                 <#wt as #tr>::into_rows(self.0)
             }
@@ -37,6 +50,8 @@ pub fn matrix_proc_macro(input: TokenStream) -> TokenStream {
     }.into()
 }
 
+
+
 #[proc_macro_derive(AlgebraMatrix)]
 pub fn algebra_matrix_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
@@ -44,7 +59,7 @@ pub fn algebra_matrix_proc_macro(input: TokenStream) -> TokenStream {
     let tr=quote!{matrix_traits::AlgebraMatrix};
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #where_clause {
-            fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Option<Self::T> where Self::T:Clone
+            fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Result<Self::T, container_traits::IndexOutOfBoundsError<usize>> where Self::T:Clone
             {
                 <#wt as #tr>::try_col_sc_prod(&self.0,j0,j1)
             }
@@ -52,6 +67,15 @@ pub fn algebra_matrix_proc_macro(input: TokenStream) -> TokenStream {
     }.into()
 }
 
+#[proc_macro_derive(MatrixNormal)]
+pub fn matrix_normal_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let (generics, where_clause, ty, wt) = preprocess4matrix(&mut input);
+    quote! {
+        impl #generics matrix_traits::MatrixNormal for #ty where #wt : algebra_traits::Conjugate, #where_clause {
+        }
+    }.into()
+}
 
 #[proc_macro_derive(MatrixTryConstruct)]
 pub fn matrix_try_construct_proc_macro(input: TokenStream) -> TokenStream {
@@ -194,7 +218,7 @@ pub fn empty_proc_macro(input: TokenStream) -> TokenStream {
             }
 
             fn is_empty(&self) -> bool {
-                <Self as matrix_traits::Matrix>::matrix_dimensions(&self) == (0,0)
+                <Self as matrix_traits::MatrixView>::matrix_dimensions(&self) == (0,0)
             }
         }
     }.into()
@@ -218,34 +242,113 @@ pub fn static_matrix_proc_macro(input: TokenStream) -> TokenStream {
     }.into()
 }
 
+
+#[proc_macro_derive(PopRow)]
+pub fn pop_row_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let type_name=input.ident.clone();
+    let tr = quote!{matrix_traits::PopRow};
+    let tr_try = quote!{matrix_traits::TryPopRow};
+    let (generics, where_clause, [(ty, mut wt)])=
+    preprocess_no_impl(& mut input);
+    assert_eq!(wt.len(),1);
+    let wt=wt.remove(0);
+    quote! {
+        impl #generics #tr for #ty where #wt : #tr, #where_clause {
+            type Output=#type_name<<#wt as #tr>::Output>;
+            fn pop_row(self) -> (#type_name<<#wt as #tr>::Output>, <Self as Matrix>::Row) {
+                let (m,r)=self.0.pop_row();
+                (#type_name(m),r)
+            }
+        }
+
+        impl #generics #tr_try for #ty where #wt : #tr_try, #where_clause {
+            type Output=#type_name<<#wt as #tr_try>::Output>;
+            fn try_pop_row(self) -> Option<(#type_name<<#wt as #tr_try>::Output>, <Self as Matrix>::Row)> {
+                self.0
+                    .try_pop_row()
+                    .map(|(m,r)|(#type_name(m),r))
+            }
+        }
+    }.into()
+}
+
+
+#[proc_macro_derive(PopCol)]
+pub fn pop_col_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let type_name=input.ident.clone();
+    let tr = quote!{matrix_traits::PopCol};
+    let tr_try = quote!{matrix_traits::TryPopCol};
+    let (generics, where_clause, [(ty, mut wt)])=
+    preprocess_no_impl(& mut input);
+    assert_eq!(wt.len(),1);
+    let wt=wt.remove(0);
+    quote! {
+        impl #generics #tr for #ty where #wt : #tr, #where_clause {
+            type Output=#type_name<<#wt as #tr>::Output>;
+            fn pop_col(self) -> (#type_name<<#wt as #tr>::Output>, <Self as Matrix>::Col) {
+                let (m,r)=self.0.pop_col();
+                (#type_name(m),r)
+            }
+        }
+
+        impl #generics #tr_try for #ty where #wt : #tr_try, #where_clause {
+            type Output=#type_name<<#wt as #tr_try>::Output>;
+            fn try_pop_col(self) -> Option<(#type_name<<#wt as #tr_try>::Output>, <Self as Matrix>::Col)> {
+                self.0
+                    .try_pop_col()
+                    .map(|(m,r)|(#type_name(m),r))
+            }
+        }
+    }.into()
+}
+
 /// requires also to implement GeneralizedMatrixProduct
 #[proc_macro_derive(MatrixVectorProduct)]
 pub fn matrix_vector_product_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let tr = quote!{matrix_traits::MatrixVectorProduct<Rhs>};
     let tr_try = quote!{matrix_traits::TryMatrixVectorProduct<Rhs>};
+    let tr_into = quote!{matrix_traits::IntoMatrixVectorProduct<Rhs>};
+    let tr_try_into = quote!{matrix_traits::TryIntoMatrixVectorProduct<Rhs>};
     let (generics, where_clause, [(ty, mut wt)])=
     preprocess_no_impl_add_gen_types(& mut input, vec!["Rhs"]);
     assert_eq!(wt.len(),1);
     let wt=wt.remove(0);
     quote! {
-        impl #generics #tr for #ty where #wt : #tr, Rhs : matrix_traits::ColVector, #where_clause {
+        impl #generics #tr for #ty where #wt : #tr, Rhs : matrix_traits::ColVectorView, #where_clause {
             type Output=<#wt as #tr>::Output;
-            fn matrix_vector_product(self, rhs:Rhs) -> <#wt as #tr>::Output {
+            fn matrix_vector_product(&self, rhs:&Rhs) -> <#wt as #tr>::Output {
                 self.0
                     .matrix_vector_product(rhs)
             }
         }
 
-        impl #generics #tr_try for #ty where #wt : #tr_try, Rhs : matrix_traits::ColVector, #where_clause {
+
+        impl #generics #tr_into for #ty where #wt : #tr_into, Rhs : matrix_traits::ColVector, #where_clause {
+            type Output=<#wt as #tr_into>::Output;
+            fn into_matrix_vector_product(self, rhs:Rhs) -> <#wt as #tr_into>::Output {
+                self.0
+                    .into_matrix_vector_product(rhs)
+            }
+        }
+
+        impl #generics #tr_try for #ty where #wt : #tr_try, Rhs : matrix_traits::ColVectorView, #where_clause {
             type Output=<#wt as #tr_try>::Output;
-            fn try_matrix_vector_product(self, rhs:Rhs) -> Option<<#wt as #tr_try>::Output> {
+            fn try_matrix_vector_product(&self, rhs:&Rhs) -> Option<<#wt as #tr_try>::Output> {
                 self.0
                     .try_matrix_vector_product(rhs)
             }
         }
 
-
+        impl #generics #tr_try_into for #ty where #wt : #tr_try_into, Rhs : matrix_traits::ColVector, #where_clause {
+            type Output=<#wt as #tr_try_into>::Output;
+            fn try_into_matrix_vector_product(self, rhs:Rhs) -> Option<<#wt as #tr_try_into>::Output> {
+                self.0
+                    .try_into_matrix_vector_product(rhs)
+            }
+        }
     }.into()
 }
 
@@ -258,7 +361,6 @@ pub fn matrix_vector_product_proc_macro(input: TokenStream) -> TokenStream {
 //     assert_eq!(wt.len(),1);
 //     let wt=wt.remove(0);
 //     quote! {
-
 //     }.into()
 // }
 
@@ -267,23 +369,43 @@ pub fn closed_matrix_matrix_product_proc_macro(input: TokenStream) -> TokenStrea
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let tr =quote!{matrix_traits::MatrixMatrixProduct};
     let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
+    let tr_into=quote!{matrix_traits::IntoMatrixMatrixProduct};
+    let tr_try_into=quote!{matrix_traits::TryIntoMatrixMatrixProduct};
     let (generics, where_clause, [(ty, wt),(ty1, wt1),(ty2, wt2)])=
     preprocess_no_impl(& mut input);
     let mul_bound=quote!{<#ty as container_traits::ItemT>::T : std::ops::Mul<<#ty1 as container_traits::ItemT>::T>};
     quote! {
         impl #generics #tr<#ty1> for #ty where #(#wt : #tr<#wt1,Output=#wt2>,)* #mul_bound, #where_clause {
             type Output=#ty2;
-            fn matrix_matrix_product(self, rhs:#ty1) -> #ty2 {
+            fn matrix_matrix_product(&self, rhs:&#ty1) -> #ty2 {
                 #ty2(self.0
-                         .matrix_matrix_product(rhs.0))
+                         .matrix_matrix_product(&rhs.0))
+            }
+        }
+
+
+        impl #generics #tr_into<#ty1> for #ty where #(#wt : #tr_into<#wt1,Output=#wt2>,)* #mul_bound, #where_clause {
+            type Output=#ty2;
+            fn into_matrix_matrix_product(self, rhs:#ty1) -> #ty2 {
+                #ty2(self.0
+                         .into_matrix_matrix_product(rhs.0))
             }
         }
 
         impl #generics #tr_try<#ty1> for #ty where #(#wt : #tr_try<#wt1,Output=#wt2>,)* #mul_bound, #where_clause {
             type Output=#ty2;
-            fn try_matrix_matrix_product(self, rhs:#ty1) -> Option<#ty2> {
+            fn try_matrix_matrix_product(&self, rhs:&#ty1) -> Option<#ty2> {
                 self.0
-                    .try_matrix_matrix_product(rhs.0)
+                    .try_matrix_matrix_product(&rhs.0)
+                    .map(|c|#ty2(c))
+            }
+        }
+
+        impl #generics #tr_try_into<#ty1> for #ty where #(#wt : #tr_try_into<#wt1,Output=#wt2>,)* #mul_bound, #where_clause {
+            type Output=#ty2;
+            fn try_into_matrix_matrix_product(self, rhs:#ty1) -> Option<#ty2> {
+                self.0
+                    .try_into_matrix_matrix_product(rhs.0)
                     .map(|c|#ty2(c))
             }
         }
@@ -292,518 +414,231 @@ pub fn closed_matrix_matrix_product_proc_macro(input: TokenStream) -> TokenStrea
 
 
 
-
-#[proc_macro_derive(MatrixMatrixProductHomogeneous)]
-pub fn matrix_matrix_product_hom_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
+fn matrix_matrix_product_impl(
+    input : DeriveInput,
+    rhs   : &str,
+    omtr  : Option<proc_macro2::TokenStream>,
+    ottr  : Option<proc_macro2::TokenStream>) -> TokenStream {
+    let tr =parse_quote!{matrix_traits::MatrixMatrixProduct};
     let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let hom=quote!{Homogeneous<Rhs>};
+    let tr_into=quote!{matrix_traits::IntoMatrixMatrixProduct};
+    let tr_try_into=quote!{matrix_traits::TryIntoMatrixMatrixProduct};
+    let hom=quote!{#rhs<Rhs>};
     let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
+    let mut input=input;
+    let (generics, wc, [(ty, mut types)], _)=
     DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
+    let mut where_clause=quote!{Rhs : matrix_traits::MatrixView};
+    if let Some(mtr)=omtr {
+        where_clause=quote!{#where_clause + #mtr};
+    }
+    if let Some(ttr)=ottr {
+        where_clause=quote!(#where_clause, Rhs::T : #ttr);
+    }
+    where_clause=quote!{#where_clause + #wc};
     let wt=types.remove(0);
-
     quote! {
-        impl #generics #tr<#hom> for #ty where #wt : #tr<Rhs>, Rhs : matrix_traits::MatrixSquare, Rhs::T : algebra_traits::RealNumber, #where_clause {
+        impl #generics #tr<#hom> for #ty where #wt : #tr<Rhs>, #where_clause {
             type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#hom) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#hom as container_traits::IntoInner>::into_inner(rhs))
+            fn matrix_matrix_product(&self, rhs:&#hom) -> <#wt as #tr<Rhs>>::Output {
+                self.0.matrix_matrix_product(<#hom as container_traits::Inner>::inner(rhs))
             }
         }
 
-        impl #generics #tr_try<#hom> for #ty where #wt : #tr_try<Rhs>, Rhs : matrix_traits::MatrixSquare, Rhs::T : algebra_traits::RealNumber, #where_clause {
+        impl #generics #tr_into<#hom> for #ty where #wt : #tr_into<Rhs>, #where_clause {
+            type Output=<#wt as #tr<Rhs>>::Output;
+            fn into_matrix_matrix_product(self, rhs:#rhs<Rhs>) -> <#wt as #tr_into<Rhs>>::Output {
+                self.0
+                    .into_matrix_matrix_product(<#hom as container_traits::IntoInner>::into_inner(rhs))
+            }
+        }
+
+        impl #generics #tr_try<#hom> for #ty where #wt : #tr_try<Rhs>, #where_clause {
             type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#hom) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#hom as container_traits::IntoInner>::into_inner(rhs))
+            fn try_matrix_matrix_product(&self, rhs:&#hom) -> Option<<#wt as #tr_try<Rhs>>::Output> {
+                self.0.try_matrix_matrix_product(<#hom as container_traits::Inner>::inner(rhs))
+            }
+        }
+
+        impl #generics #tr_try_into<#hom> for #ty where #wt : #tr_try_into<Rhs>, #where_clause {
+            type Output=<#wt as #tr_try_into<Rhs>>::Output;
+            fn try_into_matrix_matrix_product(self, rhs:#hom) -> Option<<#wt as #tr_try_into<Rhs>>::Output> {
+                self.0.try_into_matrix_matrix_product(<#hom as container_traits::IntoInner>::into_inner(rhs))
             }
         }
     }.into()
+}
+
+
+#[proc_macro_derive(MatrixMatrixProductHomogeneous)]
+pub fn matrix_matrix_product_hom_proc_macro(input: TokenStream) -> TokenStream {
+    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "Homogeneous",
+        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{algebra_traits::RealNumber}))
 }
 
 #[proc_macro_derive(MatrixMatrixProductOrthogonal)]
 pub fn matrix_matrix_product_orth_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let orth=quote!{Orthogonal<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#orth> for #ty where #wt : #tr<Rhs>, Rhs : matrix_traits::MatrixSquare, Rhs::T : algebra_traits::RealNumber, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#orth) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#orth as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#orth> for #ty where #wt : #tr_try<Rhs>, Rhs : matrix_traits::MatrixSquare, Rhs::T : algebra_traits::RealNumber, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#orth) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#orth as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "Orthogonal",
+        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{algebra_traits::RealNumber}))
 }
 
 #[proc_macro_derive(MatrixMatrixProductUnitary)]
 pub fn matrix_matrix_product_unitary_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let unitary=quote!{Unitary<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#unitary> for #ty where #wt : #tr<Rhs>, Rhs : matrix_traits::MatrixSquare, Rhs::T : algebra_traits::ComplexNumber, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#unitary) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#unitary as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#unitary> for #ty where #wt : #tr_try<Rhs>, Rhs : matrix_traits::MatrixSquare, Rhs::T : algebra_traits::ComplexNumber, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#unitary) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#unitary as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "Unitary",
+        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{algebra_traits::ComplexNumber}))
 }
 
 #[proc_macro_derive(MatrixMatrixProductSpecialOrthogonal)]
 pub fn matrix_matrix_product_special_orth_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let orth=quote!{Orthogonal<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#orth> for #ty where #wt : #tr<Rhs>, Rhs : matrix_traits::MatrixSquare, Rhs::T : algebra_traits::RealNumber, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#orth) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#orth as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#orth> for #ty where #wt : #tr_try<Rhs>, Rhs : matrix_traits::MatrixSquare, Rhs::T : algebra_traits::RealNumber, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#orth) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#orth as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "SpecialOrthogonal",
+        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{algebra_traits::RealNumber}))
 }
 
 #[proc_macro_derive(MatrixMatrixProductSpecialUnitary)]
 pub fn matrix_matrix_product_special_unitary_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let unitary=quote!{SpecialUnitary<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#unitary> for #ty where #wt : #tr<Rhs>, Rhs : matrix_traits::MatrixSquare, Rhs::T : algebra_traits::ComplexNumber, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#unitary) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#unitary as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#unitary> for #ty where #wt : #tr_try<Rhs>, Rhs : matrix_traits::MatrixSquare, Rhs::T : algebra_traits::ComplexNumber, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#unitary) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#unitary as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "SpecialUnitary",
+        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{algebra_traits::ComplexNumber}))
 }
 
 #[proc_macro_derive(MatrixMatrixProductStiefel)]
 pub fn matrix_matrix_product_stiefel_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let stiefel=quote!{Stiefel<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#stiefel> for #ty where #wt : #tr<Rhs>, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#stiefel) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#stiefel as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#stiefel> for #ty where #wt : #tr_try<Rhs>, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#stiefel) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#stiefel as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "Stiefel",
+        None,
+        Some(quote!{algebra_traits::Scalar}))
 }
 
 #[proc_macro_derive(MatrixMatrixProductNotTall)]
 pub fn matrix_matrix_product_not_tall_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let not_tall=quote!{NotTall<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#not_tall> for #ty where #wt : #tr<Rhs>, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#not_tall) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#not_tall as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#not_tall> for #ty where #wt : #tr_try<Rhs>, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#not_tall) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#not_tall as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "NotTall",
+        None,
+        None)
 }
 
 #[proc_macro_derive(MatrixMatrixProductNotWide)]
 pub fn matrix_matrix_product_not_wide_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let not_wide=quote!{NotWide<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#not_wide> for #ty where #wt : #tr<Rhs>, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#not_wide) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#not_wide as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#not_wide> for #ty where #wt : #tr_try<Rhs>, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#not_wide) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#not_wide as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "NotWide",
+        None,
+        None)
 }
 
 #[proc_macro_derive(MatrixMatrixProductSquare)]
 pub fn matrix_matrix_product_square_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let square=quote!{Square<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#square> for #ty where #wt : #tr<Rhs>, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#square) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#square as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#square> for #ty where #wt : #tr_try<Rhs>, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#square) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#square as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }<Rhs>
-    }.into()
+    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "Square",
+        None,
+        None)
 }
 
 #[proc_macro_derive(MatrixMatrixProductTall)]
 pub fn matrix_matrix_product_tall_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let tall=quote!{Tall<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#tall> for #ty where #wt : #tr<Rhs>, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#tall) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#tall as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#tall> for #ty where #wt : #tr_try<Rhs>, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#tall) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#tall as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "Tall",
+        None,
+        None)
 }
 
 #[proc_macro_derive(MatrixMatrixProductWide)]
 pub fn matrix_matrix_product_wide_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let wide=quote!{Wide<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#wide> for #ty where #wt : #tr<Rhs>, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#wide) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#wide as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#wide> for #ty where #wt : #tr_try<Rhs>, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#wide) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#wide as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "Wide",
+        None,
+        None)
 }
 
 
 #[proc_macro_derive(MatrixMatrixProductAntiHermitian)]
 pub fn matrix_matrix_product_anti_herm_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let anti_herm=quote!{AntiHermitian<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#anti_herm> for #ty where
-        #wt : #tr<Rhs>,
-        Rhs : matrix_traits::MatrixSquare,
-        Rhs :: T : Clone+algebra_traits::ComplexNumber, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#anti_herm) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#anti_herm as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#anti_herm> for #ty where
-        #wt : #tr_try<Rhs>,
-        Rhs : matrix_traits::MatrixSquare,
-        Rhs :: T : Clone+algebra_traits::ComplexNumber, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#anti_herm) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#anti_herm as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "AntiHermitian",
+        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!(algebra_traits::ComplexNumber)))
 }
 
 #[proc_macro_derive(MatrixMatrixProductHermitian)]
 pub fn matrix_matrix_product_herm_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let herm=quote!{Hermitian<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#herm> for #ty where
-        #wt : #tr<Rhs>,
-        Rhs : matrix_traits::MatrixSquare,
-        Rhs :: T : Clone+algebra_traits::ComplexNumber, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#herm) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#herm as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#herm> for #ty where
-        #wt : #tr_try<Rhs>,
-        Rhs : matrix_traits::MatrixSquare,
-        Rhs :: T : Clone+algebra_traits::ComplexNumber,  #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#herm) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#herm as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "Hermitian",
+        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!(algebra_traits::ComplexNumber)))
 }
 
 #[proc_macro_derive(MatrixMatrixProductSymmetric)]
 pub fn matrix_matrix_product_symm_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let symm=quote!{Symmetric<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#symm> for #ty where 
-            #wt : #tr<Rhs>,
-            Rhs :: T : Clone+algebra_traits::RealNumber,
-            Rhs : matrix_traits::MatrixSquare, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#symm) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#symm as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#symm> for #ty where
-            #wt : #tr_try<Rhs>,
-            Rhs :: T : Clone+algebra_traits::RealNumber,
-            Rhs : matrix_traits::MatrixSquare, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#symm) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#symm as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "Symmetric",
+        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!(algebra_traits::RealNumber)))
 }
 
 #[proc_macro_derive(MatrixMatrixProductSkewSymmetric)]
 pub fn matrix_matrix_product_skew_symm_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let skew_symm=quote!{SkewSymmetric<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#skew_symm> for #ty where 
-            #wt : #tr<Rhs>,
-            Rhs :: T : Clone+algebra_traits::RealNumber,
-            Rhs : matrix_traits::MatrixSquare, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#skew_symm) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#skew_symm as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#skew_symm> for #ty where
-            #wt : #tr_try<Rhs> + matrix_traits::MatrixSquare,
-            Rhs :: T : Clone+algebra_traits::RealNumber,
-            Rhs : matrix_traits::MatrixSquare, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#skew_symm) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#skew_symm as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "SkewSymmetric",
+        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!(algebra_traits::RealNumber)))
 }
 
 #[proc_macro_derive(MatrixMatrixProductLeftTriangular)]
 pub fn matrix_matrix_product_left_triang_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let left_triang=quote!{LeftTriangular<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#left_triang> for #ty where
-            #wt : #tr<Rhs>,
-            Rhs :: T : num_traits::Zero,
-            Rhs :  matrix_traits::Matrix, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#left_triang) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#left_triang as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#left_triang> for #ty where
-            #wt : #tr_try<Rhs>,
-            Rhs :: T : num_traits::Zero,
-            Rhs :  matrix_traits::Matrix, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#left_triang) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#left_triang as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "LeftTriangular",
+        None,
+        Some(quote!(num_traits::Zero)))
 }
 
 #[proc_macro_derive(MatrixMatrixProductRightTriangular)]
 pub fn matrix_matrix_product_right_triang_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=parse_quote!{matrix_traits::MatrixMatrixProduct};
-    let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let right_triang=quote!{RightTriangular<Rhs>};
-    let fn_name=parse_quote!{matrix_matrix_product};
-    let (generics, where_clause, [(ty, mut types)], _)=
-    DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
-    let wt=types.remove(0);
-
-    quote! {
-        impl #generics #tr<#right_triang> for #ty where
-            #wt : #tr<Rhs>,
-            Rhs :: T : num_traits::Zero,
-            Rhs :  matrix_traits::Matrix, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
-            fn matrix_matrix_product(self, rhs:#right_triang) -> <#wt as #tr<Rhs>>::Output {
-                self.0.matrix_matrix_product(<#right_triang as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-
-        impl #generics #tr_try<#right_triang> for #ty where
-            #wt : #tr_try<Rhs>,
-            Rhs :: T : num_traits::Zero,
-            Rhs :  matrix_traits::Matrix, #where_clause {
-            type Output=<#wt as #tr_try<Rhs>>::Output;
-            fn try_matrix_matrix_product(self, rhs:#right_triang) -> Option<<#wt as #tr_try<Rhs>>::Output> {
-                self.0.try_matrix_matrix_product(<#right_triang as container_traits::IntoInner>::into_inner(rhs))
-            }
-        }
-    }.into()
+     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    matrix_matrix_product_impl(
+        input,
+        "RightTriangular",
+        None,
+        Some(quote!(num_traits::Zero)))
 }
 
 
@@ -971,6 +806,60 @@ pub fn matrix_square_try_construct_proc_macro(input: TokenStream) -> TokenStream
     }.into()
 }
 
+#[proc_macro_derive(TryInvFromTryInvCoarse)]
+pub fn try_inv_from_try_inv_coarse(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let tr=quote!{algebra_traits::TryInv};
+    let tr_c=quote!{matrix_traits::TryInvCoarse};
+    let (generics, where_clause, ty, _)=
+    preprocess4matrix(& mut input);
+    quote! {
+        impl #generics #tr for #ty
+        where Self : Clone
+                    +algebra_traits::TryInv<Output=Self>
+                    +matrix_traits::MatrixSquare
+                    +matrix_traits::TryMatrixMatrixProduct<Output=Self>
+                    +#tr_c<Output=Self>,
+            #where_clause {
+            type Output=Self;
+            type Error=<Self as algebra_traits::TryInv>::Error;
+            fn is_invertible(&self) -> Result<(),<Self as algebra_traits::TryInv>::Error>
+            {
+                self.clone()
+                    .try_inv()
+                    .map(|_|())
+            }
+            fn try_inv(self) -> Result<Self,<Self as algebra_traits::TryInv>::Error> {
+                let mut si=<Self as #tr_c>::try_inv_coarse(self.clone())?;
+                let mul=|lhs:&Self,rhs:&Self|lhs.clone().try_matrix_matrix_product(rhs.clone()).unwrap();
+                for _ in 0..5 {
+                    si=mul(&si,&<Self as #tr_c>::try_inv_coarse(mul(&self,&si))?);
+                }
+                Some(si)
+            }
+        }
+    }.into()
+}
+
+#[proc_macro_derive(TryIntoSubMatrix)]
+pub fn try_into_sub_matrix_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let tr:syn::Path=parse_quote!{matrix_traits::TryIntoSubMatrix};
+    let fn_name=parse_quote!{ try_into_sub_matrix };
+    let (generics, where_clause, [(ty, wt),(ty1, wt1)], _)=
+    DeriveHelper::new(&mut input, &tr, &fn_name).extended1();
+    quote! {
+        impl #generics #tr for #ty where #(#wt : #tr<Output=#wt1>, #wt1 : matrix_traits::MatrixTryConstruct,)* #where_clause {
+            type Output=#ty1;
+            fn try_into_sub_matrix(self,size:(usize,usize)) -> Option<#ty1> {
+                self.0
+                    .try_into_sub_matrix(size)
+                    .map(|s|#ty1(s))
+            }
+        }
+    }.into()
+}
+
 #[proc_macro_derive(Display)]
 pub fn display_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
@@ -992,6 +881,7 @@ pub fn display_proc_macro(input: TokenStream) -> TokenStream {
 pub fn inherit_proc_macro(input: TokenStream) -> TokenStream {
     let fs=[
         empty_proc_macro,
+        matrix_view_proc_macro,
         matrix_proc_macro,
         algebra_matrix_proc_macro,
         display_proc_macro,

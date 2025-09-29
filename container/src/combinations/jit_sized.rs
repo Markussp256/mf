@@ -1,8 +1,8 @@
 use utils::iter::IntoExactSizeIterator;
 
-use crate::{Size, ChangeT, Get, GetMut, IndexedIter, IndexedIterMut, IntoIter, IntoVec, ItemT, Iter, IterMut, Map, Pop, TryIntoElement};
+use container_traits::{ChangeT, Get, GetMut, IndexOutOfBoundsError, IndexedIter, IndexedIterMut, IntoIter, IntoVec, ItemT, Iter, IterMut, Map, Pop, Size, TryIntoElement};
 
-use crate::container::ContainerIndex;
+use container_traits::container::ContainerIndex;
 
 // jit-sized means just in time sized
 // it means the size is not known at compile time but before the instance is constructed
@@ -75,27 +75,22 @@ impl<Index : 'static+ContainerIndex, T,
 impl<C:IntoVec<T>,T> IntoVec<T> for JITSized<usize,C> {
     fn into_vec(self) -> Vec<T> {
         let len=self.size();
-        crate::vec_op::crop(self.c.into_vec(),len)
+        container_traits::vec_op::crop(self.c.into_vec(),len)
     }
 }
 
 impl<Index : ContainerIndex,T,C:TryIntoElement<Index,T>+Size<Index>> TryIntoElement<Index,T> for JITSized<Index,C> {
-    fn try_into_element(self,index:Index) -> Option<T> {
-        if index.is_elem_wise_strictly_smaller(&self.size) {
-            self.c.try_into_element(index)
-        } else {
-            None
-        }
+    fn try_into_element(self,index:Index) -> Result<T,IndexOutOfBoundsError<Index>> {
+        IndexOutOfBoundsError::try_new(&self.size(),&index)?;
+        self.c
+            .try_into_element(index)
     }
 }
 
 impl<Index : ContainerIndex,T,C:Get<Index,T>> Get<Index,T> for JITSized<Index,C> {
-    fn get(&self, index:Index) -> Option<&T> {
-        if index.is_elem_wise_strictly_smaller(&self.size) {
-            self.c.get(index)
-        } else {
-            None
-        }
+    fn get(&self, index:Index) -> Result<&T,IndexOutOfBoundsError<Index>> {
+        IndexOutOfBoundsError::try_new(&self.size(),&index)?;
+        self.c.get(index)
     }
 }
 
@@ -112,12 +107,9 @@ impl<Index,T,T2,C:Map<T,T2,Output=C2>,C2> Map<T,T2> for JITSized<Index,C> {
 }
 
 impl<Index:ContainerIndex,T,C:GetMut<Index,T>> GetMut<Index,T> for JITSized<Index,C> {
-    fn get_mut(&mut self, index:Index) -> Option<&mut T> {
-        if index.is_elem_wise_strictly_smaller(&self.size) {
-            self.c.get_mut(index)
-        } else {
-            None
-        }
+    fn get_mut(&mut self, index:Index) -> Result<&mut T,IndexOutOfBoundsError<Index>> {
+        IndexOutOfBoundsError::try_new(&self.size(),&index)?;
+        self.c.get_mut(index)
     }
 }
 

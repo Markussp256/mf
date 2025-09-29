@@ -7,6 +7,7 @@ use super::{InvalidFloatInputError, FloatOpError, OverflowError};
 pub struct DivisionByZeroError;
 
 impl DivisionByZeroError {
+
     pub fn try_new<F:crate::IsAZero>(divisor:&F) -> Result<(),Self> {
         if divisor.is_a_zero() {
             Err(Self)

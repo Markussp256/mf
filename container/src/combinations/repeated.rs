@@ -1,4 +1,4 @@
-use crate::*;
+use container_traits::*;
 
 // zero elements is not allowed
 // one could add it by using Option<value>
@@ -23,9 +23,9 @@ impl<Index:Clone,C> Size<Index> for Repeated<Index,C> {
 }
 
 impl<Index:ContainerIndex,C:Size<Index>> Repeated<Index,C> {
-    fn try_convert_index(&self, index:Index) -> Option<Index> {
-        index.is_elem_wise_smaller_eq(&self.size).then(||
-            index.elem_wise_mod(self.c.size()))
+    fn try_convert_index(&self, index:Index) -> Result<Index,IndexOutOfBoundsError<Index>> {
+        IndexOutOfBoundsError::try_new(&self.size(),&index)
+            .map(|_|index.elem_wise_mod(self.c.size()))
     }
 }
 
@@ -77,14 +77,14 @@ impl<Index,C:ItemT> ItemT for Repeated<Index,C> {
 }
 
 impl<Index:ContainerIndex,T,C:Get<Index,T>+Size<Index>> Get<Index,T> for Repeated<Index,C> {
-    fn get(&self, index:Index) -> Option<&T> {
+    fn get(&self, index:Index) -> Result<&T,IndexOutOfBoundsError<Index>> {
         self.try_convert_index(index)
             .and_then(|c_index|self.c.get(c_index))
     }
 }
 
 impl<Index:ContainerIndex,T,C:TryIntoElement<Index,T>+Size<Index>> TryIntoElement<Index,T> for Repeated<Index,C> {
-    fn try_into_element(self, index:Index) -> Option<T> {
+    fn try_into_element(self, index:Index) -> Result<T,IndexOutOfBoundsError<Index>> {
         self.try_convert_index(index)
             .and_then(|c_index|self.c.try_into_element(c_index))
     }

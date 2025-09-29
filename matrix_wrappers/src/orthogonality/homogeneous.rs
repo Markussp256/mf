@@ -1,10 +1,10 @@
 use num_traits::{Zero,One};
 
 use matrix_traits::{AlgebraMatrix, row_col::ColVectorTryConstruct, MatrixConstructError, MatrixSquare, MatrixSquareTryConstruct, Transpose};
-use algebra_traits::RealNumber;
+use algebra_traits::{basic::Inv, TryInv, RealNumber};
 use utils::iter::IntoExactSizeIterator;
 use super::{Orthogonal, SpecialOrthogonal};
-use container_traits::{Get, IntoInner, IntoIter, TryFromSuperContainer};
+use container_traits::{TryFromFn, Get, IntoInner, IntoIter, IntoSum, TryFromSuperContainer};
 
 type U2=(usize,usize);
 
@@ -13,15 +13,19 @@ type U2=(usize,usize);
  algebra_derive::Inv,
  container_derive::IntoInner,
  container_derive::JustContainer,
+ container_derive::NewUnchecked,
  derive_more::AsRef,
  derive_more::Index,
  matrix_derive::Identity,
  matrix_derive::Inherit,
+ matrix_derive::MatrixNormal,
  matrix_derive::ClosedMatrixMatrixProduct,
  matrix_derive::MatrixShape)]
 pub struct Homogeneous<M:MatrixSquare>(M) where M::T : RealNumber;
 
 impl<M:MatrixSquare> Homogeneous<M> where M::T : RealNumber {
+
+    pub fn n(&self) -> usize { self.0.n() }
 
     pub fn try_into_rot<M2:MatrixSquareTryConstruct<T=M::T>+AlgebraMatrix+TryFromSuperContainer<U2,Self>>(self) -> Result<SpecialOrthogonal<M2>,MatrixConstructError> {
         let n=self.n();
@@ -69,5 +73,41 @@ impl<M:MatrixSquare+Transpose<Output=M>> Transpose for Homogeneous<M> where M::T
     fn transpose(self) -> Self::Output {
         SpecialOrthogonal::<M>::from(self)
             .transpose()
+    }
+}
+
+impl<M:MatrixSquare+TryFromFn<U2,M::T>> Inv for Homogeneous<M> where M::T : Clone+RealNumber {
+    type Output=Self;
+    fn inv(self) -> Self {
+        let n=self.n();
+        Self(<M as TryFromFn<U2,M::T>>::try_from_fn(
+            (n,n),
+            |(i,j)|{
+                if i < n-1 && j < n-1 {
+                    self.get((j,i)).unwrap().clone()
+                } else if i == n-1 {
+                    if j == n-1 {
+                        M::T::one()
+                    } else {
+                        M::T::zero()
+                    }
+                }
+                else {
+                    -(0..(n-1))
+                        .into_iter()
+                        .map(|k|self.get((k,i)).unwrap().clone()*
+                                       self.get((k,n-1)).unwrap().clone())
+                            .into_sum()
+                }
+            }).ok().unwrap())
+    }
+}
+
+impl<M:MatrixSquare> TryInv for Homogeneous<M> where Self : Inv<Output=Self>, M::T : RealNumber {
+    type Output=Self;
+    type Error=();
+    fn is_invertible(&self) -> Result<(),()> { Ok(()) }
+    fn try_inv(self) -> Result<Self,()> {
+        Ok(self.inv())
     }
 }

@@ -20,7 +20,7 @@ pub mod muliu_powiu;
 pub use muliu_powiu::{MulI, MulU, PowI, PowU};
 
 pub mod solve;
-pub use solve::{AnySolve, Solve, TrySolve};
+pub use solve::{Solve, TrySolve, SolveHomogeneous, TrySolveHomogeneous};
 
 pub mod unary;
 pub use unary::*;

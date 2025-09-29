@@ -6,7 +6,7 @@ mod impl_row_col;
 use algebra::{Unit, Vector, VectorGeneric};
 
 use container_traits::{FromInner, IntoInner, LinearContainer};
-use matrix_traits::{ColVector, RowVector, TryVectorVectorProduct, VectorVectorProduct, try_vector_vector_product_impl};
+use matrix_traits::{try_vector_vector_product_impl, ColVector, RowVector, TryVectorVectorProduct, VectorVectorProduct};
 
 algebra::gen_vector!(MatrixColGeneric, MatrixColDyn, MatrixCol);
 algebra::gen_vector!(MatrixRowGeneric, MatrixRowDyn, MatrixRow);
@@ -82,6 +82,7 @@ impl<C:'static> Into<VectorGeneric<C>> for MatrixColGeneric<C> {
         VectorGeneric::from_inner(self.0)
     }
 }
+
 
 // impl<F   : Clone+ComplexNumber,
 //      C   : LinearContainerTryConstruct<T=F>+ChangeT<F,Output=C>+ChangeT<MatrixRowGeneric<C>,Output=C2>,

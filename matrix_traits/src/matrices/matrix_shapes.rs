@@ -1,18 +1,21 @@
 
-use crate::{Matrix, MatrixTryConstruct};
+use crate::{MatrixView, MatrixTryConstruct};
+
+pub trait MatrixFixedNumberOfRows<const NROWS:usize> : MatrixView {}
+pub trait MatrixFixedNumberOfCols<const NCOLS:usize> : MatrixView {}
+
+pub trait MatrixFixedSize<const M:usize, const N:usize>
+    : MatrixFixedNumberOfRows<M>
+    + MatrixFixedNumberOfCols<N> {}
 
 
-pub trait FixedNumberOfRows : Matrix {
-    const NROWS:usize;
-}
-
-pub trait FixedNumberOfCols : Matrix {
-    const NCOLS:usize;
-}
 
 
-pub trait MatrixNotTall : Matrix {}
-pub trait MatrixNotWide : Matrix {}
+
+pub trait MatrixNotTall : MatrixView {}
+pub trait MatrixNotWide : MatrixView {}
+
+
 
 
 pub trait MatrixSquare : MatrixNotTall+MatrixNotWide {
@@ -48,40 +51,41 @@ pub trait MatrixTall : MatrixNotWide {}
 pub trait MatrixWide : MatrixNotTall {}
 
 // some fun with macro_rules!
-macro_rules! def_stat {
-    ($i:literal, $j:literal, $shape:ident) => {
-        paste::paste!(
-            pub trait [<Matrix $i $j>] : [<Matrix $shape>]+$crate::matrices::static_matrix::StaticMatrix {}
-        );
-    };
-}
+// macro_rules! def_stat {
+//     ($i:literal, $j:literal, $shape:ident) => {
+//         paste::paste!(
+//             pub trait [<Matrix $i $j>] : [<Matrix $shape>]+$crate::matrices::static_matrix::StaticMatrix {}
+//         );
+//     };
+// }
 #[macro_export]
 macro_rules! impl_stat {
     ($t:ident<$f:ident $(: $tr:ident)?, $i:literal,$j:literal>, $shape:ident, $shape_not:ident) => {
         paste::paste!(
-            impl<$f :'static $(+ $tr)?> $crate::matrices::matrix_shapes::[<Matrix $shape_not>] for $t<$f,$i,$j> {}
-            impl<$f :'static $(+ $tr)?> $crate::matrices::matrix_shapes::[<Matrix $shape>]     for $t<$f,$i,$j> {}
-            impl<$f :'static $(+ $tr)?> $crate::matrices::matrix_shapes::[<Matrix $i $j>]      for $t<$f,$i,$j> {}
+            impl<$f :'static $(+ $tr)?> $crate::matrices::matrix_shapes::[<Matrix $shape_not>]  for $t<$f,$i,$j> {}
+            impl<$f :'static $(+ $tr)?> $crate::matrices::matrix_shapes::[<Matrix $shape>]      for $t<$f,$i,$j> {}
+            impl<$f :'static $(+ $tr)?> $crate::matrices::matrix_shapes::MatrixFixedSize<$i,$j> for $t<$f,$i,$j> {}
         );
-    };
+    }; 
 }
 
-macro_rules! def_square {
-    ($($i:literal),*) => {
-       $( def_stat!($i,$i,Square); )*
-    }
-}
-def_square!(1,2,3,4,5,6,7,8,9);
+// macro_rules! def_square {
+//     ($($i:literal),*) => {
+//        $( def_stat!($i,$i,Square); )*
+//     }
+// }
+// def_square!(1,2,3,4,5,6,7,8,9);
+
 #[macro_export]
 macro_rules! impl_matrixii {
     ($t:ident , $tr:ident $(,$i:literal)*) => {
         paste::paste!(
-        $(impl<F :'static + $tr> $crate::matrices::matrix_shapes::[<Matrix $i $i>] for $t<F,$i,$i> {} )*
+        $(impl<F :'static + $tr> $crate::matrices::matrix_shapes::MatrixFixedSize<$i, $i> for $t<F,$i,$i> {} )*
         );
     };
     ($t:ident $(,$i:literal)*) => {
         paste::paste!(
-        $( impl<F :'static > $crate::matrices::matrix_shapes::[<Matrix $i $i>] for $t<F,$i,$i> {} )*
+        $( impl<F :'static > $crate::matrices::matrix_shapes::MatrixFixedSize< $i, $i> for $t<F,$i,$i> {} )*
         );
     }
 }
@@ -89,20 +93,24 @@ macro_rules! impl_matrixii {
 macro_rules! impl_matrixii_one_param {
     ($t:ident , $tr:ident $(,$i:literal)*) => {
         paste::paste!(
-        $( impl<F :'static +$tr> $crate::matrices::matrix_shapes::[<Matrix $i $i>] for $t<F,$i> {} )*
+        $( impl<F :'static +$tr> $crate::matrices::matrix_shapes::MatrixFixedSize<$i, $i> for $t<F,$i> {} )*
         );
     };
     ($t:ident $(,$i:literal)*) => {
         paste::paste!(
-        $( impl<F :'static  > $crate::matrices::matrix_shapes::[<Matrix $i $i>] for $t<F,$i> {} )*
+        $( impl<F :'static  > $crate::matrices::matrix_shapes::MatrixFixedSize<$i, $i> for $t<F,$i> {} )*
         );
     }
 }
+
+
+
+
 macro_rules! def_tall_or_wide {
     ($i0:literal, $shape:ident) => {};
 
     ($i0:literal $(,$i:literal)+ ,$shape:ident) => {
-        $( def_stat!($i0, $i, $shape); )*
+        // $( def_stat!($i0, $i, $shape); )*
         def_tall_or_wide!($($i),*, $shape);
     }
 }

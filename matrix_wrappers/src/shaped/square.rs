@@ -2,7 +2,7 @@ use std::ops::Sub;
 use algebra_traits::{TryAdd, TrySub};
 use container_traits::{GetMut, Size, SizesNotEqualError, TryAccept};
 use num_traits::Zero;
-use matrix_traits::{matrix_shapes::{MatrixNotTall, MatrixNotWide}, MatrixSquareTryConstruct, AsBaseMatrix, AsBaseSquareMatrix, IntoBaseMatrix, IntoBaseSquareMatrix, Matrix, MatrixConstructError, MatrixDiagonal, MatrixMut, MatrixSquare, MatrixTryConstruct};
+use matrix_traits::{matrix_shapes::{MatrixNotTall, MatrixNotWide}, MatrixSquareTryConstruct, AsBaseMatrix, AsBaseSquareMatrix, IntoBaseMatrix, IntoBaseSquareMatrix, Matrix, MatrixView, MatrixConstructError, MatrixDiagonal, MatrixMut, MatrixSquare, MatrixTryConstruct};
 
 // we can not use matrix_derive::Inherit because we want to implement IntoMatrix, IntoSquareMatrix
 
@@ -15,56 +15,61 @@ type U2=(usize,usize);
          algebra_derive::TryDiv,
          algebra_derive::One,
          container_derive::ChangeT,
+         container_derive::TryIntoElement,
+         container_derive::IntoIterator,
+         container_derive::IntoIndexedIter,
          container_derive::ContainerMut,
+         container_derive::NewUnchecked,
          derive_more::Index,
          derive_more::IndexMut,
          matrix_derive::Display,
          matrix_derive::Empty,
          matrix_derive::Identity,
+         matrix_derive::MatrixView,
          matrix_derive::Matrix,
          matrix_derive::MatrixTryConstruct,
          matrix_derive::MatrixVectorProduct,
          matrix_derive::ClosedMatrixMatrixProduct,
          matrix_derive::AlgebraMatrix,
          matrix_derive::Transpose)]
-pub struct Square<M:Matrix>(M);
+pub struct Square<M:MatrixView>(M);
 
-impl<M:Matrix> AsBaseMatrix for Square<M> {
+impl<M:MatrixView> AsBaseMatrix for Square<M> {
    type Output=M;
    fn base_matrix(&self) -> &M {
       &self.0
    }
 }
 
-impl<M:Matrix> IntoBaseMatrix for Square<M> {
+impl<M:MatrixView> IntoBaseMatrix for Square<M> {
    type Output=M;
    fn into_base_matrix(self) -> M {
       self.0
    }
 }
 
-impl<M:Matrix> MatrixNotWide for Square<M> {}
-impl<M:Matrix> MatrixNotTall for Square<M> {}
-impl<M:Matrix> MatrixSquare  for Square<M> {} 
+impl<M:MatrixView> MatrixNotWide for Square<M> {}
+impl<M:MatrixView> MatrixNotTall for Square<M> {}
+impl<M:MatrixView> MatrixSquare  for Square<M> {} 
 
 impl<M:MatrixTryConstruct> MatrixSquareTryConstruct for Square<M> {}
 
 
-impl<M:Matrix> AsBaseSquareMatrix for Square<M> {
+impl<M:MatrixView> AsBaseSquareMatrix for Square<M> {
    type Output = Self;
    fn base_square_matrix(&self) -> &Self::Output {
        &self
    }
 }
 
-impl<M:Matrix> IntoBaseSquareMatrix for Square<M> {
+impl<M:MatrixView> IntoBaseSquareMatrix for Square<M> {
    type Output = Self;
    fn into_base_square_matrix(self) -> Self::Output {
        self
    }
 }
 
-impl<M:Matrix> TryAccept<U2,M::T,MatrixConstructError> for Square<M> {
+impl<M:MatrixView> TryAccept<U2,M::T,MatrixConstructError> for Square<M> {
    fn try_accept<'a>((nrows,ncols):U2,_:impl Fn(U2) -> &'a M::T) -> Result<(),MatrixConstructError> where M::T: 'a {
       if nrows == ncols {
           Ok(())

@@ -54,11 +54,11 @@ algebra::gen_vector!(VectorGen, VectorDynNotUsed, Vector);
 
 macro_rules! from_into {
     ($t:ty) => {
-        impl<C:'static> From<$t> for VectorGen<C> {
-            fn from(value: $t) -> Self {
-                Self(value.into_inner())
-            }
-        }
+        // impl<C:'static> From<$t> for VectorGen<C> {
+        //     fn from(value: $t) -> Self {
+        //         Self(value.into_inner())
+        //     }
+        // }
 
         impl<C:'static> Into<$t> for VectorGen<C> {
             fn into(self) -> $t {

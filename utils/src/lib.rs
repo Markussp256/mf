@@ -40,6 +40,9 @@ pub use option::OptionExt;
 
 pub mod result;
 
+pub mod sorted_list;
+pub use sorted_list::SortedList;
+
 pub mod time_stamp;
 pub use time_stamp::{TimeStamp, TimeStampProvider, DiscreteTimeStamp, DiscreteTimeStampProvider};
 

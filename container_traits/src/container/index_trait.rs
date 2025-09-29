@@ -1,7 +1,8 @@
-use std::ops::Add;
-use num_traits::Zero;
+
 use std::fmt::Debug;
-use crate::{ContainerConstructError, LenTooSmallError, IntoIter, IntoProduct, Iter, TryFromIterator};
+use crate::{ContainerConstructError, IntoInner, IntoIter, IntoProduct, Iter, LenTooSmallError, TryFromIterator};
+
+use super::index_type::IndexN;
 
 pub trait ContainerIndex
     : Debug
@@ -84,65 +85,6 @@ pub trait ContainerIndex
 }
 
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct IndexN<const N:usize>([usize;N]);
-
-impl<const N:usize> Add for IndexN<N> {
-    type Output=Self;
-    fn add(self, rhs: Self) -> Self {
-        Self(crate::array_op::add(self.0,rhs.0))
-    }
-}
-
-impl<const N:usize> Iter<usize> for IndexN<N> {
-    fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a usize> where Self : 'a {
-        self.0
-            .iter()
-    }
-}
-
-impl<const N:usize> IntoIter<usize> for IndexN<N> {
-    fn into_iterator(self) -> impl ExactSizeIterator<Item=usize> {
-        self.0
-            .into_iter()
-    }
-}
-
-impl<const N:usize> TryFromIterator<usize,ContainerConstructError<usize>> for IndexN<N> {
-    fn try_take_away<I:Iterator<Item=usize>>(iter:& mut I) -> Result<Self,ContainerConstructError<usize>> {
-        utils::iter::next_chunk(iter)
-            .map(|arr|Self(arr))
-            .map_err(|v:Vec<usize>|LenTooSmallError::new(N,v.len()).into())
-    }
-
-    crate::try_from_iter_impl!(usize);
-}
-
-impl<const N:usize> Zero for IndexN<N> {
-    fn is_zero(&self) -> bool {
-        self.0
-            .iter()
-            .all(Zero::is_zero)
-    }
-
-    fn zero() -> Self {
-        Self([0;N])
-    }
-}
-
-impl<const N:usize> Default for IndexN<N> {
-    fn default() -> Self {
-        Self([0;N])
-    }
-}
-
-impl<const N:usize> ContainerIndex for IndexN<N> {
-    fn index_iterator(self) -> impl ExactSizeIterator<Item=Self> {
-        super::ContainerIndexIterator::new_exact_size(self.0)
-            .map(|ind|Self(ind))
-    }
-}
-
 impl Iter<usize> for usize {
     fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a usize> where usize : 'a {
         std::iter::once(self)
@@ -169,12 +111,6 @@ impl TryFromIterator<usize,ContainerConstructError<usize>> for (usize,usize) {
     crate::try_from_iter_impl!(usize);
 }
 
-impl<S:Into<[usize;N]>,const N:usize> From<S> for IndexN<N> {
-    fn from(value: S) -> Self {
-        IndexN(value.into()) // [value.0,value.1]
-    }
-}
-
 impl Iter<usize> for (usize,usize) {
     fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a usize> where usize : 'a {
         [&self.0,&self.1].into_iter()
@@ -187,13 +123,17 @@ impl IntoIter<usize> for (usize,usize) {
     }
 }
 
+
+
 impl ContainerIndex for (usize,usize) {
     fn index_iterator(self) -> impl ExactSizeIterator<Item=Self> {
         IndexN::<2>::from(self)
             .index_iterator()
-            .map(|s|s.0.into())
+            .map(|s|s.into_inner().into())
     }
 }
+
+
 
 pub fn row_major_index_iterator(size:(usize,usize)) -> impl ExactSizeIterator<Item=(usize,usize)> {
     size.index_iterator()

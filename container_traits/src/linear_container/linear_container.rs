@@ -1,18 +1,11 @@
-use crate::{Container,First,IntoVec,Last,Len,LenFromORef};
+use crate::{Container,LinearContainerView, IntoVec};
 
 pub trait LinearContainer : Container<usize>
-        +Len
-        +LenFromORef
-        +IntoVec<Self::T>
-        +First  <Self::T>
-        +Last   <Self::T> {}
+        +IntoVec<Self::T> {}
 
 impl<C : Container<usize>
-        +Len
-        +LenFromORef
-        +IntoVec<C::T>
-        +First<C::T>
-        +Last<C::T>> LinearContainer for C {}
+        +LinearContainerView
+        +IntoVec<C::T>> LinearContainer for C {}
 
 
 // impl<T>               Container<T> for Vec<T> {}

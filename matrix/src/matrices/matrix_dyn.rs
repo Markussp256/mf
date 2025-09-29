@@ -37,6 +37,45 @@ impl<F:'static> OneElement<F> for MatrixDyn<F> {
 
 impl<F:'static> MatrixConstruct for MatrixDyn<F> {}
 
+impl<F:'static> CropToSquareMatrix for MatrixDyn<F> {
+    type Output = MatrixDyn<F>;
+    fn crop_to_square_matrix(self) -> Self::Output {
+        let (m,n)=self.matrix_dimensions();
+        if        m < n {
+            MatrixDyn::<F>::try_from_cols(self.into_cols().take(m)).unwrap()
+        } else if n < m {
+            MatrixDyn::<F>::try_from_rows(self.into_rows().take(n)).unwrap()
+        } else {
+            self
+        }
+    }
+}
+
+impl<F:'static> CropToSquareMatrixIfTall for MatrixDyn<F> {
+    type Output = MatrixDyn<F>;
+    fn crop_to_square_matrix_if_tall(self) -> Self::Output {
+        let (m,n)=self.matrix_dimensions();
+        if n < m {
+            MatrixDyn::<F>::try_from_rows(self.into_rows().take(n)).unwrap()
+        } else {
+            self
+        }
+    }
+}
+
+impl<F:'static> CropToSquareMatrixIfWide for MatrixDyn<F> {
+    type Output = MatrixDyn<F>;
+    fn crop_to_square_matrix_if_wide(self) -> Self::Output {
+        let (m,n)=self.matrix_dimensions();
+        if m < n {
+            MatrixDyn::<F>::try_from_cols(self.into_cols().take(m)).unwrap()
+        } else {
+            self
+        }
+    }
+}
+
+
 // impl<F:'static> MatrixDynamic   for MatrixDyn<F> {
 //     fn try_push_row(&mut self, row:Self::Row) -> Result<(),Self::Row> {
 //         if self.is_empty() || row.len() == self.ncols() {
@@ -229,7 +268,27 @@ impl<F    :'static,
      }
 
 
+impl<F   : 'static, 
+     Row : RowVector<T=F>,
+     Col : ColVector<T=F>+ChangeT<Row,Output = C>,
+     C>  TryIntoSubMatrix for MatrixGeneric<Row,Col> where Self : Matrix<T=F,Row=Row,Col=Col> {
+    type Output = MatrixDyn<F>;
+    fn try_into_sub_matrix(self,(nrows,ncols):(usize,usize)) -> Option<Self::Output> {
+        (self.nrows() >= nrows &&
+         self.ncols() >= ncols ).then(||
+            MatrixDyn::<F>::try_from_rows(
+                self.into_rows()
+                    .take(nrows)
+                    .map(|r|MatrixRowDyn::<F>::from_iter(r.into_iterator().take(ncols)))
+            ).ok().unwrap()
+        )
+    }
+}
+
 pub type SquareMatrixDyn<F>=Square<MatrixDyn<F>>;
+
+matrix_traits::impl_op_diag_dyn! (MatrixRowDyn,MatrixDyn);
+
 
 // #[test]
 // fn test_matrix_matrix_mul<F:Mul<V,Output=V>,V:Zero>(q:MatrixDyn<F>,r:MatrixDyn<V>) -> Option<MatrixDyn<V>> {

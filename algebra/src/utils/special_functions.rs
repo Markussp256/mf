@@ -88,7 +88,7 @@ pub fn lndzm1<T:Clone+ComplexNumber+TryLog<Output=T>>(z: T) -> T {
     }
 }
 
-fn lnzp1dz_taylor<T:Scalar>(z: T) -> T {
+fn lnzp1dz_taylor<T:Clone+Scalar>(z: T) -> T {
     // function z -> ln(z+1)/z which has Taylor expansion 1-z/2 + z^2/3 - z^3/4
     let n = 5;
     let mut val = T::one().try_div(fromi32::<T>(n)).unwrap();

@@ -4,6 +4,9 @@ pub use chain_exact_size::ChainExactSize;
 pub mod current;
 pub use current::Current;
 
+pub mod flatten_exact_size;
+pub use flatten_exact_size::FlattenExactSize;
+
 pub mod inter_leave;
 pub use inter_leave::InterLeave;
 

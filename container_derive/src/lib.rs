@@ -285,8 +285,8 @@ pub fn into_vec_proc_macro(input: TokenStream) -> TokenStream {
 /// struct MyWrapper<C>(C);
 /// 
 /// let vec:MyWrapper::<Vec<i32>>=MyWrapper(vec![0,1,2,3]);
-/// assert_eq!(vec.get(1), Some(&1_i32));
-/// assert!(   vec.get(7).is_none());
+/// assert_eq!(vec.get(1), Ok(&1_i32));
+/// assert!(   vec.get(7).is_err());
 /// ```
 #[proc_macro_derive(Get)]
 pub fn get_proc_macro(input: TokenStream) -> TokenStream {
@@ -298,7 +298,7 @@ pub fn get_proc_macro(input: TokenStream) -> TokenStream {
     let wt=wt.remove(0);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
-            fn get(&self, index:IndexGet) -> Option<&TGet> {
+            fn get(&self, index:IndexGet) -> Result<&TGet,container_traits::IndexOutOfBoundsError<IndexGet>> {
                 <#wt as #tr>::get(&self.0,index)
             }
         }
@@ -315,12 +315,12 @@ pub fn get_proc_macro(input: TokenStream) -> TokenStream {
 /// use container_derive::TryInsert;
 /// use container_traits::TryInsert;
 /// 
-/// #[derive(Get, Debug, PartialEq)]
+/// #[derive(TryInsert, Debug, PartialEq)]
 /// struct MyWrapper<C>(C);
 /// 
-/// let mut vec:MyWrapper::<Vec<i32>>=MyWrapper(vec![7,4,2,3]);
-/// assert!(vec.try_insert(1,42).is_ok())
-/// assert_eq!(vec,MyWrapper(vec![7,42,4,2,3]));
+/// let mut v=MyWrapper(vec![7,4,2,3]);
+/// assert!(v.try_insert(1,42).is_ok());
+/// assert_eq!(v,MyWrapper(vec![7,42,4,2,3]));
 /// ```
 #[proc_macro_derive(TryInsert)]
 pub fn try_insert_proc_macro(input: TokenStream) -> TokenStream {
@@ -332,7 +332,7 @@ pub fn try_insert_proc_macro(input: TokenStream) -> TokenStream {
     let wt=wt.remove(0);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
-            fn try_insert(&mut self, index:usize, t:TInsert) -> Option<()> {
+            fn try_insert(&mut self, index:usize, t:TInsert) -> Result<(),container_traits::IndexOutOfBoundsError<usize>> {
                 <#wt as #tr>::try_insert(&mut self.0,index,t)
             }
         }
@@ -349,11 +349,11 @@ pub fn try_insert_proc_macro(input: TokenStream) -> TokenStream {
 /// use container_derive::TryRemove;
 /// use container_traits::TryRemove;
 /// 
-/// #[derive(Get, Debug, PartialEq)]
+/// #[derive(TryRemove, Debug, PartialEq)]
 /// struct MyWrapper<C>(C);
 /// 
 /// let mut vec:MyWrapper::<Vec<i32>>=MyWrapper(vec![7,4,2,3]);
-/// assert_eq!(vec.try_remove(1), Some(4_i32));
+/// assert_eq!(vec.try_remove(1), Ok(4_i32));
 /// assert_eq!(vec,MyWrapper(vec![7,2,3]));
 /// ```
 #[proc_macro_derive(TryRemove)]
@@ -366,7 +366,7 @@ pub fn try_remove_proc_macro(input: TokenStream) -> TokenStream {
     let wt=wt.remove(0);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
-            fn try_remove(&mut self, index:usize) -> Option<TRemove> {
+            fn try_remove(&mut self, index:usize) -> Result<TRemove,container_traits::IndexOutOfBoundsError<usize>> {
                 <#wt as #tr>::try_remove(&mut self.0,index)
             }
         }
@@ -470,7 +470,7 @@ pub fn get_mut_proc_macro(input: TokenStream) -> TokenStream {
     let wt=wt.remove(0);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
-            fn get_mut(&mut self, index:IndexGetMut) -> Option<&mut TGetMut> {
+            fn get_mut(&mut self, index:IndexGetMut) -> Result<&mut TGetMut, container_traits::IndexOutOfBoundsError<IndexGetMut>> {
                 <#wt as #tr>::get_mut(&mut self.0, index)
             }
         }
@@ -513,7 +513,9 @@ pub fn iter_proc_macro(input: TokenStream) -> TokenStream {
           .unwrap_or(quote!{std::iter::empty()});
     quote! {
         impl #generics #tr for #ty where #(#wt : #tr)*, #wc {
-            fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a TIter> where TIter : 'a {
+            fn iter<'iter_lifetime>(&'iter_lifetime self)
+            -> impl ExactSizeIterator<Item=&'iter_lifetime TIter>
+            where TIter : 'iter_lifetime {
                 #implementation
             }
         }
@@ -547,7 +549,9 @@ pub fn indexed_iter_proc_macro(input: TokenStream) -> TokenStream {
     let wt=wt.remove(0);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
-            fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(IndexIndexedIter,&'a TIndexedIter)> where TIndexedIter : 'a {
+    fn indexed_iter<'indexed_iter_lifetime>(&'indexed_iter_lifetime self)
+        -> impl ExactSizeIterator<Item=(IndexIndexedIter,&'indexed_iter_lifetime TIndexedIter)>
+            where TIndexedIter : 'indexed_iter_lifetime {
                 <#wt as #tr>::indexed_iter(&self.0)
             }
         }
@@ -619,7 +623,9 @@ pub fn iter_mut_proc_macro(input: TokenStream) -> TokenStream {
           .unwrap_or(quote!{std::iter::empty()});
     quote! {
         impl #generics #tr for #ty where #(#wt : #tr)*, #wc {
-            fn iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=&'a mut TIterMut> where TIterMut : 'a {
+            fn iter_mut<'iter_mut_lifetime>(&'iter_mut_lifetime mut self)
+            -> impl ExactSizeIterator<Item=&'iter_mut_lifetime mut TIterMut>
+            where TIterMut : 'iter_mut_lifetime {
                 #implementation
             }
         }
@@ -652,7 +658,9 @@ pub fn indexed_iter_mut_proc_macro(input: TokenStream) -> TokenStream {
     preprocess_no_impl_add_gen_types(& mut input,vec!["IndexIndexedIterMut", "TIndexedIterMut"]);
     quote! {
         impl #generics #tr for #ty where #(#wt : #tr,)* #wc {
-            fn indexed_iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(IndexIndexedIterMut,&'a mut TIndexedIterMut)> where TIndexedIterMut : 'a {
+            fn indexed_iter_mut<'indexed_iter_mut_lifetime>(&'indexed_iter_mut_lifetime mut self)
+                -> impl ExactSizeIterator<Item=(IndexIndexedIterMut,&'indexed_iter_mut_lifetime mut TIndexedIterMut)>
+                where TIndexedIterMut : 'indexed_iter_mut_lifetime {
                 self.0
                     .indexed_iter_mut()
             }
@@ -753,7 +761,33 @@ pub fn empty_proc_macro(input: TokenStream) -> TokenStream {
                 fn empty() -> Self {
                     Self(<#wt as #tr>::empty())
                 }
+        }
+    }.into()
+}
 
+/// Implements [`container_traits::for_dynamic::IsEmpty`]
+///
+/// return if container is empty
+///
+/// # Example
+/// 
+/// ```rust
+/// use container_derive::IsEmpty;
+/// use container_traits::for_dynamic::IsEmpty;
+/// 
+/// #[derive(Debug, PartialEq, IsEmpty)]
+/// struct MyWrapper<C>(C);
+/// 
+/// let vec=MyWrapper::<Vec<f64>>(vec![]);
+/// assert!(vec.is_empty());
+/// ```
+#[proc_macro_derive(IsEmpty)]
+pub fn is_empty_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let (generics, wc, ty, wt) = preprocess(& mut input);
+    let tr=quote!{container_traits::for_dynamic::IsEmpty};
+    quote! {
+        impl #generics #tr for #ty where #wt : #tr, #wc {
                 fn is_empty(&self) -> bool {
                     self.0
                         .is_empty()
@@ -761,6 +795,7 @@ pub fn empty_proc_macro(input: TokenStream) -> TokenStream {
         }
     }.into()
 }
+
 
 /// Implements [`container_traits::for_dynamic::OneElement`]
 ///
@@ -852,10 +887,10 @@ pub fn from_element_proc_macro(input: TokenStream) -> TokenStream {
 /// struct MyWrapper<C>(C);
 /// 
 /// let vec:MyWrapper::<Vec<i32>>=MyWrapper(vec![0,1,42,3]);
-/// assert_eq!(vec.try_into_element(2), Some(42));
+/// assert_eq!(vec.try_into_element(2), Ok(42));
 /// 
 /// let vec:MyWrapper::<Vec<i32>>=MyWrapper(vec![0,1,42,3]);
-/// assert_eq!(vec.try_into_element(5), None);
+/// assert_eq!(vec.try_into_element(5), Err(container_traits::IndexOutOfBoundsError::new(&4,&5)));
 /// ```
 #[proc_macro_derive(TryIntoElement)]
 pub fn try_into_element_proc_macro(input: TokenStream) -> TokenStream {
@@ -865,7 +900,7 @@ pub fn try_into_element_proc_macro(input: TokenStream) -> TokenStream {
     let tr=quote!{container_traits::TryIntoElement<IndexTryIntoElement,TTryIntoElement>};
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
-            fn try_into_element(self, index:IndexTryIntoElement) -> Option<TTryIntoElement> {
+            fn try_into_element(self, index:IndexTryIntoElement) -> Result<TTryIntoElement,container_traits::IndexOutOfBoundsError<IndexTryIntoElement>> {
                 <#wt as #tr>::try_into_element(self.0, index)
             }
         }
@@ -1083,6 +1118,32 @@ pub fn try_map_proc_macro(input: TokenStream) -> TokenStream {
     }.into()
 }
 
+/// Implements [`container_traits::TryMapI`]
+///
+/// maps container to the same container type by changin one entry according to a function f
+///
+#[proc_macro_derive(TryMapI)]
+pub fn try_map_i_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let name=input.ident.clone();
+    let tr=parse_quote!{container_traits::TryMapI<IndexTryMapI,TTryMapI> };
+    let fn_name=parse_quote!{try_map_i};
+    let (generics,wc,[(ty, wt)],_)=
+        DeriveHelper::new(& mut input,&tr,&fn_name)
+                .add_gen_types(vec!["IndexTryMapI","TTryMapI"])
+                .binary_const_rhs::<1>(true, &parse_quote!{&f});
+    quote! {
+        impl #generics #tr for #ty where #(#wt : #tr)*, #wc {
+                fn try_map_i(self, index : IndexTryMapI, f: impl FnOnce(& mut TTryMapI)) -> Result<#ty,container_traits::IndexOutOfBoundsError<IndexTryMapI>> {
+                    self.0
+                        .try_map_i(index,f)
+                        .map(|res|#name(res))
+                }
+        }
+    }.into()
+}
+
+
 /// Implements [`container_traits::ClosedMap`]
 ///
 /// maps container to self by applying function to each element.
@@ -1266,7 +1327,9 @@ pub fn try_put_at_proc_macro(input: TokenStream) -> TokenStream {
 /// struct MyWrapper<C>(C);
 /// 
 /// let mut basis=MyWrapper::<Vec<f64>>::standard_basis(2);
-/// assert_eq!(basis, vec![MyWrapper(vec![1.0,0.0]), MyWrapper(vec![0.0,1.0])]);
+/// assert_eq!(basis.next().unwrap(), MyWrapper(vec![1.0,0.0]));
+/// assert_eq!(basis.next().unwrap(), MyWrapper(vec![0.0,1.0]));
+/// assert!(basis.next().is_none());
 /// ```
 #[proc_macro_derive(StandardBasis)]
 pub fn standard_basis_proc_macro(input: TokenStream) -> TokenStream {
@@ -1431,6 +1494,58 @@ pub fn push_proc_macro(input: TokenStream) -> TokenStream {
             fn push(& mut self, t:TPush) {
                 <#wt as #tr>::push(&mut self.0, t)
             }
+        }
+    }.into()
+}
+
+/// Implements [`container_traits::LinearContainerStatic`]
+///
+/// # Example
+/// 
+/// ```rust
+/// use container_derive::LinearContainerStatic;
+/// use container_traits::LinearContainerStatic;
+/// 
+/// #[derive(LinearContainerStatic, Debug, PartialEq)]
+/// struct MyWrapper<C>(C);
+/// 
+/// ```
+#[proc_macro_derive(LinearContainerStatic)]
+pub fn linear_container_static_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let (generics, wc, [(ty, wt)])=
+    preprocess_no_impl_add_gen_const_types(& mut input,Vec::new(),vec!{"N"});
+    assert_eq!(wt.len(),1);
+    let wt=&wt[0];
+    let tr=quote!{container_traits::LinearContainerStatic<N>};
+    quote! {
+        impl #generics #tr for #ty where #wt : #tr, Self : container_traits::LinearContainerTryConstruct, #wc {}
+    }.into()
+}
+
+/// Implements [`container_traits::LinearContainerSized`]
+///
+/// # Example
+/// 
+/// ```rust
+/// use container_derive::LinearContainerSized;
+/// use container_traits::LinearContainerSized;
+/// 
+/// #[derive(LinearContainerSized, Debug, PartialEq)]
+/// struct MyWrapper<C>(C);
+/// 
+/// ```
+#[proc_macro_derive(LinearContainerSized)]
+pub fn linear_container_sized_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let (generics, wc, [(ty, wt)])=
+    preprocess_no_impl(& mut input);
+    assert_eq!(wt.len(),1);
+    let wt=&wt[0];
+    let tr=quote!{container_traits::LinearContainerSized};
+    quote! {
+        impl #generics #tr for #ty where #wt : #tr, Self : container_traits::LinearContainerTryConstruct, #wc {
+            const N:usize=<#wt as #tr>::N;
         }
     }.into()
 }
@@ -1815,11 +1930,11 @@ pub fn into_indexed_iter_proc_macro(input: TokenStream) -> TokenStream {
 /// #[derive(XYZ, Debug, PartialEq)]
 /// struct MyWrapper<C>(C);
 /// 
-/// let v=MyWrapper([1.0;2.0]);
+/// let v=MyWrapper::<[f64;2]>([1.0,2.0]);
 /// assert_eq!(v.x(),&1.0);
 /// assert_eq!(v.y(),&2.0);
-/// assert_eq!(MyWrapper::ex(),MyWrapper([1.0;0.0]));
-/// assert_eq!(MyWrapper::ey(),MyWrapper([0.0,1.0]));
+/// assert_eq!(MyWrapper::<[f64;2]>::ex(),MyWrapper::<[f64;2]>([1.0,0.0]));
+/// assert_eq!(MyWrapper::<[f64;2]>::ey(),MyWrapper::<[f64;2]>([0.0,1.0]));
 /// 
 /// ```
 #[proc_macro_derive(XYZ)]
@@ -1828,6 +1943,9 @@ pub fn xyz_proc_macro(input: TokenStream) -> TokenStream {
     let tr_x=quote!{ container_traits::for_static::X<TXYZ> };
     let tr_y=quote!{ container_traits::for_static::Y<TXYZ> };
     let tr_z=quote!{ container_traits::for_static::Z<TXYZ> };
+    let tr_ex=quote!{ container_traits::for_static::EX<TXYZ> };
+    let tr_ey=quote!{ container_traits::for_static::EY<TXYZ> };
+    let tr_ez=quote!{ container_traits::for_static::EZ<TXYZ> };
     let (generics, wc, [(ty, mut wt)])=
     preprocess_no_impl_add_gen_types(& mut input,vec!["TXYZ"]);
     let wt=wt.remove(0);
@@ -1836,27 +1954,30 @@ pub fn xyz_proc_macro(input: TokenStream) -> TokenStream {
             fn x(&self) -> &TXYZ {
                 <#wt as #tr_x>::x(&self.0)
             }
-
+        }
+        impl #generics #tr_ex for #ty where #wt : #tr_ex, #wc {
             fn ex() -> Self where TXYZ : num_traits::Zero + num_traits::One {
-                Self(<#wt as #tr_x>::ex())
+                Self(<#wt as #tr_ex>::ex())
             }
         }
         impl #generics #tr_y for #ty where #wt : #tr_y, #wc {
             fn y(&self) -> &TXYZ {
                 <#wt as #tr_y>::y(&self.0)
             }
-
+        }
+        impl #generics #tr_ey for #ty where #wt : #tr_ey, #wc {
             fn ey() -> Self where TXYZ : num_traits::Zero + num_traits::One {
-                Self(<#wt as #tr_y>::ey())
+                Self(<#wt as #tr_ey>::ey())
             }
         }
         impl #generics #tr_z for #ty where #wt : #tr_z, #wc {
             fn z(&self) -> &TXYZ {
                 <#wt as #tr_z>::z(&self.0)
             }
-
+        }
+        impl #generics #tr_ez for #ty where #wt : #tr_ez, #wc {
             fn ez() -> Self where TXYZ : num_traits::Zero + num_traits::One {
-                Self(<#wt as #tr_z>::ez())
+                Self(<#wt as #tr_ez>::ez())
             }
         }
     }.into()
@@ -1886,6 +2007,7 @@ pub fn xyz_proc_macro(input: TokenStream) -> TokenStream {
 pub fn for_dyn_proc_macro(input: TokenStream) -> TokenStream {
     let fs=[
         concat_proc_macro,
+        is_empty_proc_macro,
         empty_proc_macro,
         one_element_proc_macro,
         extend_proc_macro,
@@ -1898,6 +2020,33 @@ pub fn for_dyn_proc_macro(input: TokenStream) -> TokenStream {
     fs.iter()
       .map(|f|f(input.clone()))
       .collect()
+}
+
+/// Implements [`container_traits::ContainerView`]
+/// 
+/// # Example
+///
+/// ```rust
+/// use container_derive::ContainerView;
+///
+/// #[derive(ContainerView)]
+/// struct MyWrapper<C>(C);
+/// 
+/// ```
+#[proc_macro_derive(ContainerView)]
+pub fn container_view_proc_macro(input: TokenStream) -> TokenStream {
+    [  
+        get_proc_macro,
+        ndofs_proc_macro,
+        iter_proc_macro,
+        indexed_iter_proc_macro,
+        size_proc_macro,
+        first_proc_macro,
+        last_proc_macro,
+        item_t_proc_macro,
+    ].iter()
+     .map(|f|f(input.clone()))
+     .collect()
 }
 
 /// Implements [`container_traits::Container`]
@@ -1914,17 +2063,10 @@ pub fn for_dyn_proc_macro(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(JustContainer)]
 pub fn just_container_proc_macro(input: TokenStream) -> TokenStream {
     [  
-        get_proc_macro,
-        ndofs_proc_macro,
-        iter_proc_macro,
+        container_view_proc_macro,
         into_iter_proc_macro,
-        indexed_iter_proc_macro,
         into_indexed_iter_proc_macro,
         into_vec_proc_macro,
-        size_proc_macro,
-        first_proc_macro,
-        last_proc_macro,
-        item_t_proc_macro,
         try_into_element_proc_macro
     ].iter()
      .map(|f|f(input.clone()))
@@ -1970,9 +2112,10 @@ pub fn container_any_construct_proc_macro(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_derive(ContainerMut)]
 pub fn container_mut_proc_macro(input: TokenStream) -> TokenStream {
-    [  
-        just_container_proc_macro,
+    [
+        container_view_proc_macro,
         iter_mut_proc_macro,
+        indexed_iter_mut_proc_macro,
         get_mut_proc_macro
     ].iter()
      .map(|f|f(input.clone()))
@@ -1995,6 +2138,7 @@ pub fn container_dynamic_proc_macro(input: TokenStream) -> TokenStream {
     [  
         container_any_construct_proc_macro,
         empty_proc_macro,
+        is_empty_proc_macro,
         one_element_proc_macro,
         pop_proc_macro,
         push_proc_macro,
@@ -2064,6 +2208,8 @@ pub fn container_proc_macro(input: TokenStream) -> TokenStream {
         as_mut_slice_proc_macro,
         as_slice_proc_macro,
         change_t_proc_macro,
+        change_len_proc_macro,
+        change_dim_proc_macro,
         enumerate_proc_macro,
         for_dyn_proc_macro,
         from_element_proc_macro,
@@ -2085,11 +2231,14 @@ pub fn container_proc_macro(input: TokenStream) -> TokenStream {
         indexed_iter_mut_proc_macro,
         iter_proc_macro,
         indexed_iter_proc_macro,
+        linear_container_static_proc_macro,
+        linear_container_sized_proc_macro,
         try_accept_proc_macro,
         size_proc_macro,
         ndofs_proc_macro,
         map_proc_macro,
         try_map_proc_macro,
+        try_map_i_proc_macro,
         reverse_proc_macro,
         try_into_element_proc_macro,
         try_put_at_proc_macro,
@@ -2133,6 +2282,38 @@ pub fn change_t_proc_macro(input: TokenStream) -> TokenStream {
     }.into()
 }
 
+#[proc_macro_derive(ChangeLen)]
+pub fn change_len_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let type_name=input.ident.clone();
+    let tr=quote!{container_traits::ChangeLen};
+    let (generics, wc, [(ty,mut wt)])=
+    preprocess_no_impl(& mut input);
+    assert_eq!(wt.len(),1);
+    let wt=wt.remove(0);
+    quote! {
+        impl #generics #tr for #ty where #wt : #tr, #wc {
+            type Output<const LChangeLen:usize>=#type_name<<#wt as #tr>::Output<LChangeLen>>;
+        }
+    }.into()
+}
+
+#[proc_macro_derive(ChangeDim)]
+pub fn change_dim_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let type_name=input.ident.clone();
+    let tr=quote!{container_traits::ChangeDim};
+    let (generics, wc, [(ty,mut wt)])=
+    preprocess_no_impl(& mut input);
+    assert_eq!(wt.len(),1);
+    let wt=wt.remove(0);
+    quote! {
+        impl #generics #tr for #ty where #wt : #tr, #wc {
+            type Output<const RChangeDim:usize,const CChangeDim:usize>=#type_name<<#wt as #tr>::Output<RChangeDim,CChangeDim>>;
+        }
+    }.into()
+}
+
 /// Implements      [`algebra_traits::Parameter<F>`]
 /// 
 #[proc_macro_derive(Parameter)]
@@ -2151,6 +2332,23 @@ pub fn parameters1_proc_macro(input: TokenStream) -> TokenStream {
 
             fn from_parameter(f:FParameter) -> Self {
                 Self(<#wt as #tr>::from_parameter(f))
+            }
+        }
+    }.into()
+}
+
+#[proc_macro_derive(NewUnchecked)]
+pub fn new_unchecked_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+
+    let tr=quote!{container_traits::NewUnchecked};
+    let (generics, wc, [(ty, wt)])=preprocess_no_impl(& mut input);
+    assert_eq!(wt.len(),1);
+    let wt=&wt[0];
+    quote! {
+        impl #generics #tr<#wt> for #ty where #wc {
+            fn new_unchecked(wt:#wt) -> Self {
+                Self(wt)
             }
         }
     }.into()

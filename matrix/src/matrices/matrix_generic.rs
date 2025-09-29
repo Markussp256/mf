@@ -1,4 +1,5 @@
-use algebra_traits::{Conjugate, Scalar, TryScalarproduct};
+use algebra_traits::{Conjugate, RealNumber, Scalar, Inv, TryInv, TryScalarproduct};
+use matrix_wrappers::{RightTriangular, SpecialOrthogonal};
 use num_traits::{One, Zero};
 
 use container_traits::*;
@@ -7,13 +8,15 @@ use std::fmt::Display;
 use std::ops::{Mul,Index,IndexMut};
 use utils::iter::IntoExactSizeIterator;
 
+use matrix_decompositions::OrthogonalQR;
+
 type U2=(usize,usize);
 
 #[derive(algebra_derive::ScalarContainer,
          container_derive::Empty,
          derive_more::IntoIterator,
          derive_more::AsRef,
-         derive_more::AsMut,
+         derive_more::AsMut
 )]
 pub struct MatrixGeneric<Row,
                          Col:ChangeT<Row>>(<Col as ChangeT<Row>>::Output); // =<Row as Transpose>::Output
@@ -24,7 +27,8 @@ impl<Row : Len,
      Col : ChangeT<Row,Output = C>,
      C: Len+Get<usize,Row>> MatrixGeneric<Row,Col> {
     fn nrows_private(&self) -> usize {
-        self.0.len()
+        self.0
+            .len()
     }
 
     fn ncols_private(&self) -> usize {
@@ -44,7 +48,7 @@ impl<Row : Len,
     }
 }
 
-
+// why implement manually? probably it would require Row : Clone and Col : Clone then
 impl<Row,
      Col : ChangeT<Row,Output = C>,
      C   : Clone> Clone for MatrixGeneric<Row,Col> {
@@ -108,10 +112,11 @@ impl<F,
      Row : RowVectorTryConstruct<T=F>,
      Col : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
      C   : 'static+ColVectorTryConstruct<T=Row>> container_traits::Get<U2,F> for MatrixGeneric<Row,Col> {
-    fn get(&self, (i,j):U2) -> Option<&F> {
-        self.0
-            .get(i)
-            .and_then(|r|r.get(j))
+    fn get(&self, (i,j):U2) -> Result<&F,IndexOutOfBoundsError<U2>> {
+        IndexOutOfBoundsError::try_new(&self.size(),&(i,j))?;
+        Ok(self.0
+            .get(i).unwrap()
+            .get(j).unwrap())
     }
 }
 
@@ -137,10 +142,11 @@ impl<F,
 Row  : RowVectorTryConstruct<T=F>,
 Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
 C    : 'static+ColVectorTryConstruct<T=Row>> TryIntoElement<U2,F> for MatrixGeneric<Row,Col> {
-    fn try_into_element(self,index:U2) -> Option<F> {
-        self.0
-            .try_into_element(index.0)
-            .and_then(|r|r.try_into_element(index.1))
+    fn try_into_element(self,index:U2) -> Result<F,IndexOutOfBoundsError<U2>> {
+        IndexOutOfBoundsError::try_new(&self.size(),&index)?;
+        Ok(self.0
+            .try_into_element(index.0).unwrap()
+            .try_into_element(index.1).unwrap())
     }
 }
 
@@ -297,7 +303,7 @@ impl<F,
         let vs:Vec<F>=utils::iter::next_chunk_dyn(iter,len)
                         .map_err(|e|LenTooSmallError::new(len,e.len()))?;
         let mut iter=vs.into_iter();
-        let orowref:Option<&Row>=oref.and_then(|r|r.0.get(0));
+        let orowref:Option<&Row>=oref.and_then(|r|r.0.get(0).ok());
         let rows=
             std::iter::repeat_with(||Row::any_take_away(orowref,& mut iter).ok().unwrap());
         Ok(Self(C::any_from_iter(oref.map(|s|&s.0),rows).unwrap()))
@@ -367,15 +373,19 @@ impl<F, FOut,
     // 
 }
 
+
+
+
 impl<F   : 'static,
      Row : RowVectorMut<T=F>,
      Col : ColVectorMut<T=F>+ChangeT<Row,Output=C>,
      C   : 'static+ColVectorMut<T=Row>> container_traits::GetMut<U2,F> for MatrixGeneric<Row,Col> 
     where Self : Matrix<T=F,Row=Row> {
-    fn get_mut(& mut self, (i,j):U2) -> Option<& mut F> {
-        self.0
-            .get_mut(i)
-            .and_then(|r|r.get_mut(j))
+    fn get_mut(& mut self, (i,j):U2) -> Result<& mut F,IndexOutOfBoundsError<U2>> {
+        IndexOutOfBoundsError::try_new(&self.size(),&(i,j))?;
+        Ok(self.0
+            .get_mut(i).unwrap()
+            .get_mut(j).unwrap())
     }
 }
 
@@ -442,6 +452,21 @@ impl<F,
     }
 }
 
+impl<F,
+     Row : IndexedIterMut<usize,F>,
+     Col : ChangeT<Row,Output=C>,
+     C   : 'static+IndexedIterMut<usize,Row>> IndexedIterMut<U2,F> for MatrixGeneric<Row,Col> where Self : Matrix {
+    fn indexed_iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(U2,&'a mut F)> where F:'a {
+        let sz=self.nrows()*self.ncols();
+        self.0
+            .indexed_iter_mut()
+            .map(|(i,row)|
+                    row.indexed_iter_mut()
+                        .map(move |(j,f)|((i,j),f)))
+            .flatten()
+            .into_exact_size_iter(sz)
+    }
+}
 
 impl<Row : TryVectorVectorProduct<Rhs,Output=F3>,
      F3  : Zero,
@@ -470,6 +495,37 @@ impl<Row1 : RowVector<T=F1>,
             try_matrix_matrix_product_impl(self,rhs)
         }
 }
+
+
+
+impl<F   : RealNumber,
+     Row : RowVector<T=F>+Transpose<Output=Col>,
+     Col : ColVector<T=F>+ChangeT<Row>> TryInv for MatrixGeneric<Row, Col>
+     where Self : Clone+ConjugateTranspose
+                + Transpose<Output=Self>
+                +MatrixSquareTryConstruct<T=F>
+                +TryMatrixMatrixProduct<Output=Self>
+                +OrthogonalQR<Q=SpecialOrthogonal<Self>,R=RightTriangular<Self>>,
+           RightTriangular<Self> : TryInv<Output=RightTriangular<Self>> {
+    type Error = MatrixNotRegularError;
+    type Output = Self;
+
+    fn is_invertible(&self) -> Result<(),   Self::Error> {
+        self.clone()
+            .try_inv()
+            .map(|_|())
+    }
+
+    fn try_inv(self) -> Result<Self::Output,Self::Error> {
+        let (q,r):(SpecialOrthogonal<Self>,RightTriangular<Self>)=self.qr();
+        let ri=r.try_inv()
+            .map_err(|_|MatrixNotRegularError)?;
+        Ok(ri.into_inner().try_matrix_matrix_product(q.inv().into_inner()).unwrap())
+    }
+}
+
+
+
 
 // impl<Row : TryFromSuperContainer<usize, Row2>,
 //      Row2: Container<usize>,

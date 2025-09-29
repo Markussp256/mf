@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 use container_traits::TryAccept;
-use matrix_traits::{Matrix, MatrixNotWide, MatrixConstructError, MatrixTryConstruct, TryFromMatrix, Transpose};
+use matrix_traits::{Matrix, MatrixConstructError, MatrixNotWide, MatrixTryConstruct, MatrixView, Transpose, TryFromMatrix};
 use super::not_tall::NotTall;
 
 type U2=(usize,usize);
@@ -10,7 +10,11 @@ type U2=(usize,usize);
          PartialEq,
          algebra_derive::ScalarContainer,
          container_derive::ChangeT,
+         container_derive::TryIntoElement,
+         container_derive::IntoIterator,
+         container_derive::IntoIndexedIter,
          container_derive::ContainerMut,
+         container_derive::NewUnchecked,
          container_derive::IntoInner,
          derive_more::AsRef,
          derive_more::Index,
@@ -21,12 +25,13 @@ type U2=(usize,usize);
          matrix_derive::MatrixNotTall,
          matrix_derive::MatrixSquare,
          matrix_derive::MatrixTall,
+         matrix_derive::PopCol,
 )]
-pub struct NotWide<M:Matrix>(M);
+pub struct NotWide<M:MatrixView>(M);
 
-impl<M:Matrix> MatrixNotWide for NotWide<M> {}
+impl<M:MatrixView> MatrixNotWide for NotWide<M> {}
 
-impl<M:Matrix+Transpose<Output=MT>,MT:MatrixTryConstruct> Transpose for NotWide<M> {
+impl<M:MatrixView+Transpose<Output=MT>,MT:MatrixTryConstruct> Transpose for NotWide<M> {
     type Output=NotTall<MT>;
 
     fn transpose(self) -> Self::Output {

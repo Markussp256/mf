@@ -13,10 +13,6 @@ pub trait TryFromLocalParameters<T,E> : Sized {
 
 #[macro_export]
 macro_rules! try_from_local_parameters_impl {
-    ($t:ty) => {
-        $crate::try_from_local_parameters_impl!($t, $crate::LinearContainerConstructError);
-    };
-
     ($t:ty, $e:ty) => {
         fn try_from_iter<I:IntoIterator<Item=$t>>(self, iter:I) -> Result<Self,$e> {
             let vs:Vec<$t>=iter.into_iter().collect();
@@ -31,6 +27,10 @@ macro_rules! try_from_local_parameters_impl {
             }
         }
     };
+
+    ($t:ty) => {
+        $crate::try_from_local_parameters_impl!($t, $crate::LinearContainerConstructError);
+    };
 }
 
 #[macro_export]
@@ -41,7 +41,7 @@ macro_rules! impl_try_from_local_parameters_for_multiplicative_group {
                 .map(|rhs|self*rhs)
         }
 
-        $crate::try_from_local_parameters_impl!(F);
+        $crate::try_from_local_parameters_impl!(F,E);
     };
 }
 

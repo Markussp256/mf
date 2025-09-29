@@ -24,9 +24,9 @@ use algebra::quaternion::ProjectiveQuaternion;
 use crate::primitives::{UnitVector3, Vector3};
 use crate::Vector;
 
-type O3   <F>=matrix_wrappers::OrthogonalMatrix<F,3>;
-type SO3  <F>=matrix_wrappers::SpecialOrthogonalMatrix<F,3>;
-type Skew3<F>=matrix_wrappers::SkewSymmetricMatrix<F,3>;
+type O3   <F>=matrix::OrthogonalMatrix<F,3>;
+type SO3  <F>=matrix::SpecialOrthogonalMatrix<F,3>;
+type Skew3<F>=matrix::SkewSymmetricMatrix<F,3>;
 
 #[derive(Clone, Debug)]
 pub struct ContradictingDataForRotation3Vector<F:RealNumber, V:Vectorspace<F>> {

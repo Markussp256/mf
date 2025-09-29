@@ -1,12 +1,20 @@
 
 
-use crate::{ColVector, ColVectorTryConstruct, Matrix};
+use container_traits::{AnyFromIterator, LinearContainerConstructError};
+
+use crate::{ColVector, ColVectorView, ColVectorTryConstruct, Matrix, MatrixView};
 
 use super::vector_vector_product::TryVectorVectorProduct;
 
-pub trait MatrixVectorProduct<Rhs : ColVector> : Matrix {
-    type Output : ColVector;
-    fn matrix_vector_product(self, rhs:Rhs) -> Self::Output;
+pub trait MatrixVectorProduct<Rhs : ColVectorView> : MatrixView {
+    type Output : ColVectorView;
+    fn matrix_vector_product(&self, rhs:&Rhs) -> Self::Output;
+}
+
+
+pub trait IntoMatrixVectorProduct<Rhs : ColVector> : Matrix {
+    type Output : ColVectorView;
+    fn into_matrix_vector_product(self, rhs:Rhs) -> Self::Output;
 }
 
 // impl code using only method from Matrix/Rowvector/Colvector traits
@@ -14,27 +22,44 @@ pub trait MatrixVectorProduct<Rhs : ColVector> : Matrix {
 // put many constraints
 
 pub fn try_matrix_vector_product_impl
+    <F : Clone,
+    F3,
+     Lhs    : MatrixView<T=F,RowView=LhsRow>,
+     LhsRow : AnyFromIterator<F,LinearContainerConstructError>+TryVectorVectorProduct<Rhs,Output=F3> ,
+     Rhs    : ColVectorView,
+     Out    : ColVectorTryConstruct<T=F3>>(lhs:&Lhs,rhs:&Rhs) -> Option<Out> {
+    if lhs.ncols() != rhs.len() { return None; }
+    Out::any_from_iter(None,
+        (0..lhs.nrows())
+            .map(|i|lhs.row_view(i).unwrap())
+            .map(|r|r.try_vector_vector_product(rhs).unwrap())).ok()
+}
+
+
+pub fn try_into_matrix_vector_product_impl
     <F3,
      Lhs    : Matrix<Row=LhsRow>,
      LhsRow : TryVectorVectorProduct<Rhs,Output=F3> ,
-     Rhs    : Clone+ColVector,
+     Rhs    : ColVectorView,
      Out    : ColVectorTryConstruct<T=F3>>(lhs:Lhs,rhs:Rhs) -> Option<Out> {
     if lhs.ncols() != rhs.len() { return None; }
-    Out::try_from_vec(
+    Out::any_from_iter(None,
         lhs.into_rows()
-           .map(|r|r.try_vector_vector_product(rhs.clone()).unwrap())
-           .collect()).ok()
+           .map(|r|r.try_vector_vector_product(&rhs).unwrap())
+           ).ok()
 }
 
-pub trait TryMatrixVectorProduct<Rhs : ColVector> : Matrix {
-    type Output : ColVector;
-    fn try_matrix_vector_product(self, rhs:Rhs) -> Option<Self::Output>;
+
+pub trait TryMatrixVectorProduct<Rhs : ColVectorView> : MatrixView {
+    type Output : ColVectorView;
+    fn try_matrix_vector_product(&self, rhs:&Rhs) -> Option<Self::Output>;
 }
 
-pub trait AnyMatrixVectorProduct<Rhs : ColVector> : Matrix {
-    type Output : ColVector;
-    fn any_matrix_vector_product(self, rhs:Rhs) -> Option<Self::Output>;
+pub trait TryIntoMatrixVectorProduct<Rhs : ColVector> : Matrix {
+    type Output : ColVectorView;
+    fn try_into_matrix_vector_product(self, rhs:Rhs) -> Option<Self::Output>;
 }
+
 
 // impl<M:Matrix<Row=Row,Col=Col>,
 //      F3,

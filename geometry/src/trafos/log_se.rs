@@ -158,7 +158,7 @@ macro_rules! impl_exp_log {
             fn exp(self) -> Self::Output {
                 let m=self.lnrot
                           .clone()
-                          .into_this::<Eig<Complex<F>,$N>>()
+                          .into_this::<EigStruct<Complex<F>,$N>>()
                           .apply_fn(expm1dz)
                           .into_matrix()
                           .into_real();

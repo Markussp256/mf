@@ -16,10 +16,12 @@ type U2=(usize,usize);
 #[derive(Clone, Debug, PartialEq,
          algebra_derive::ScalarContainer,
          container_derive::JustContainer,
+         container_derive::NewUnchecked,
          container_derive::IntoInner,
          matrix_derive::Inherit,
          matrix_derive::ClosedTranspose,
          matrix_derive::MatrixShape,
+         matrix_derive::MatrixNormal,
          derive_more::Index)]
 pub struct AntiHermitian<M:MatrixSquare>(M) where M::T:Clone+ComplexNumber;
 

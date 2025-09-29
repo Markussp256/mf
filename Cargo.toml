@@ -21,4 +21,4 @@ members = [
     "playground",
     "utils",
     "vector_and_affine_spaces"
-]
+, "container"]

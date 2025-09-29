@@ -1,4 +1,4 @@
-use crate::container::index::{column_major_index_iterator,row_major_index_iterator};
+use crate::container::index_trait::{column_major_index_iterator,row_major_index_iterator};
 use nalgebra::{allocator::Allocator, DMatrix, DefaultAllocator, Dim, Matrix, OMatrix, RawStorage, RawStorageMut, Scalar};
 use num_traits::Zero;
 use crate::*;
@@ -33,7 +33,8 @@ impl<T : Scalar,
         } else if C::try_to_usize() == Some(1) {
             (size,1)
         } else {
-            panic!("")
+            assert!(false); // panic!("number of rows or of columns must be 1")
+            (0,0)
         };
         let r=R::from_usize(r);
         let c=C::from_usize(c); 
@@ -102,7 +103,8 @@ impl<T : Scalar,
         } else if self.ncols() == 1 {
             self.nrows()
         } else {
-            panic!("Asking for 1d-size of a 2d nalgebra matrix")
+            assert!(false); // panic!("Asking for 1d-size of a 2d nalgebra matrix")
+            0
         }
     }
 }
@@ -128,9 +130,17 @@ impl<T : Scalar,
 impl<T : Scalar,
      R : Dim,
      C : Dim,
+     S : RawStorageMut<T,R,C>> ChangeDim for Matrix<T,R,C,S> {
+    type Output<const RR:usize,const CC:usize> = nalgebra::SMatrix<T,RR,CC>;
+}
+
+impl<T : Scalar,
+     R : Dim,
+     C : Dim,
      S : RawStorageMut<T,R,C>> GetMut<usize, T> for Matrix<T,R,C,S> {
-    fn get_mut(& mut self, index:usize) -> Option<& mut T> {
-       self.get_mut(index)
+    fn get_mut(& mut self, index:usize) -> Result<& mut T,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&self.size(),&index)?;
+        Ok(self.get_mut(index).unwrap())
     }
 }
 
@@ -138,8 +148,9 @@ impl<T : Scalar,
      R : Dim,
      C : Dim,
      S : RawStorageMut<T,R,C>> GetMut<U2, T> for Matrix<T,R,C,S> {
-    fn get_mut(& mut self, index:U2) -> Option<& mut T> {
-       self.get_mut(index)
+    fn get_mut(& mut self, index:U2) -> Result<& mut T,IndexOutOfBoundsError<U2>> {
+        IndexOutOfBoundsError::try_new(&self.size(),&index)?;
+        Ok(self.get_mut(index).unwrap())
     }
 }
 
@@ -147,8 +158,9 @@ impl<T : Scalar,
      R : Dim,
      C : Dim,
      S : RawStorage<T,R,C>> Get<usize, T> for Matrix<T,R,C,S> {
-    fn get(&self, index:usize) -> Option<& T> {
-       self.get(index)
+    fn get(&self, index:usize) -> Result<& T,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&self.size(),&index)?;
+        Ok(self.get(index).unwrap())
     }
 }
 
@@ -156,8 +168,9 @@ impl<T : Scalar,
      R : Dim,
      C : Dim,
      S : RawStorage<T,R,C>> Get<U2, T> for Matrix<T,R,C,S> {
-    fn get(&self, index:U2) -> Option<&T> {
-        self.get(index)
+    fn get(&self, index:U2) -> Result<&T,IndexOutOfBoundsError<U2>> {
+        IndexOutOfBoundsError::try_new(&self.size(),&index)?;
+        Ok(self.get(index).unwrap())
     }
 }
 
@@ -330,6 +343,7 @@ impl<T : Scalar,
     }
 }
 
+
 impl<T : Scalar,
      T2: Scalar,
      R : Dim,
@@ -338,6 +352,36 @@ impl<T : Scalar,
     type Output = OMatrix<T2,R,C>;
     fn try_map(self, f:impl Fn(T) -> T2) -> Result<Self::Output,E> {
         Ok(OMatrix::map(&self,f))
+    }
+}
+
+impl<T : Scalar,
+     R : Dim,
+     C : Dim> TryMapI<U2, T> for OMatrix<T,R,C> where DefaultAllocator : Allocator<R, C> {
+    fn try_map_i(self, index:U2, f:impl FnOnce(& mut T)) -> Result<Self,IndexOutOfBoundsError<U2>> {
+        IndexOutOfBoundsError::try_new(&self.size(), &index)?;
+        let mut smut=self;
+        if let Some(x)=smut.get_mut(index) {
+            f(x);
+        }
+        Ok(smut)
+    }
+}
+
+impl<T : Scalar,
+     R : Dim,
+     C : Dim> TryMapI<usize, T> for OMatrix<T,R,C> where DefaultAllocator : Allocator<R, C> {
+    fn try_map_i(self, index:usize, f:impl FnOnce(& mut T)) -> Result<Self,IndexOutOfBoundsError<usize>> {
+        if        self.nrows() == 1 {
+            IndexOutOfBoundsError::try_new(&self.ncols(),&index)?;
+            Ok(self.try_map_i((0,index),f).unwrap())
+        } else if self.ncols() == 1 {
+            IndexOutOfBoundsError::try_new(&self.nrows(),&index)?;
+            Ok(self.try_map_i((index,0),f).unwrap())
+        } else {
+            assert!(false);// panic!("TryMapI<usize,...> is only supposed to be used if number of rows or number of cols is 1");
+            Ok(self)
+        }
     }
 }
 
@@ -394,13 +438,17 @@ impl<T : Scalar,
      R : Dim,
      C : Dim,
      S : RawStorage<T,R,C>> TryIntoElement<usize,T> for Matrix<T,R,C,S> {
-    fn try_into_element(self,index:usize) -> Option<T> {
-        if        self.nrows() == 1 && index < self.ncols() {
-            Some(self[(0,index)].clone())
-        } else if self.ncols() == 1 && index < self.nrows() {
-            Some(self[(index,0)].clone())
+    fn try_into_element(self,index:usize) -> Result<T,IndexOutOfBoundsError<usize>> {
+        if        self.nrows() == 1 {
+            IndexOutOfBoundsError::try_new(&self.ncols(),&index)?;
+            Ok(self[(0,index)].clone())
+        } else if self.ncols() == 1 {
+            IndexOutOfBoundsError::try_new(&self.nrows(),&index)?;
+            Ok(self[(index,0)].clone())
         } else {
-            None
+            assert!(false);
+            Ok(self[(0,0)].clone())
+            // panic!("matrix is supposed to have only one row or only one column")
         }
     }
 }
@@ -409,9 +457,8 @@ impl<T : Scalar,
      R : Dim,
      C : Dim,
      S : RawStorage<T,R,C>> TryIntoElement<U2,T> for Matrix<T,R,C,S> {
-    fn try_into_element(self,index:U2) -> Option<T> {
-        index.is_elem_wise_strictly_smaller(&self.size()).then(||
-            self[index].clone())
+    fn try_into_element(self,index:U2) -> Result<T,IndexOutOfBoundsError<U2>> {
+        IndexOutOfBoundsError::try_new(&self.size(),&index)?;
+        Ok(self[index].clone())
     }
 }
-

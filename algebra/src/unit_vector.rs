@@ -1,7 +1,7 @@
 use std::ops::Mul;
 
 use crate::{Vector, VectorDyn};
-use algebra_traits::{ConstNonZero, Norm, RealNumber, Tolerance, TryDiv, TryNormalize};
+use algebra_traits::{ConstNonZero, Norm, Scalar,  Tolerance, TryDiv, TryNormalize};
 
 #[derive(Clone, Debug, PartialEq,
          algebra_derive::Conjugate,
@@ -13,6 +13,7 @@ use algebra_traits::{ConstNonZero, Norm, RealNumber, Tolerance, TryDiv, TryNorma
          container_derive::Get,
          container_derive::StandardBasis,
          container_derive::IntoIterator,
+         container_derive::Iter,
          container_derive::Size,
          container_derive::XYZ,
          derive_more::Index)]
@@ -21,7 +22,7 @@ pub struct Unit<C>(C);
 pub type UnitVector<T,const N:usize>=Unit<Vector<T,N>>;
 pub type UnitVectorDyn<T>=Unit<VectorDyn<T>>;
 
-impl<C:Clone+Norm> Unit<C> where C::NormT : RealNumber {
+impl<C:Clone+Norm> Unit<C> where C::NormT : Scalar {
     pub fn try_new(c:C) -> Result<Self, C> {
         let is_ok=
             c.clone()
@@ -36,8 +37,8 @@ impl<C:Clone+Norm> Unit<C> where C::NormT : RealNumber {
 }
 
 // get direction from a vector
-impl<C : TryNormalize<NormT=NT>,
-     NT: Clone+RealNumber> Unit<C> {
+impl<C : Clone+TryNormalize<NormT=NT>+TryDiv<NT,Output=C>,
+     NT: Clone+Scalar> Unit<C> {
     pub fn try_dir<
     V : ConstNonZero + Mul<NT,Output=V>,
     CV: TryDiv<V,Output=C>>(cv:CV) -> Option<(V,Self)> {

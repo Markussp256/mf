@@ -1,5 +1,5 @@
 use algebra::unit_vector::Unit;
-use container_traits::{Get, IndexedIter, IntoIndexedIter, IntoInner, IntoIter, ItemT, Iter, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
+use container_traits::{Get, IndexOutOfBoundsError, IndexedIter, IntoIndexedIter, IntoInner, IntoIter, ItemT, Iter, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
 use algebra_traits::*;
 use std::ops::Mul;
 use matrix_wrappers::{Hermitian, Symmetric, orthogonality::*};
@@ -68,14 +68,12 @@ fn test_try_froma2b() {
 
 impl<F   : Clone+Scalar,
      Col : ColVector<T=F>> Get<U2,F> for HouseholderTrafoGeneric<Col> {    
-    fn get(&self, (i,j):U2) -> Option<&F> {
-        let r=self.a.get(&(i,j));
-        if r.is_some() {
-            return r.map(|b|b.as_ref());
-        }
+    fn get(&self, (i,j):U2) -> Result<&F,IndexOutOfBoundsError<U2>> {
         let n=self.n();
-        if i >= n || j >= n {
-            return None;
+        IndexOutOfBoundsError::try_new(&(n,n),&(i,j))?;
+        let r=self.a.get(&(i,j));
+        if let Some(bf)=r {
+            return Ok(bf.as_ref());
         }
         let f=|&(ii,jj)|{
             let get=|iii:usize|self.u.as_ref().get(iii).cloned();
@@ -84,7 +82,7 @@ impl<F   : Clone+Scalar,
             let ujh=uj.conjugate();
             kron_delta::<usize,F>(ii, jj) - (ui*ujh).muli(2)
         };
-        Some(*self.a.cache((i,j),f(&(i,j))))
+        Ok(*self.a.cache((i,j),f(&(i,j))))
     }
 }
 
@@ -109,7 +107,7 @@ impl<F   : Scalar,
 
 impl<F   : Clone+Scalar,
      Col : ColVector<T=F>> TryIntoElement<U2,F> for HouseholderTrafoGeneric<Col> {
-    fn try_into_element(self,index:U2) -> Option<F> {
+    fn try_into_element(self,index:U2) -> Result<F,IndexOutOfBoundsError<U2>> {
         self.get(index)
             .cloned()
     }
@@ -218,7 +216,15 @@ impl<F:RealNumber,
 
 impl<F:ComplexNumber,
      Col:ScalarVector<T=F>+ColVector<T=F>> HouseholderTrafoGeneric<Col> where Self : Matrix<T=F> {
-    pub fn try_into_unitary_matrix<M:Clone+PartialEq+AlgebraMatrix+MatrixSquareTryConstruct<T=F>+Transpose<Output=M>>(self) -> Option<Unitary<Hermitian<M>>>
+    pub fn try_into_unitary_matrix<M:Clone+AlgebraMatrix+MatrixSquareTryConstruct<T=F>+Transpose<Output=M>>(self) -> Option<Unitary<M>>
+    where M::Col : ScalarVector<T = F> {
+        Unitary::try_from_matrix(self).ok()
+    }
+}
+
+impl<F:ComplexNumber,
+     Col:ScalarVector<T=F>+ColVector<T=F>> HouseholderTrafoGeneric<Col> where Self : Matrix<T=F> {
+    pub fn try_into_unitary_hermitian_matrix<M:Clone+PartialEq+AlgebraMatrix+MatrixSquareTryConstruct<T=F>+Transpose<Output=M>>(self) -> Option<Unitary<Hermitian<M>>>
     where M::Col : ScalarVector<T = F> {
         Unitary::try_from_matrix(self).ok()
     }

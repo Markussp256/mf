@@ -79,7 +79,7 @@ macro_rules! impl_trigonometric_functions_for_angle {
 macro_rules! impls_for_angle_and_angle_pos {
     ($t:ty) => {
 
-        impl<F:algebra_traits::RealNumber> algebra_traits::Sinc for $t where $t : $crate::Radians<F> {
+        impl<F:Clone+algebra_traits::RealNumber> algebra_traits::Sinc for $t where $t : $crate::Radians<F> {
             type Output=F;
             fn denominator(self) -> F {
                 <Self as $crate::Radians<F>>::rad(self)

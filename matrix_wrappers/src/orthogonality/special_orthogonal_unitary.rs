@@ -5,12 +5,11 @@ use algebra::{quaternion::ProjectiveQuaternion, Quaternion};
 use algebra_traits::{Exp, TryLog};
 use num_traits::{Zero,One};
 
-use matrix_traits::{matrix_shapes::{Matrix33,Matrix44}, AlgebraMatrix, ChangeDim, ColVector, IntoBaseSquareMatrix, MatrixConstructError, MatrixMatrixProduct, MatrixMut, MatrixSquare, MatrixSquareTryConstruct, MatrixVectorProduct, Transpose, TryFromMatrix};
-use matrix_traits::identity::for_static::Identity;
+use matrix_traits::{*,identity::for_static::Identity};
 use algebra_traits::{AdditiveGroup, ClosedTryInv, ComplexNumber, RealNumber, ScalarVector, Scalar, TryInv};
 use super::{Homogeneous, Orthogonal, Stiefel, Unitary};
 use crate::{SkewSymmetric, SkewSymmetricPart, RightTriangular};
-use container_traits::{for_static::{FromFn, TryFromParameters}, Get, IntoInner, IntoParameters, TryFromIterator};
+use container_traits::{for_static::{FromFn, TryFromParameters}, ChangeDim, Get, IntoInner, IntoParameters, NewUnchecked, TryFromIterator};
 use std::fmt::Debug;
 
 type U2=(usize,usize);
@@ -21,7 +20,9 @@ macro_rules! def_orthogonal_or_unitary {
             #[derive(Clone, Debug, PartialEq,
               algebra_derive::Conjugate,
               container_derive::IntoInner,
+              container_derive::Inner,
               container_derive::JustContainer,
+              container_derive::NewUnchecked,
               derive_more::AsRef,
               derive_more::Index,
               matrix_derive::Display,
@@ -32,6 +33,9 @@ macro_rules! def_orthogonal_or_unitary {
               matrix_derive::AsBaseMatrix,
               matrix_derive::AsBaseSquareMatrix,
               matrix_derive::Matrix,
+              matrix_derive::MatrixView,
+              matrix_derive::AlgebraMatrix,
+              matrix_derive::MatrixNormal,
               matrix_derive::MatrixVectorProduct,
               matrix_derive::ClosedMatrixMatrixProduct,
               matrix_derive::MatrixMatrixProductRightTriangular,
@@ -50,10 +54,28 @@ macro_rules! def_orthogonal_or_unitary {
                  }
              }
 
-            impl<M:MatrixSquare+Transpose<Output=M>> algebra_traits::Inv for [<Special $uc>]<M> where M::T : $tr {
+            impl<M:MatrixSquare+ConjugateTranspose<Output=M>> algebra_traits::Inv for [<Special $uc>]<M> where M::T : $tr {
                 type Output=Self;
                 fn inv(self) -> Self {
-                    self.transpose()
+                    self.conjugate_transpose()
+                }
+            }
+
+            impl<M:MatrixSquare+ConjugateTranspose<Output=M>> algebra_traits::TryInv for [<Special $uc>]<M> where M::T : $tr {
+                type Output=Self;
+                type Error=();
+                fn is_invertible(&self) -> Result<(),()> { Ok(()) }
+                fn try_inv(self) -> Result<Self,()> {
+                    Ok(self.conjugate_transpose())
+                }
+            }
+
+            impl<F : $tr, M:MatrixSquareTryConstruct<T=F>+TryPopCol> TryPopCol for [<Special $uc>]<M> {
+                type Output=Stiefel<<M as TryPopCol>::Output>;
+                fn try_pop_col(self) -> Option<(<Self as TryPopCol>::Output,M::Col)> {
+                    self.0
+                        .try_pop_col()
+                        .map(|(ms,col)|(Stiefel::new_unchecked(ms),col))
                 }
             }
 
@@ -82,7 +104,7 @@ impl<M:MatrixSquare> From<Homogeneous<M>> for SpecialOrthogonal<M> where M::T : 
 
 
 
-impl<M : Matrix33<T=F>+FromFn<U2,F>, F : Clone+RealNumber> From<ProjectiveQuaternion<F>> for SpecialOrthogonal<M> {
+impl<M : MatrixFixedSize<3,3,T=F>+MatrixSquare+FromFn<U2,F>, F : Clone+RealNumber> From<ProjectiveQuaternion<F>> for SpecialOrthogonal<M> {
     fn from(value: ProjectiveQuaternion<F>) -> Self {
         let (real, imag):(F,[F;3])=value.quaternion().clone().into_real_imag();
         let pow2=|x:&F|x.clone()*x.clone();
@@ -107,8 +129,8 @@ impl<M : Matrix33<T=F>+FromFn<U2,F>, F : Clone+RealNumber> From<ProjectiveQuater
 
 // since this would create circular dependency we can not use optimization
 // for this impl
-impl<M   : Matrix33<T=F>+ChangeDim<Output<4,4>=M44>,
-     M44 : Matrix44<T=F,Col=M44Col>+Clone+MatrixMut<T=F>+Zero+MatrixVectorProduct<M44Col,Output=M44Col>,
+impl<M   : MatrixFixedSize<3,3,T=F>+MatrixSquare+ChangeDim<Output<4,4>=M44>,
+     M44 : MatrixFixedSize<4,4,T=F,Col=M44Col>+MatrixSquare+Clone+MatrixMut<T=F>+Zero+MatrixVectorProduct<M44Col,Output=M44Col>,
      M44Col : ColVector<T=F>+ScalarVector,
      F : Clone+RealNumber> Into<ProjectiveQuaternion<F>> for SpecialOrthogonal<M> {
     fn into(self) ->  ProjectiveQuaternion<F> {       
@@ -161,15 +183,15 @@ impl<M   : Matrix33<T=F>+ChangeDim<Output<4,4>=M44>,
 
 // for parametrization we use cayley transform to map to skew symmetric matrices
 
-trait MConditions : Clone
-                    +AlgebraMatrix
+trait MConditions<T : RealNumber> : Clone
+                    +AlgebraMatrix<T=T>
                     +IntoBaseSquareMatrix<Output=Self>
                     +SkewSymmetricPart
-                    +MatrixSquareTryConstruct
+                    +MatrixSquareTryConstruct<T=T>
                     +Identity
                     +AdditiveGroup
                     +ClosedTryInv
-                    +MatrixMatrixProduct<Self,Output=Self> where Self::T : RealNumber {}
+                    +MatrixMatrixProduct<Output=Self> {}
 
 impl<T : RealNumber,
      E : Debug,
@@ -181,37 +203,36 @@ impl<T : RealNumber,
         +Identity
         +AdditiveGroup
         +ClosedTryInv<Error=E>
-        +MatrixMatrixProduct<M,Output=M>> MConditions for M {}
+        +MatrixMatrixProduct<M,Output=M>> MConditions<T> for M {}
 
-fn skew2special<M : MConditions>(skew:SkewSymmetric<M>) -> SpecialOrthogonal<M> where M::T : RealNumber, <M as TryInv>::Error : Debug {
+fn skew2special<T:RealNumber, M : MConditions<T>>(skew:SkewSymmetric<M>) -> SpecialOrthogonal<M> where <M as TryInv>::Error : Debug {
     let m=skew.into_inner();
-    let mt=(M::identity()+m.clone()).try_inv().unwrap().matrix_matrix_product(M::identity()-m);
+    let mt=(M::identity()+m.clone()).try_inv().ok().unwrap().matrix_matrix_product(M::identity()-m);
     let o=Orthogonal::try_new(mt).unwrap();
     SpecialOrthogonal::try_new(o,M::T::one()).ok().unwrap()
 }
 
-fn special2skew<M : MConditions>(special:SpecialOrthogonal<M>) -> SkewSymmetric<M> where M::T : RealNumber, <M as TryInv>::Error : Debug {
+fn special2skew<T:RealNumber, M : MConditions<T>>(special:SpecialOrthogonal<M>) -> SkewSymmetric<M> where <M as TryInv>::Error : Debug {
     let m=special.into_inner();
     let mt=(M::identity()+m.clone()).try_inv().unwrap().matrix_matrix_product(m-M::identity());
     mt.skew_part()
 }
 
-impl<M : MConditions> IntoParameters<M::T> for SpecialOrthogonal<M> where M::T : RealNumber, <M as TryInv>::Error : Debug {
+impl<T:RealNumber, M : MConditions<T>> IntoParameters<T> for SpecialOrthogonal<M> where <M as TryInv>::Error : Debug {
     fn into_parameters(self) -> impl ExactSizeIterator<Item=M::T> {
         special2skew(self)
             .into_parameters()
     }
 }
 
-impl<M : MConditions> TryFromParameters<M::T,MatrixConstructError> for SpecialOrthogonal<M>
-where M::T             : Clone+RealNumber,
-      SkewSymmetric<M> : TryFromParameters<M::T,MatrixConstructError>,
+impl<F : Clone+RealNumber, M : MConditions<F>> TryFromParameters<F,MatrixConstructError> for SpecialOrthogonal<M> where
+      SkewSymmetric<M> : TryFromParameters<F,MatrixConstructError>,
       <M as TryInv>::Error : Debug {
-    fn try_take_away<I:    Iterator<Item=M::T>>(iter:& mut I) -> Result<Self,MatrixConstructError> {
+    fn try_take_away<I:    Iterator<Item=F>>(iter:& mut I) -> Result<Self,MatrixConstructError> {
         let m=SkewSymmetric::<M>::try_take_away(iter)?;
         Ok(skew2special(m))
     }
-    container_traits::try_from_parameters_impl!(M::T,MatrixConstructError);
+    container_traits::try_from_parameters_impl!(F,MatrixConstructError);
 }
 
 impl<M    : AlgebraMatrix+MatrixSquare+TryLog<Output=MLog>,

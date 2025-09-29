@@ -1,6 +1,9 @@
 pub mod from_into;
 pub use from_into::*;
 
+pub mod matrix_diagonal_type;
+pub use matrix_diagonal_type::DiagonalMatrixGeneric;
+
 pub mod matrix_diagonal;
 pub use matrix_diagonal::{MatrixDiagonal,MatrixDiagonalTryConstruct};
 
@@ -24,6 +27,9 @@ pub use matrix_shapes::*;
 
 pub mod matrix_try_construct;
 pub use matrix_try_construct::MatrixTryConstruct;
+
+pub mod matrix_view;
+pub use matrix_view::MatrixView;
 
 pub mod matrix_construct;
 pub use matrix_construct::MatrixConstruct;

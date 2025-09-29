@@ -1,34 +1,38 @@
-use std::{iter::{Chain, Flatten, Once, Repeat, Take}, num::NonZeroUsize};
+use std::iter::{Chain, Flatten, Once, Repeat, Take};
+
+// iter contains the main Iterator
+// skips contains info how many elem are skipped
 
 #[derive(Clone, Debug)]
-pub struct VarStep<I:Iterator, ISteps:Iterator<Item=NonZeroUsize>> {
+pub struct VarStep<I:Iterator, ISkips:Iterator<Item=usize>> {
     iter:I,
-    steps:ISteps
+    skips:ISkips
 }
 
-impl<T,I:Iterator<Item=T>, ISteps:Iterator<Item=NonZeroUsize>> Iterator for VarStep<I,ISteps> {
+impl<I:Iterator, ISkips:Iterator<Item=usize>> VarStep<I,ISkips> {
+    pub fn new(iter:I, skips:ISkips) -> Self {
+        Self{iter, skips}
+    }
+}
+
+impl<T,I:Iterator<Item=T>, ISkips:Iterator<Item=usize>> Iterator for VarStep<I,ISkips> {
     type Item=T;
     fn next(&mut self) -> Option<Self::Item> {
-        let nsteps=self.steps.next()?;
-        let mut res=None;
-        for _ in 0..nsteps.into() {
-            res=self.iter.next();
+        let nskips=self.skips.next()?;
+        for _ in 0..nskips {
+            self.iter.next();
         }
-        res
+        self.iter.next()
     }
 }
 
-impl<I:Iterator, ISteps:Iterator<Item=NonZeroUsize>> VarStep<I,ISteps> {
-    pub fn new(iter:I, steps:ISteps) -> Self {
-        Self{iter, steps}
-    }
-}
 
-impl<T,I:Iterator<Item=T>> VarStep<I,Flatten<Repeat<Chain<Take<Repeat<NonZeroUsize>>,Once<NonZeroUsize>>>>> {
+
+impl<T,I:Iterator<Item=T>> VarStep<I,Flatten<Repeat<Chain<Take<Repeat<usize>>,Once<usize>>>>> {
     pub fn take_a_skip_b(iter:I, a:usize, b:usize) -> Self {
-        let steps_a=std::iter::repeat(NonZeroUsize::new(1usize).unwrap()).take(a);
-        let steps=steps_a.chain(std::iter::once(NonZeroUsize::new(b+1).unwrap()));
-        let steps=std::iter::repeat(steps).flatten();
-        Self::new(iter, steps)
+        let skips_a=std::iter::repeat(0).take(a);
+        let skips=skips_a.chain(std::iter::once(b));
+        let skips=std::iter::repeat(skips).flatten();
+        Self::new(iter, skips)
     }
 } 

@@ -1,8 +1,6 @@
-use algebra_traits::TryScalarDiv;
-
-#[derive(algebra_derive::TryScalarDiv)]
-struct MyArray<T>([T;3]);
-
+struct MyStruct<T>(T);
 
 fn main() {
+
+    let m=MyStruct::<i32>(3);
 }

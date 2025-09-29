@@ -1,17 +1,19 @@
 
-use algebra_traits::{RealNumber, TryDiv, Vectorspace1d};
+use algebra_traits::{MultiplicativeGroup, RealNumber, TryDiv, Vectorspace1d};
 use container_traits::{ContainerConstructError, DimensionMismatchError, LenNotEqualToRequiredLenError, LenTooSmallError};
 use container_traits::{for_static::TryFromParameters,Parameter, IntoParameters, TryFromLocalParameters, IntoLocalParameters};
 use matrix_traits::identity::for_static::Identity;
-use num_traits::real::Real;
 use num_traits::{One, Zero, Inv};
 use utils::IntoThis;
 use std::ops::{Mul, Sub};
 use std::fmt::Display;
 use matrix::Matrix;
 use matrix_traits::{MatrixConstructError, MatrixMatrixProduct, MatrixVectorProduct};
-use matrix_wrappers::{SpecialOrthogonalMatrix, HomogeneousMatrix};
+use matrix::{SpecialOrthogonalMatrix, HomogeneousMatrix};
+
 use crate::trafos::{ScrewMotion, Translation};
+
+
 
 use num_traits::Pow;
 use crate::{Point, Point3, Vector};
@@ -330,16 +332,12 @@ impl<F:RealNumber, V:Parameter<F>, const N:usize> container_traits::for_static::
     const NDOFS: usize = (N*(N+1))/2;
 }
 
-// impl<F:RealNumber+Mul<V, Output=V>,
-//      V:Clone+TryDiv<Output=F>+Vectorspace1d+Parameter<F>> IntoLocalParameters<F> for SE<F,V,3> {
-//     fn into_local_parameters(self,rhs:Self) -> impl ExactSizeIterator<Item=F> {
-//         (rhs/self).into_parameters()
-//     }
-// }
-
 impl<F:RealNumber+Mul<V, Output=V>,
-     V:TryDiv<Output=F>+Vectorspace1d+Parameter<F>> IntoLocalParameters<F> for SE<F, V, 3> {
-    container_traits::impl_into_local_parameters_for_multiplicative_group!();
+     V:TryDiv<Output=F>+Vectorspace1d+Parameter<F>> IntoLocalParameters<F> for SE<F, V, 3>
+     where Self : MultiplicativeGroup+IntoParameters<F> {
+    fn into_local_parameters(self, rhs: Self) -> impl ExactSizeIterator<Item=F> {
+        <Self as container_traits::IntoParameters<F>>::into_parameters(rhs / self)
+    }
 }
 
 impl<F:RealNumber+Mul<V, Output=V>,
@@ -349,18 +347,17 @@ impl<F:RealNumber+Mul<V, Output=V>,
 }
 
 impl<F:RealNumber+Mul<V,Output=V>,
-     V:TryDiv<Output=F>+Vectorspace1d+Parameter<F>> geometry_traits::Manifold<F,SETryFromParametersError> for SE<F,V,3> {
+     V:Clone+TryDiv<Output=F>+Vectorspace1d+Parameter<F>> geometry_traits::Manifold<F,SETryFromParametersError> for SE<F,V,3> {
 }
 
 impl<F:RealNumber+Mul<V, Output=V>,
-     V:TryDiv<Output=F>+Vectorspace1d+Parameter<F>> geometry_traits::LieGroup<F,SETryFromParametersError> for SE<F, V, 3> {   
+     V:'static+Clone+TryDiv<Output=F>+Vectorspace1d+Parameter<F>> geometry_traits::LieGroup<F,SETryFromParametersError> for SE<F, V, 3> {   
 }
 
 #[test]
 fn so_conv() {
-    use algebra_traits::Parameters;
-    let vs = vec![0.0, 0.0, 0.0, 3.1, -2.3, 4.1];
-    let se3: SE3<f64> = SE3::<f64>::try_from_parameters(vs.clone()).unwrap();
+    let vs = [0.0, 0.0, 0.0, 3.1, -2.3, 4.1];
+    let se3: SE3<f64> = SE3::<f64>::try_from_parameters(vs.iter()).unwrap();
     println!("The SpecialOrthogonalMatrix3 matrix is: {:?}", se3.clone().rot_mat());
     println!("The translation vector is: {:?}", se3.t().clone());
     let vb = se3.parameters();
@@ -376,17 +373,12 @@ fn so_conv() {
 #[test]
 fn test_parameters_se3() {
     use optimization::{jacobian, FiniteDifference};
-    use algebra_traits::{TrySub, Parameters};
-    use algebra::matrix::MatrixDyn;
-    let vs = vec![0.0, 0.0, 0.0, 0.0, 0.0, 1.0];
+    use algebra_traits::TrySub;
+    use matrix::MatrixDyn;
+    let vs = [0.0, 0.0, 0.0, 0.0, 0.0, 1.0];
 
     let f =
         |p: &Vec<f64>| SE3::<f64>::try_from_parameters(p.clone()).unwrap();
     let jac = jacobian(&f, &vs, FiniteDifference::default());
-    // println!("jac:{}",jac);
-
-    // let jac_round=jac.map(|z|z.round());
-    // println!("jac_round:{}",jac_round);
-
     assert!((jac.try_sub(MatrixDyn::<f64>::identity(6)).unwrap()).max_norm_of_entries() < 1e-6);
 }

@@ -1,5 +1,5 @@
 use algebra_traits::Pow2;
-use matrix_traits::{try_matrix_matrix_product_impl, try_matrix_vector_product_impl, AsBaseSquareMatrix, IntoBaseSquareMatrix, MatrixMatrixProduct, MatrixSquareTryConstruct, MatrixTryConstruct, MatrixVectorProduct, SquareStaticMatrix, StaticMatrix};
+use matrix_traits::{try_matrix_matrix_product_impl, try_matrix_vector_product_impl, AsBaseSquareMatrix, DiagonalMatrixGeneric, IntoBaseSquareMatrix, MatrixMatrixProduct, MatrixSquareTryConstruct, MatrixTryConstruct, MatrixVectorProduct, SquareStaticMatrix, StaticMatrix};
 use num_traits::Zero;
 use std::ops::Mul;
 use super::MatrixGeneric;
@@ -12,12 +12,10 @@ pub type Matrix<F, const M:usize, const N:usize>=MatrixGeneric<MatrixRow<F,N>,Ma
 
 type U2=(usize,usize);
 
-impl<F:'static, const M:usize, const N:usize> matrix_traits::FixedNumberOfCols for Matrix<F,M,N> {
-    const NCOLS:usize = N;
+impl<F:'static, const M:usize, const N:usize> matrix_traits::MatrixFixedNumberOfCols<N> for Matrix<F,M,N> {
 }
 
-impl<F:'static, const M:usize, const N:usize> matrix_traits::FixedNumberOfRows for Matrix<F,M,N> {
-    const NROWS:usize = M;
+impl<F:'static, const M:usize, const N:usize> matrix_traits::MatrixFixedNumberOfRows<M> for Matrix<F,M,N> {
 }
 
 impl<F:'static, const M:usize> SquareStaticMatrix for Matrix<F,M,M> {
@@ -47,6 +45,60 @@ impl<F:'static,const M:usize, const N:usize> Matrix<F,M,N> {
         Self::try_from_cols(cols.into_iter()).unwrap()
     }
 }
+
+macro_rules! crop_to_square_impl {
+    ($i0:literal) => {};
+    ($i0:literal, $($i:literal),*) =>
+    {
+        $(
+        impl<F:'static> matrix_traits::CropToSquareMatrix for Matrix<F,$i0,$i> {
+            type Output=Matrix<F,$i0,$i0>;
+            fn crop_to_square_matrix(self) -> Matrix<F,$i0,$i0>
+            {
+                Matrix::<F,$i0,$i0>::try_from_cols(<Self as matrix_traits::Matrix>::into_cols(self).take($i0)).unwrap()
+            }
+        }
+        impl<F:'static> matrix_traits::CropToSquareMatrixIfWide for Matrix<F,$i0,$i> {
+            type Output=Matrix<F,$i0,$i0>;
+            fn crop_to_square_matrix_if_wide(self) -> Matrix<F,$i0,$i0>
+            {
+                Matrix::<F,$i0,$i0>::try_from_cols(<Self as matrix_traits::Matrix>::into_cols(self).take($i0)).unwrap()
+            }
+        }
+        impl<F:'static> matrix_traits::CropToSquareMatrixIfTall for Matrix<F,$i0,$i> {
+            type Output=Self;
+            fn crop_to_square_matrix_if_tall(self) -> Self
+            {
+                self
+            }
+        }
+        impl<F:'static> matrix_traits::CropToSquareMatrixIfWide for Matrix<F,$i,$i0> {
+            type Output=Self;
+            fn crop_to_square_matrix_if_wide(self) -> Self
+            {
+                self
+            }
+        }
+        impl<F:'static> matrix_traits::CropToSquareMatrixIfTall for Matrix<F,$i,$i0> {
+            type Output=Matrix<F,$i0,$i0>;
+            fn crop_to_square_matrix_if_tall(self) -> Matrix<F,$i0,$i0>
+            {
+                Matrix::<F,$i0,$i0>::try_from_rows(<Self as matrix_traits::Matrix>::into_rows(self).take($i0)).unwrap()
+            }
+        }
+        impl<F:'static> matrix_traits::CropToSquareMatrix for Matrix<F,$i,$i0> {
+            type Output=Matrix<F,$i0,$i0>;
+            fn crop_to_square_matrix(self) -> Matrix<F,$i0,$i0>
+            {
+                Matrix::<F,$i0,$i0>::try_from_rows(<Self as matrix_traits::Matrix>::into_rows(self).take($i0)).unwrap()
+            }
+        }
+        )*
+        crop_to_square_impl!($($i),*);
+    };
+}
+crop_to_square_impl!(1,2,3,4,5,6,7,8);
+
 
 macro_rules! matrix_i {
     ($i:literal) => {
@@ -137,8 +189,6 @@ impl<F:'static+Clone+Zero+Mul<Output=F>, const N:usize> Pow2 for Matrix<F,N,N> {
     }
 }
 
-crate::impl_mul_diag!(Matrix<F,M,N>);
-
 matrix_traits::impl_tall_square_and_wide_matrix_marker!(Matrix);
 
 impl<F:'static,const M:usize> MatrixSquareTryConstruct for Matrix<F,M,M> {}
@@ -163,6 +213,10 @@ pub type OrthogonalMatrix       <F,const N:usize>=matrix_wrappers::Orthogonal   
 pub type SpecialOrthogonalMatrix<F,const N:usize>=matrix_wrappers::SpecialOrthogonal<Matrix<F,N,N>>;
 pub type SkewSymmetricMatrix    <F,const N:usize>=matrix_wrappers::SkewSymmetric    <Matrix<F,N,N>>;
 pub type SymmetricMatrix        <F,const N:usize>=matrix_wrappers::Symmetric        <Matrix<F,N,N>>;
+pub type HomogeneousMatrix      <F,const N:usize>=matrix_wrappers::Homogeneous      <Matrix<F,N,N>>;
+
+
+matrix_traits::impl_op_diag_stat!(MatrixRow,Matrix);
 
 
 #[test]

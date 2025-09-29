@@ -9,9 +9,9 @@ pub trait Norm {
     fn norm(self) -> Nonnegative<Self::NormT>;
 }
 
-pub trait TryNormalize: Clone + Norm + TryDiv<Self::NormT,Output=Self> where Self::NormT : Clone {
+pub trait TryNormalize: Clone + Norm + TryDiv<Self::NormT> where Self::NormT : Clone {
 
-    fn try_divide_by_norm(self) -> Result<(Self::NormT,Self),<Self as TryDiv<Self::NormT>>::Error> {
+    fn try_divide_by_norm(self) -> Result<(Self::NormT,<Self as TryDiv<Self::NormT>>::Output),<Self as TryDiv<Self::NormT>>::Error> {
         let norm=
             self.clone()
                 .norm()
@@ -20,15 +20,18 @@ pub trait TryNormalize: Clone + Norm + TryDiv<Self::NormT,Output=Self> where Sel
             .map(|r|(norm,r))
     }
 
-    fn try_normalize<R>(self) -> Result<(Self::NormT,R),Either<<Self as TryDiv<Self::NormT>>::Error,<Self as TryInto<R>>::Error>> where Self : TryInto<R> {
+    fn try_normalize<R>(self) -> Result<(Self::NormT,R),
+                                         Either<<Self as TryDiv<Self::NormT>>::Error,
+                                               <<Self as TryDiv<Self::NormT>>::Output as TryInto<R>>::Error>>
+    where <Self as TryDiv<Self::NormT>>::Output : TryInto<R> {
         let (n,v)=self.try_divide_by_norm()
             .map_err(|e|Either::Left(e))?;
         let r=v.try_into().map_err(|e|Either::Right(e))?;
         Ok((n,r))
     }
 }
-impl<T>               TryNormalize for Vec<T> where Self : Clone+Norm+TryDiv<Self::NormT,Output=Self>, Self::NormT : Clone {}
-impl<T,const N:usize> TryNormalize for [T;N]  where Self : Clone+Norm+TryDiv<Self::NormT,Output=Self>, Self::NormT : Clone {}
+impl<T : TryDiv<Output=f64>>               TryNormalize for Vec<T> where Self : Clone+Norm+TryDiv<Self::NormT,Output=Vec<f64>>, Self::NormT : Clone {}
+impl<T : TryDiv<Output=f64>,const N:usize> TryNormalize for [T;N]  where Self : Clone+Norm+TryDiv<Self::NormT,Output=[f64;N]>,  Self::NormT : Clone {}
 
 
 #[macro_export]

@@ -8,11 +8,13 @@ type U2=(usize,usize);
 #[derive(Clone, Debug, PartialEq,
          algebra_derive::ScalarContainer,
          container_derive::JustContainer,
+         container_derive::NewUnchecked,
          container_derive::Map,
          container_derive::IntoInner,
          matrix_derive::Identity,
          matrix_derive::Inherit,
          matrix_derive::MatrixShape,
+         matrix_derive::MatrixNormal,
          matrix_derive::ClosedTranspose,
          derive_more::Index)]
 pub struct Symmetric<M:MatrixSquare>(M) where M::T : RealNumber;

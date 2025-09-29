@@ -176,10 +176,10 @@ impl<R: Clone+RealNumber,
         //         }
         //     }
         // }
-        Ok(Self::new(V::linear_combination(ws.into_iter().zip(ds.into_iter())).try_scalar_div(&sum).unwrap()))
+        Ok(Self::new(V::any_linear_combination(ws,ds).unwrap().try_scalar_div(&sum).unwrap()))
         //Ok(Self::new(sum(ws.iter().zip(ds.iter()).map(|(w,d)|d.clone()*w.clone()))/sum))
     }
-    
+
     fn defining_points() -> impl ExactSizeIterator<Item=A> {
         std::iter::once(A::ELEMENT)
     }

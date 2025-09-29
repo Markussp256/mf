@@ -1,12 +1,18 @@
 use std::ops::Mul;
+use container_traits::{AnyFromIterator, LinearContainerConstructError};
 use num_traits::Zero;
 
-use crate::{TryMatrixVectorProduct, ColVector, Matrix, MatrixTryConstruct};
+use crate::{TryMatrixVectorProduct, ColVector, ColVectorView, Matrix, MatrixView, MatrixTryConstruct};
 
 
-pub trait MatrixMatrixProduct<Rhs : Matrix=Self> {
-    type Output : Matrix;
-    fn matrix_matrix_product(self, rhs:Rhs) -> Self::Output;
+pub trait MatrixMatrixProduct<Rhs : MatrixView=Self> {
+    type Output : MatrixView;
+    fn matrix_matrix_product(&self, rhs:&Rhs) -> Self::Output;
+}
+
+pub trait IntoMatrixMatrixProduct<Rhs : Matrix=Self> {
+    type Output : MatrixView;
+    fn into_matrix_matrix_product(self, rhs:Rhs) -> Self::Output;
 }
 
 
@@ -17,6 +23,37 @@ pub trait MatrixMatrixProduct<Rhs : Matrix=Self> {
 
 pub fn try_matrix_matrix_product_impl
     <F1     : Mul<F2,Output=F3>,
+     F2     : Clone,
+     F3     : Zero,
+     Lhs    : MatrixView<T=F1>+TryMatrixVectorProduct<RhsCol,Output=Out::Col>,
+     Rhs    : MatrixView<T=F2,ColView=RhsCol>,
+     Out    : MatrixTryConstruct<T=F3>,
+     RhsCol : ColVectorView<T=F2>+AnyFromIterator<F2,LinearContainerConstructError>>(lhs:&Lhs, rhs:&Rhs) -> Option<Out> {
+        if lhs.ncols() != rhs.nrows() { return None; }
+        let lhs_dims=lhs.matrix_dimensions();
+        let rhs_dims=rhs.matrix_dimensions();
+        let out=Out::try_from_cols(
+                (0..rhs.ncols())
+                    .map(|j|rhs.col_view(j).unwrap())
+                    .map(|col|lhs.try_matrix_vector_product(&col).unwrap())).unwrap();
+        let out_dims=out.matrix_dimensions();
+        assert_eq!(out_dims.0, lhs_dims.0);
+        assert_eq!(out_dims.1, rhs_dims.1);
+        Some(out)
+        // match &res {
+        //     Ok(r) => {
+        //         let out_dims=r.matrix_dimensions();
+        //         assert_eq!(out_dims.0, lhs_dims.0);
+        //         assert_eq!(out_dims.1, rhs_dims.1);
+        //     },
+        //     Err(e) => { panic!{"matrix_matrix_product error: {:?}",e}; }
+        // };
+        // res.ok()
+}
+
+
+pub fn try_into_matrix_matrix_product_impl
+    <F1     : Mul<F2,Output=F3>,
      F2,
      F3     : Zero,
      Lhs    : Clone+Matrix<T=F1>+TryMatrixVectorProduct<RhsCol,Output=Out::Col>,
@@ -26,24 +63,24 @@ pub fn try_matrix_matrix_product_impl
         if lhs.ncols() != rhs.nrows() { return None; }
         let lhs_dims=lhs.matrix_dimensions();
         let rhs_dims=rhs.matrix_dimensions();
-        let res=Out::try_from_cols(
+        let out=Out::try_from_cols(
                 rhs.into_cols()
-                   .map(|col|lhs.clone().try_matrix_vector_product(col).unwrap()));
-        match &res {
-            Ok(r) => {
-                let out_dims=r.matrix_dimensions();
-                assert_eq!(out_dims.0, lhs_dims.0);
-                assert_eq!(out_dims.1, rhs_dims.1);
-            },
-            Err(e) => { println!{"matrix_matrix_product error: {:?}",e}; }
-        };
-        res.ok()
+                   .map(|col|lhs.try_matrix_vector_product(&col).unwrap())).unwrap();
+        let out_dims=out.matrix_dimensions();
+        assert_eq!(out_dims.0, lhs_dims.0);
+        assert_eq!(out_dims.1, rhs_dims.1);
+        Some(out)
 }
 
 
-pub trait TryMatrixMatrixProduct<Rhs : Matrix=Self> {
-    type Output : Matrix;
-    fn try_matrix_matrix_product(self, rhs:Rhs) -> Option<Self::Output>;
+pub trait TryMatrixMatrixProduct<Rhs : MatrixView=Self> {
+    type Output : MatrixView;
+    fn try_matrix_matrix_product(&self, rhs:&Rhs) -> Option<Self::Output>;
+}
+
+pub trait TryIntoMatrixMatrixProduct<Rhs : Matrix=Self> {
+    type Output : MatrixView;
+    fn try_into_matrix_matrix_product(self, rhs:Rhs) -> Option<Self::Output>;
 }
 
 

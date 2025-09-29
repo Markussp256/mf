@@ -1,4 +1,4 @@
-use super::MatrixNotRegularError;
+use super::{MatrixRegularError, MatrixNotRegularError};
 
 use container_traits::LensNotEqualError;
 
@@ -12,6 +12,9 @@ pub enum MatrixSolveError {
 
     #[error(transparent)]
     MatrixNotRegular(#[from] MatrixNotRegularError),
+
+    #[error(transparent)]
+    MatrixRegular(#[from] MatrixRegularError),
 
     #[error("number of rows of matrix is not equal to length of columnvector, {0}")]
     LenNotEqual(#[from] LensNotEqualError)

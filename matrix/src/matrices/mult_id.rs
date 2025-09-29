@@ -1,4 +1,4 @@
-use container_traits::{AnyFromIterator, TryMap, ClosedMap, Get, IndexedIter, IntoIndexedIter, IntoIter, ItemT, Iter, LenTooSmallError, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryAccept, TryFromFn, TryIntoElement};
+use container_traits::{AnyFromIterator, ClosedMap, Get, IndexOutOfBoundsError, IndexedIter, IntoIndexedIter, IntoIter, ItemT, Iter, LenTooSmallError, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryAccept, TryFromFn, TryIntoElement, TryMap};
 use num_traits::Zero;
 use std::ops::Mul;
 
@@ -22,11 +22,11 @@ impl<F:Zero> MultId<F> {
 }
 
 impl<F:Zero> Get<U2,F> for MultId<F> {
-    fn get(&self, (i,j):U2) -> Option<&F> {
+    fn get(&self, (i,j):U2) -> Result<&F,IndexOutOfBoundsError<U2>> {
         if i == j {
-            Some(&self.factor)
+            Ok(&self.factor)
         } else {
-            Some(&self.zero)
+            Ok(&self.zero)
         }
     }
 }
@@ -48,8 +48,12 @@ impl<F:Zero> ItemT for MultId<F> {
 }
 
 impl<F:Zero> TryIntoElement<U2,F> for MultId<F> {
-    fn try_into_element(self,index:U2) -> Option<F> {
-        (index == (0,0)).then(||self.factor)
+    fn try_into_element(self,index:U2) -> Result<F,IndexOutOfBoundsError<U2>> {
+        if index == (0,0) {
+            Ok(self.factor)
+        } else {
+            Err(IndexOutOfBoundsError::new(&(1,1),&index))
+        }
     }
 }
 

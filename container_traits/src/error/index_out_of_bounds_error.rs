@@ -26,3 +26,17 @@ impl<Index:ContainerIndex> IndexOutOfBoundsError<Index> {
             .unwrap()
     }
 }
+
+impl<Index> IndexOutOfBoundsError<Index> {
+    pub fn into_index(self) -> Index {
+        self.index
+    }
+
+    pub fn into_bounds(self) -> Index {
+        self.bounds
+    }
+
+    pub fn into_parts(self) -> (Index,Index) {
+        (self.index, self.bounds)
+    }
+}

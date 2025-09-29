@@ -7,6 +7,7 @@
 //     ArrayTraits, Container, NormSquared, Norm, Vectorspace, VecTraits
 // };
 
+
 #[macro_export]
 macro_rules! gen_vector {
     ($gen:ident, $dyn:ident, $stat:ident) => {
@@ -136,7 +137,7 @@ macro_rules! gen_vector {
                 self.0
             }
         }
-        
+
         utils::    into_via!(impl<T, const N:usize> Into<[T;N]>      for $stat<T,N>, via $crate::EnhancedArray<T,N>);
         utils::    from_via!(impl<T, const N:usize> From<[T;N]>      for $stat<T,N>, via $crate::EnhancedArray<T,N>);
         utils::    into_via!(impl<T, const N:usize> Into<Vec<T>>     for $stat<T,N>, via [T;N]);

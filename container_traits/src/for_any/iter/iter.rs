@@ -5,6 +5,7 @@ pub trait Iter<T> {
     fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a T> where T:'a;
 }
 
+
 macro_rules! iter_impl {
     () => {
         fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a T> where T:'a {

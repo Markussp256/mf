@@ -7,11 +7,13 @@ type U2=(usize,usize);
 #[derive(Clone, Debug, PartialEq,
          algebra_derive::ScalarContainer,
          container_derive::JustContainer,
+         container_derive::NewUnchecked,
          container_derive::IntoInner,
          derive_more::AsRef,
          derive_more::Index,
          matrix_derive::Identity,
          matrix_derive::Inherit,
+         matrix_derive::MatrixNormal,
          matrix_derive::ClosedTranspose,
          matrix_derive::MatrixShape,
 )]
