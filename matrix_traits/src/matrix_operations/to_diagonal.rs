@@ -5,10 +5,10 @@ use num_traits::Zero;
 
 // return matrix where all off_diagonal entries are set to zero
 
-pub fn diagonal_matrix<M:MatrixSquare>(m:&M) -> Result<DiagonalMatrixGeneric<M::RowView>,LinearContainerConstructError>
-     where M::T       : Zero+Clone,
-           M::RowView : ItemT<T=M::T>+AnyFromIterator<M::T,LinearContainerConstructError> {
-    M::RowView::any_from_iter(None, m.diagonal().cloned())
+pub fn diagonal_matrix<'a,M:MatrixSquare>(m:&'a M) -> Result<DiagonalMatrixGeneric<M::RowView<'a>>,LinearContainerConstructError>
+     where M::T           : Zero+Clone,
+           M::RowView<'a> : ItemT<T=M::T>+AnyFromIterator<&'a M::T,LinearContainerConstructError> {
+    M::RowView::<'a>::any_from_iter(None, m.diagonal())
         .map(|diag|DiagonalMatrixGeneric::new(diag))
 }
 

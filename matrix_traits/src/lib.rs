@@ -1,5 +1,5 @@
 pub mod error;
-pub use error::{MatrixConstructError, MatrixRegularError, MatrixNotRegularError, MatrixSolveError};
+pub use error::*;
 
 pub mod extensions;
 pub use extensions::{BlockDiagonal,MatrixWithDet};

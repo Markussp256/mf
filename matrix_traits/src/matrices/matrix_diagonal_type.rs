@@ -3,8 +3,8 @@ use std::ops::Mul;
 use num_traits::{Zero,One};
 
 use algebra_traits::{Det, DivError, FloatOpError, MulError};
-use container_traits::*;
-use utils::iter::{InterLeave, RepeatN};
+use container_traits::{index_iterator::ContainerIndexIterator, *};
+use utils::iter::{InterLeave, IntoExactSizeIterator, RepeatN};
 
 use crate::*;
 
@@ -126,10 +126,12 @@ impl<Diag:Iter<F>+Len+ItemT<T=F>,F:Zero> Iter<F> for DiagonalMatrixGeneric<Diag>
     }
 }
 
-impl<Diag:Iter<F>+Len+ItemT<T=F>,F:Zero> IndexedIter<U2,F> for DiagonalMatrixGeneric<Diag> {
-   fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a F)> where F:'a {
-       (self.n(),self.n()).index_iterator()
-                          .zip(self.iter())
+impl<Diag:Iter<F>+Len+ItemT<T=F>,F:Zero> IterIndexed<U2,F> for DiagonalMatrixGeneric<Diag> {
+   fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a F)> where F:'a {
+      let cii=ContainerIndexIterator::from_size((self.n(),self.n()));
+      let numel=cii.numel();
+      cii.zip(self.iter())
+         .into_exact_size_iter(numel)
    }
 }
 
@@ -145,10 +147,11 @@ impl<Diag:IntoIter<F>+Len+ItemT<T=F>,F:Zero> IntoIter<F> for DiagonalMatrixGener
    }
 }
 
-impl<Diag:IntoIter<F>+Len+ItemT<T=F>,F:Zero> IntoIndexedIter<U2,F> for DiagonalMatrixGeneric<Diag> {
-   fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(U2,F)> {
-       (self.n(),self.n()).index_iterator()
-                          .zip(self.into_iterator())
+impl<Diag:IntoIter<F>+Len+ItemT<T=F>,F:Zero> IntoIterIndexed<U2,F> for DiagonalMatrixGeneric<Diag> {
+   fn into_iter_indexed(self) -> impl ExactSizeIterator<Item=(U2,F)> {
+      let n=self.n();
+      ContainerIndexIterator::new_exact_size((n,n))
+         .zip(self.into_iterator())
    }
 }
 
@@ -171,6 +174,13 @@ impl<Diag:Len+ItemT<T=F>,F:Zero> Size<U2> for DiagonalMatrixGeneric<Diag> {
    }
 }
 
+impl<Diag:IsEmpty+ItemT<T=F>, F:Zero> IsEmpty for DiagonalMatrixGeneric<Diag> {
+   fn is_empty(&self) -> bool {
+       self.diag
+           .is_empty()
+   }
+}
+
 impl<Diag:OCTSize<usize>+ItemT<T=F>,F:Zero> OCTSize<U2> for DiagonalMatrixGeneric<Diag> {
    const OCTSIZE:Option<U2>=match Diag::OCTSIZE {
       Some(n) => Some((n,n)),
@@ -185,11 +195,10 @@ impl<Diag:Len+ItemT<T=F>,F:Zero> NumberOfDegreesOfFreedom<F> for DiagonalMatrixG
    }
 }
 
-impl<F    : Zero+'static,
-     Row  : RowVectorView<T=F>+Transpose<Output=Col>,
-     Col  : ColVectorView<T=F>> MatrixView for DiagonalMatrixGeneric<Row> {
-   type RowView=Row;
-   type ColView=Col;
+impl<F    : Clone+Zero+'static,
+     Diag : LinearContainerView<T=F>> MatrixView for DiagonalMatrixGeneric<Diag> {
+   type RowView<'a>=SparseRowView<'a,F> where Self : 'a;
+   type ColView<'a>=SparseColView<'a,F> where Self : 'a;
 
    fn nrows(&self) -> usize {
       self.n()
@@ -198,17 +207,36 @@ impl<F    : Zero+'static,
       self.n()
    }
 
+   fn try_row_view<'a>(&'a self, i:usize) -> Result<Self::RowView<'a>,IndexOutOfBoundsError<usize>> {
+      self.diag
+          .get(i)
+          .map(|t|{
+               let mut res=SparseRowView::new(&self.zero,self.ncols());
+               res.insert(i,t);
+               res
+          })
+   }
+
+   fn try_col_view<'a>(&'a self, j:usize) -> Result<Self::ColView<'a>,IndexOutOfBoundsError<usize>> {
+      self.diag
+          .get(j)
+          .map(|t|{
+               let mut res=SparseColView::new(&self.zero,self.ncols());
+               res.insert(j,t);
+               res
+          })
+   }
+
    fn diagonal(&self) -> impl ExactSizeIterator<Item=&F> {
       self.diag
          .iter()
    }
 }
 
-impl<F    : Zero+'static,
-     Row  : RowVectorTryConstruct<T=F>+TryPutAt<usize,F>+Transpose<Output=Col>,
-     Col  : ColVectorTryConstruct<T=F>+TryPutAt<usize,F>> Matrix for DiagonalMatrixGeneric<Row> {
-   type Row=Row;
-   type Col=Col;
+impl<F    : Clone+Zero+'static,
+     Diag : LinearContainer<T=F>> Matrix for DiagonalMatrixGeneric<Diag> {
+   type Row=SparseRow<F>;
+   type Col=SparseCol<F>;
 
    fn into_rows(self) -> impl ExactSizeIterator<Item=Self::Row> {
       let n=self.n();
@@ -256,11 +284,8 @@ impl<T:Zero,const N:usize, Diag:ItemT<T=T>+LinearContainerStatic<N>> MatrixFixed
 impl<T:Zero,const N:usize, Diag:ItemT<T=T>+LinearContainerStatic<N>> MatrixFixedNumberOfRows<N> for DiagonalMatrixGeneric<Diag> where Self : MatrixDiagonal<T=T> {}
 
 impl<Diag:ItemT<T=F>+TryPutAt<usize,F>,F:Zero> TryAccept<U2,F,MatrixConstructError> for DiagonalMatrixGeneric<Diag> {
-    fn try_accept<'a>(size:U2,f:impl Fn(U2) -> &'a F) -> Result<(),MatrixConstructError> where F: 'a {
-         let (nrows,ncols)=size;
-         if nrows != ncols {
-            return Err(MatrixConstructError::DimensionMismatch);
-         }
+    fn try_accept<'a>((nrows,ncols):U2,f:impl Fn(U2) -> &'a F) -> Result<(),MatrixConstructError> where F: 'a {
+         MatrixSquareError::try_new(nrows,ncols)?;
          for i in 0..nrows {
             for j in 0..ncols {
                if i != j && !f((i,j)).is_zero() {
@@ -424,16 +449,15 @@ impl<F  : Clone+Zero+Mul<F2,Output=F3>,
      Diag  : ItemT<T=F>+TryVectorVectorProduct<Col2,Output=F3>,
      Col2 : ColVectorView<T=F2>+ChangeT<F3,Output=Col3>,
      Col3 : ColVectorTryConstruct<T=F3>> TryMatrixVectorProduct<Col2> for DiagonalMatrixGeneric<Diag>
-     where Self : MatrixView<T=F,RowView=Diag> {
+     where Self : MatrixView<T=F> {
    type Output=Col3;
-   fn try_matrix_vector_product(&self, rhs:&Col2) -> Option<Col3> {
-      if self.n() != rhs.len() {
-         return None;
-      }
+   fn try_matrix_vector_product(&self, rhs:&Col2) -> Result<Col3,VectorConstructError> {
+      MatrixCanNotBeMultipliedWithVectorError::try_new(self.n(),rhs.len())?;
       Col3::any_from_iter(None,
          self.diag.iter().cloned()
             .zip(rhs.iter().cloned())
-            .map(|(dii,ri)|dii*ri)).ok()
+            .map(|(dii,ri)|dii*ri))
+         .map_err(|e|e.into())
    }
 }
 
@@ -443,14 +467,13 @@ impl<F:Zero+Mul<F2,Output=F3>,F2,F3,
      Col3 : ColVectorTryConstruct<T=F3>> TryIntoMatrixVectorProduct<Col2> for DiagonalMatrixGeneric<Diag>
      where Self : MatrixTryConstruct<T=F,Row=Diag> {
    type Output=Col3;
-   fn try_into_matrix_vector_product(self, rhs:Col2) -> Option<Col3> {
-      if self.n() != rhs.len() {
-         return None;
-      }
+   fn try_into_matrix_vector_product(self, rhs:Col2) -> Result<Col3,VectorConstructError> {
+      MatrixCanNotBeMultipliedWithVectorError::try_new(self.n(), rhs.len())?;
       Col3::any_from_iter(None,
          self.diag.into_iterator()
             .zip(rhs.into_iterator())
-            .map(|(dii,ri)|dii*ri)).ok()
+            .map(|(dii,ri)|dii*ri))
+         .map_err(|e|e.into())
    }
 }
 
@@ -458,20 +481,18 @@ impl<F   : Clone+Zero+Mul<F2,Output=F3>,
      F2  : Clone,
      F3,
      Row : RowVectorView<T=F>+ItemT<T=F>,
-     MRow : RowVectorView<T=F2>+Mul<F,Output=Out::Row>+AnyFromIterator<F2,LinearContainerConstructError>,
-     M   : MatrixView<T=F2,RowView=MRow>+ChangeT<F3,Output=Out>,
+     M   : Clone+Matrix<T=F2,Row=MRow>+ChangeT<F3,Output=Out>,
+     MRow: RowVector<T=F2>+std::ops::Mul<F,Output=Out::Row>,
      Out : MatrixTryConstruct<T=F3>> TryMatrixMatrixProduct<M> for DiagonalMatrixGeneric<Row> {
          type Output=Out;
-         fn try_matrix_matrix_product(&self, rhs:&M) -> Option<Out> {
-            if self.n() != rhs.nrows() {
-               return None;
-            }
+         fn try_matrix_matrix_product(&self, rhs:&M) -> Result<Out,MatrixConstructError> {
+            MatricesCanNotBeMultipliedError::try_new(&self.size(),&rhs.size())?;
             Out::try_from_rows(
-               (0..rhs.nrows())
-                  .map(|i|rhs.row_view(i).unwrap())
+               rhs.clone()
+                  .into_rows()
                   .zip(self.diag.iter().cloned())
                   .map(|(ri,dii)|ri*dii)
-            ).ok()
+            ).map_err(|e|e.into())
          }
 }
 
@@ -484,15 +505,13 @@ impl<F   : Zero+Mul<F2,Output=F3>,
      Out : MatrixTryConstruct<T=F3>> TryIntoMatrixMatrixProduct<M> for DiagonalMatrixGeneric<Row>
      where M::Row : Mul<F,Output=Out::Row> {
          type Output=Out;
-         fn try_into_matrix_matrix_product(self, rhs:M) -> Option<Out> {
-            if self.n() != rhs.nrows() {
-               return None;
-            }
+         fn try_into_matrix_matrix_product(self, rhs:M) -> Result<Out,MatrixConstructError> {
+            MatricesCanNotBeMultipliedError::try_new(&self.size(),&rhs.size())?;
             Out::try_from_rows(
                rhs.into_rows()
                   .zip(self.into_diagonal())
                   .map(|(ri,dii)|ri*dii)
-            ).ok()
+            ).map_err(|e|e.into())
          }
 }
 
@@ -549,12 +568,12 @@ macro_rules! impl_op_diag_stat {
              const M:usize,
              const N:usize> $crate::TryIntoMatrixMatrixProduct<DiagonalMatrixGeneric<$Diag_t<F2,N>>> for $m_t<F,M,N> {
                   type Output=$m_t<F3,M,N>;
-                  fn try_into_matrix_matrix_product(self, rhs:DiagonalMatrixGeneric<$Diag_t<F2,N>>) -> Option<$m_t<F3,M,N>> {
+                  fn try_into_matrix_matrix_product(self, rhs:DiagonalMatrixGeneric<$Diag_t<F2,N>>) -> Result<$m_t<F3,M,N>,MatrixConstructError> {
                      Self::Output::try_from_cols(
                         <$m_t<F,M,N> as $crate::Matrix>::into_cols(self)
                            .zip(rhs.into_diagonal())
                            .map(|(ci,dii)|<<Self as $crate::Matrix>::Col as container_traits::Map::<F,F3>>::map(ci,|cij|cij*dii.clone()))
-                     ).ok()
+                     ).map_err(|e|e.into())
                   }
              }
 
@@ -565,13 +584,13 @@ macro_rules! impl_op_diag_stat {
              const M:usize,
              const N:usize> $crate::TryMatrixMatrixProduct<DiagonalMatrixGeneric<$Diag_t<F2,N>>> for $m_t<F,M,N> {
                   type Output=$m_t<F3,M,N>;
-                  fn try_matrix_matrix_product(&self, rhs:&DiagonalMatrixGeneric<$Diag_t<F2,N>>) -> Option<$m_t<F3,M,N>> {
+                  fn try_matrix_matrix_product(&self, rhs:&DiagonalMatrixGeneric<$Diag_t<F2,N>>) -> Result<$m_t<F3,M,N>,MatrixConstructError> {
                      Self::Output::try_from_cols(
-                        (0..self.ncols())
-                           .map(|j|self.col_view(j).unwrap())
-                           .zip(rhs.diagonal().cloned())
-                           .map(|(ci,dii)|<<Self as $crate::Matrix>::Col as container_traits::Map::<F,F3>>::map(ci,|cij|cij*dii.clone()))
-                     ).ok()
+                        self.clone()
+                            .into_cols()
+                            .zip(rhs.diagonal().cloned())
+                            .map(|(ci,dii)|<<Self as $crate::Matrix>::Col as container_traits::Map::<F,F3>>::map(ci,|cij|cij*dii.clone()))
+                     ).map_err(|e|e.into())
                   }
              }
 
@@ -660,16 +679,15 @@ macro_rules! impl_op_diag_dyn {
              F2 : 'static+Clone+Zero$(+$ns)?,
              F3 : 'static+Zero$(+$ns)?> TryMatrixMatrixProduct<DiagonalMatrixGeneric<$Diag_t<F2>>> for $m_t<F> {
                   type Output=$m_t<F3>;
-                  fn try_matrix_matrix_product(&self, rhs:&DiagonalMatrixGeneric<$Diag_t<F2>>) -> Option<$m_t<F3>> {
-                     if self.ncols() != rhs.n() {
-                        return None;
-                     }
+                  fn try_matrix_matrix_product(&self, rhs:&DiagonalMatrixGeneric<$Diag_t<F2>>) -> Result<$m_t<F3>,MatrixConstructError> {
+                     $crate::MatricesCanNotBeMultipliedError::try_new(
+                        &<Self as container_traits::Size<(usize,usize)>>::size(self),
+                        &(rhs.n(),rhs.n()))?;
                      Self::Output::try_from_cols(
-                        (0..self.ncols())
-                           .map(|j|self.col_view(j).unwrap())
-                           .zip(rhs.diagonal().cloned())
-                           .map(|(ci,dii)|<<Self as Matrix>::Col as container_traits::Map<F,F3>>::map(ci,|cij|cij*dii.clone()))
-                     ).ok()
+                        self.cols()
+                            .zip(rhs.diagonal().cloned())
+                            .map(|(ci,dii)|<<Self as Matrix>::Col as container_traits::Map<F,F3>>::map(ci,|cij|cij*dii.clone()))
+                     ).map_err(|e|e.into())
                   }
              }
 
@@ -677,15 +695,15 @@ macro_rules! impl_op_diag_dyn {
              F2 : 'static+Clone+Zero$(+$ns)?,
              F3 : 'static+Zero$(+$ns)?> TryIntoMatrixMatrixProduct<DiagonalMatrixGeneric<$Diag_t<F2>>> for $m_t<F> {
                   type Output=$m_t<F3>;
-                  fn try_into_matrix_matrix_product(self, rhs:DiagonalMatrixGeneric<$Diag_t<F2>>) -> Option<$m_t<F3>> {
-                     if self.ncols() != rhs.n() {
-                        return None;
-                     }
+                  fn try_into_matrix_matrix_product(self, rhs:DiagonalMatrixGeneric<$Diag_t<F2>>) -> Result<$m_t<F3>,MatrixConstructError> {
+                     $crate::MatricesCanNotBeMultipliedError::try_new(
+                        &<Self as container_traits::Size<(usize,usize)>>::size(&self),
+                        &(rhs.n(),rhs.n()))?;
                      Self::Output::try_from_cols(
                         self.into_cols()
                            .zip(rhs.into_diagonal())
                            .map(|(ci,dii)|<<Self as Matrix>::Col as container_traits::Map<F,F3>>::map(ci,|cij|cij*dii.clone()))
-                     ).ok()
+                     ).map_err(|e|e.into())
                   }
              }
     };

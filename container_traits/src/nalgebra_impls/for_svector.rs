@@ -1,7 +1,20 @@
-use nalgebra::{RowSVector, SMatrix, SMatrixView, SMatrixViewMut, SVector, Scalar};
+use nalgebra::{Const, RowSVector, SMatrixViewMut, SMatrixView, SMatrix, SVector, Scalar};
 use crate::{for_static, ContainerConstructError, IndexOutOfBoundsError, LenTooSmallError, LinearContainerSized, LinearContainerStatic, OCTSize, StandardBasis, TryPutAt};
 
 use num_traits::{Zero,One};
+
+
+// type RowSVectorView   <'a,F, const M:usize, const N:usize>=nalgebra::MatrixView   <'a,F,Const<1>,Const<N>,Const<1>,Const<M>>;
+// type RowSVectorViewMut<'a,F, const M:usize, const N:usize>=nalgebra::MatrixViewMut<'a,F,Const<1>,Const<N>,Const<1>,Const<M>>;
+
+// fn test_col<'a>(m:&'a SMatrix<f64,4,3>) -> SVectorView<'a,f64,4> {
+//     m.column(0)
+// }
+
+// fn test_row<'a>(m:&'a SMatrix<f64,4,3>) -> RowSVectorView<'a,f64,4,3> {
+//     m.row(0)
+// }
+
 
 impl<T : Scalar,
      const M:usize,
@@ -16,51 +29,55 @@ impl<T : Scalar,
     }
 }
 
-impl<T : Scalar,
-     const M:usize,
-     const N:usize> OCTSize<usize> for SMatrix<T,M,N> {
-    const OCTSIZE:Option<usize>=if M == 1 { Some(N) } else if N == 1 { Some(M) } else { None };
+impl<T,
+    const M:usize,
+    const N:usize,
+    RS> for_static::Size<usize> for nalgebra::Matrix<T,Const<M>,Const<N>,RS> {
+        const SIZE:usize = M*N;
 }
 
-
-impl<'a,
-    T : Scalar,
-     const M:usize,
-     const N:usize> OCTSize<usize> for SMatrixView<'a, T,M,N> {
-    const OCTSIZE:Option<usize>=if M == 1 { Some(N) } else if N == 1 { Some(M) } else { None };
+impl<T,
+    const M:usize,
+    const N:usize,
+    RS> OCTSize<usize> for nalgebra::Matrix<T,Const<M>,Const<N>,RS> {
+        const OCTSIZE:Option<usize> = Some(M*N);
 }
 
-
-impl<'a,
-    T : Scalar,
-     const M:usize,
-     const N:usize> OCTSize<usize> for SMatrixViewMut<'a, T,M,N> {
-    const OCTSIZE:Option<usize>=if M == 1 { Some(N) } else if N == 1 { Some(M) } else { None };
-}
-
-
-impl<T:Scalar,
-     const M:usize,
-     const N:usize> for_static::Size<usize> for SMatrix<T,M,N> {
-        const SIZE:usize=M*N;
-}
-
-impl<'a,
-     T:Scalar,
-     const M:usize,
-     const N:usize> for_static::Size<usize> for SMatrixView<'a,T,M,N> {
-        const SIZE:usize=M*N;
-}
+// macro_rules! size {
+//     ($name:ident<$($lt :lifetime,)? $t:ident, $m0:ident $(,$m:ident)?>, $sz:expr) => {
+//         impl<$($lt,)?
+//              $t:Scalar,
+//              const $m0:usize
+//              $(,const $m:usize)*> for_static::Size<usize> for $name<$($lt,)? $t, $m0 $(,$m)*> {
+//             const SIZE:usize=$sz;
+//         }
+//     };
+// }
+// size!(SMatrix<T,M,N>,M*N);
+// size!(SVectorView<'a,T,M>,M);
+// size!(RowSVectorView<'a,T,M,N>,N);
+// size!(SVectorViewMut<'a,T,M>,M);
+// size!(RowSVectorViewMut<'a,T,M,N>,N);
 
 
+// macro_rules! oct_size {
+//     ($name:ident<$($lt :lifetime,)? $t:ident, $m:ident>) => {
+//         impl<$($lt,)?
+//             $t : Scalar,
+//             const $m0:usize> OCTSize<usize> for $name<$($lt,)? $t, $m> {
+//             const OCTSIZE:Option<usize>=Some($m);
+//         }
+//     };
 
-impl<'a,
-     T:Scalar,
-     const M:usize,
-     const N:usize> for_static::Size<usize> for SMatrixViewMut<'a,T,M,N> {
-        const SIZE:usize=M*N;
-}
-
+//     ($name:ident<$($lt :lifetime,)? $t:ident, $m:ident, $n:ident>) => {
+//         impl<$($lt,)?
+//             $t : Scalar,
+//             const $m:usize,
+//             const $n:usize> OCTSize<usize> for $name<$($lt,)? $t, $m0 $(,$m)*> {
+//             const OCTSIZE:Option<usize>=if $m == 1 { Some($n) } else if $n == 1 { Some($m)} else { None };
+//         }
+//     }
+// }
 
 impl<T : Scalar+Zero,
      const M:usize,
@@ -115,7 +132,6 @@ impl<T : Scalar,
 
     crate::try_from_iter_impl!(T);
 }
-
 
 impl<   F:Scalar, const M:usize, const K:usize> LinearContainerSized for SMatrix       <   F,M,K> { const N:usize=M*K; }
 

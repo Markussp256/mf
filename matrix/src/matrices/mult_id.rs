@@ -1,4 +1,4 @@
-use container_traits::{AnyFromIterator, ClosedMap, Get, IndexOutOfBoundsError, IndexedIter, IntoIndexedIter, IntoIter, ItemT, Iter, LenTooSmallError, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryAccept, TryFromFn, TryIntoElement, TryMap};
+use container_traits::{AnyFromIterator, ClosedMap, Get, IndexOutOfBoundsError, IterIndexed, IntoIterIndexed, IntoIter, ItemT, Iter, LenTooSmallError, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryAccept, TryFromFn, TryIntoElement, TryMap};
 use num_traits::Zero;
 use std::ops::Mul;
 
@@ -37,8 +37,8 @@ impl<F:Zero> Iter<F> for MultId<F> {
     }
 }
 
-impl<F:Zero> IndexedIter<U2,F> for MultId<F> {
-   fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a F)> where F:'a {
+impl<F:Zero> IterIndexed<U2,F> for MultId<F> {
+   fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a F)> where F:'a {
         std::iter::once(((0,0),&self.factor))
    }
 }
@@ -63,8 +63,8 @@ impl<F:Zero> IntoIter<F> for MultId<F> {
     }
 }
 
-impl<F:Zero> IntoIndexedIter<U2,F> for MultId<F> {
-    fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(U2,F)> {
+impl<F:Zero> IntoIterIndexed<U2,F> for MultId<F> {
+    fn into_iter_indexed(self) -> impl ExactSizeIterator<Item=(U2,F)> {
         std::iter::once(((0,0),self.factor))
     }
 }

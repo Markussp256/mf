@@ -31,6 +31,12 @@ pub use repeat::RepeatN;
 pub mod repeater;
 pub use repeater::RepeaterN;
 
+
+pub fn try_take_away<T>(iter:& mut impl ExactSizeIterator<Item=T>, n:usize) -> Option<impl ExactSizeIterator<Item=T>> {
+    (iter.len() >= n).then(||
+    std::iter::from_fn(|| iter.next()).into_exact_size_iter(n))
+}
+
 // if std::iter::next_chunk get stabilized we can use it instead
 pub fn next_chunk<I: Iterator<Item = T>, T, const N: usize>(iter: &mut I) -> Result<[T; N], Vec<T>> {
     // assumes that from_fn queries in the right order, i.e. 0, then 1, then 2, etc. 

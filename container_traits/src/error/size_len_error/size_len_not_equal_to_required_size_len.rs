@@ -25,7 +25,7 @@ impl LenNotEqualToRequiredLenError {
 
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq)]
-#[error("The provided size ({provided_size}) is not equal to the required size ({required_size})")]
+#[error("The provided size ({provided_size:?}) is not equal to the required size ({required_size:?})")]
 pub struct SizeNotEqualToRequiredSizeError<Index> {
     required_size:Index,
     provided_size:Index

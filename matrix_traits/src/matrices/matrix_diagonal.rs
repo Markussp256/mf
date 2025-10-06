@@ -36,7 +36,7 @@ pub trait MatrixDiagonalTryConstruct : MatrixDiagonal + MatrixSquareTryConstruct
                 .take(len)
                 .collect();
         Self::try_from_vec(vs)
-            .map_err(|_|MatrixConstructError::DimensionMismatch)
+            .map_err(|e|e.into())
     }
 
     fn try_identity(len:usize) -> Result<Self,MatrixConstructError> where Self::T:One {
@@ -45,7 +45,7 @@ pub trait MatrixDiagonalTryConstruct : MatrixDiagonal + MatrixSquareTryConstruct
                 .take(len)
                 .collect();
         Self::try_from_vec(vs)
-            .map_err(|_|MatrixConstructError::DimensionMismatch)
+            .map_err(|e|e.into())
     }
 }
 impl<F:Zero, M:MatrixDiagonal<T=F>+MatrixSquareTryConstruct+Sized+TryFromVec<F,LinearContainerConstructError>> MatrixDiagonalTryConstruct for M {}

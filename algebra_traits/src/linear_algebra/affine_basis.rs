@@ -3,8 +3,6 @@ use crate::{ConstElement, ScalarMul, Torsor};
 use super::{Basis, LinearAffineCoordinates, Vectorspace};
 use utils::iter::ChainExactSize;
 
-use container_traits::Len;
-
 pub trait AffineBasis<F> : Sized+ConstElement+Torsor
     where <Self as Sub>::Output : Basis<F> {
     fn affine_basis() -> impl ExactSizeIterator<Item=Self> {

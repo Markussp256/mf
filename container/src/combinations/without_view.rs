@@ -65,6 +65,13 @@ impl<'b,Index:Clone, C> Size<Index> for WithoutView<'b,Index,C> {
     }
 }
 
+impl<'b,Index:Iter<usize>,C> IsEmpty for WithoutView<'b,Index,C> {
+    fn is_empty(&self) -> bool {
+        self.size
+            .iter()
+            .any(|szi|szi == &0)
+    }
+}
 
 impl<'b,Index : ContainerIndex, T, C : Get<Index,T>> Get<Index,T> for WithoutView<'b,Index,C> {
     fn get(&self, index:Index) -> Result<&T,IndexOutOfBoundsError<Index>> {
@@ -73,22 +80,22 @@ impl<'b,Index : ContainerIndex, T, C : Get<Index,T>> Get<Index,T> for WithoutVie
     }
 }
 
-impl<'b,Index : ContainerIndex, T, C : IndexedIter<Index, T>> IndexedIter<Index,T> for WithoutView<'b,Index, C> {
-    fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(Index,&'a T)> where T : 'a {
+impl<'b,Index : ContainerIndex, T, C : IterIndexed<Index, T>> IterIndexed<Index,T> for WithoutView<'b,Index, C> {
+    fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(Index,&'a T)> where T : 'a {
         let ndofs:usize=<Self as NumberOfDegreesOfFreedom<T>>::ndofs(&self);
         let no_common_coord_fn=no_common_coord_fn(self.wo_index.clone());
         let c_index_into_index_fn=c_index_into_index_fn(self.wo_index.clone());
         self.c
-            .indexed_iter()
+            .iter_indexed()
             .filter(move |(i,_)|no_common_coord_fn(i))
             .map(move |(i,t)|(c_index_into_index_fn(i),t))
             .into_exact_size_iter(ndofs)
     }
 }
 
-impl<'b,Index, T, C> Iter<T> for WithoutView<'b,Index, C> where Self : IndexedIter<Index,T> {
+impl<'b,Index, T, C> Iter<T> for WithoutView<'b,Index, C> where Self : IterIndexed<Index,T> {
     fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a T> where T:'a {
-        self.indexed_iter()
+        self.iter_indexed()
             .map(|(_,t)|t)
     }
 }

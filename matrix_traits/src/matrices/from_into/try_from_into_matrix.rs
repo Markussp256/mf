@@ -1,5 +1,6 @@
+use container_traits::TryIntoContainer;
+
 use crate::{MatrixTryConstruct, MatrixConstructError, Matrix};
-use container_traits::AnyIntoContainer;
 
 pub trait TryFromMatrix<M2:Matrix<T=Self::T>> : Matrix {
     fn try_from_matrix(m2:M2) -> Result<Self,MatrixConstructError>;
@@ -10,7 +11,7 @@ impl<F,M:MatrixTryConstruct<T=F>, M2:Matrix<T=F>> TryFromMatrix<M2> for M {
         let f=|(i,j)|m2.get((i,j)).unwrap();
         Self::try_accept(m2.matrix_dimensions(), f)?;
         Self::try_from_rows(m2.into_rows()
-                                    .map(|r|r.any_into_container().ok().unwrap()))
+                                    .map(|r|r.try_into_container().ok().unwrap()))
     }
 }
 

@@ -132,9 +132,9 @@ impl<F,
 impl<F,
 Row  : RowVectorTryConstruct<T=F>,
 Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
-C    : 'static+ColVectorTryConstruct<T=Row>> IndexedIter<U2,F> for MatrixGeneric<Row,Col> {
-    fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a F)> where F:'a {
-        container_traits::indexed_iter::impl_indexed_iter_from_get(self, self.size_private())
+C    : 'static+ColVectorTryConstruct<T=Row>> IterIndexed<U2,F> for MatrixGeneric<Row,Col> {
+    fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a F)> where F:'a {
+        container_traits::iter_indexed::impl_iter_indexed_from_get(self, self.size_private())
     }
 }
 
@@ -167,8 +167,8 @@ C    : 'static+ColVectorTryConstruct<T=Row>> IntoIter<F> for MatrixGeneric<Row,C
 impl<F,
 Row  : RowVectorTryConstruct<T=F>,
 Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
-C    : 'static+ColVectorTryConstruct<T=Row>> IntoIndexedIter<U2,F> for MatrixGeneric<Row,Col> {
-    fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(U2,F)> {
+C    : 'static+ColVectorTryConstruct<T=Row>> IntoIterIndexed<U2,F> for MatrixGeneric<Row,Col> {
+    fn into_iter_indexed(self) -> impl ExactSizeIterator<Item=(U2,F)> {
         let len=self.len_private();
         self.0
             .into_iterator()
@@ -453,15 +453,15 @@ impl<F,
 }
 
 impl<F,
-     Row : IndexedIterMut<usize,F>,
+     Row : IterMutIndexed<usize,F>,
      Col : ChangeT<Row,Output=C>,
-     C   : 'static+IndexedIterMut<usize,Row>> IndexedIterMut<U2,F> for MatrixGeneric<Row,Col> where Self : Matrix {
-    fn indexed_iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(U2,&'a mut F)> where F:'a {
+     C   : 'static+IterMutIndexed<usize,Row>> IterMutIndexed<U2,F> for MatrixGeneric<Row,Col> where Self : Matrix {
+    fn iter_mut_indexed<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(U2,&'a mut F)> where F:'a {
         let sz=self.nrows()*self.ncols();
         self.0
-            .indexed_iter_mut()
+            .iter_mut_indexed()
             .map(|(i,row)|
-                    row.indexed_iter_mut()
+                    row.iter_mut_indexed()
                         .map(move |(j,f)|((i,j),f)))
             .flatten()
             .into_exact_size_iter(sz)

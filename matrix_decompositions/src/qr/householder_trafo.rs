@@ -1,5 +1,5 @@
 use algebra::unit_vector::Unit;
-use container_traits::{Get, IndexOutOfBoundsError, IndexedIter, IntoIndexedIter, IntoInner, IntoIter, ItemT, Iter, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
+use container_traits::{Get, IndexOutOfBoundsError, IterIndexed, IntoIterIndexed, IntoInner, IntoIter, ItemT, Iter, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
 use algebra_traits::*;
 use std::ops::Mul;
 use matrix_wrappers::{Hermitian, Symmetric, orthogonality::*};
@@ -94,9 +94,9 @@ impl<F   : Clone+Scalar,
 }
 
 impl<F   : Clone+Scalar,
-     Col : ColVector<T=F>> IndexedIter<U2,F> for HouseholderTrafoGeneric<Col> {
-    fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a F)> where F:'a {
-        container_traits::indexed_iter::impl_indexed_iter_from_get(self, (self.n(),self.n()))
+     Col : ColVector<T=F>> IterIndexed<U2,F> for HouseholderTrafoGeneric<Col> {
+    fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a F)> where F:'a {
+        container_traits::iter_indexed::impl_iter_indexed_from_get(self, (self.n(),self.n()))
     }
 }
 
@@ -125,10 +125,10 @@ impl<F   : Clone+Scalar,
 }
 
 impl<F   : Clone+Scalar,
-     Col : ColVectorTryConstruct<T=F>> IntoIndexedIter<U2,F> for HouseholderTrafoGeneric<Col> {
-    fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(U2,F)> {
+     Col : ColVectorTryConstruct<T=F>> IntoIterIndexed<U2,F> for HouseholderTrafoGeneric<Col> {
+    fn into_iter_indexed(self) -> impl ExactSizeIterator<Item=(U2,F)> {
         let vs:Vec<(U2,F)>=
-            self.indexed_iter()
+            self.iter_indexed()
                 .map(|(i,f)|(i,f.clone()))
                 .collect();
         vs.into_iter()

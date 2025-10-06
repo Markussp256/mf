@@ -8,8 +8,8 @@ type U2=(usize,usize);
 
 // can be dynamic or static sized
 pub trait MatrixView : ContainerView<U2> {
-    type RowView : RowVectorView;
-    type ColView : ColVectorView;
+    type RowView<'a> : RowVectorView where Self : 'a;
+    type ColView<'a> : ColVectorView where Self : 'a;
     // provided methods
 
     fn nrows(&self) -> usize {
@@ -43,9 +43,9 @@ pub trait MatrixView : ContainerView<U2> {
             .all(|(l,r)|l.is_close_to(r))
     }
 
-    fn try_row_view(&self, i:usize) -> Result<Self::RowView,IndexOutOfBoundsError<usize>>;
+    fn try_row_view<'a>(&'a self, i:usize) -> Result<Self::RowView<'a>,IndexOutOfBoundsError<usize>>;
 
-    fn rows(&self) -> impl ExactSizeIterator<Item=Self::RowView> {
+    fn row_views<'a>(&'a self) -> impl ExactSizeIterator<Item=Self::RowView<'a>> {
         (0..self.nrows())
             .map(|i|self.try_row_view(i).unwrap())
     }
@@ -53,9 +53,9 @@ pub trait MatrixView : ContainerView<U2> {
     // not possible because matrix is maybe not saved colwise
     // fn get_col(&self, j:usize) -> Option<&Self::Col>
 
-    fn try_col_view(&self, j:usize) -> Result<Self::ColView,IndexOutOfBoundsError<usize>>;
+    fn try_col_view<'a>(&'a self, j:usize) -> Result<Self::ColView<'a>,IndexOutOfBoundsError<usize>>;
 
-    fn cols(&self) -> impl ExactSizeIterator<Item=Self::ColView> {
+    fn col_views<'a>(&'a self) -> impl ExactSizeIterator<Item=Self::ColView<'a>> {
         (0..self.ncols())
             .map(|j|self.try_col_view(j).unwrap())
     }
@@ -74,7 +74,7 @@ pub trait MatrixView : ContainerView<U2> {
     fn is_an_identity_matrix(&self) -> bool where Self::T : Zero+One+PartialEq {
         self.is_square()
         && 
-        self.indexed_iter()
+        self.iter_indexed()
             .all(|((i,j),aij)| aij == &kron_delta(i,j)) 
     }
 }

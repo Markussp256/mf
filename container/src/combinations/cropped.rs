@@ -1,6 +1,6 @@
 use utils::iter::IntoExactSizeIterator;
 
-use container_traits::{ChangeT, Get, GetMut, IndexOutOfBoundsError, IndexedIter, IndexedIterMut, IntoIter, IntoVec, ItemT, Iter, IterMut, Map, Pop, Size, TryIntoElement};
+use container_traits::{ChangeT, ContainerSize, Get, GetMut, IndexOutOfBoundsError, IntoIter, IntoVec, IsEmpty, ItemT, Iter, IterIndexed, IterMut, IterMutIndexed, Map, Pop, Size, TryIntoElement};
 use container_traits::container::ContainerIndex;
 
 
@@ -27,38 +27,46 @@ impl<Index:Clone,C> Size<Index> for Cropped<Index,C> {
     }
 }
 
+impl<Index : Iter<usize>, C> IsEmpty for Cropped<Index, C> {
+    fn is_empty(&self) -> bool {
+        self.size
+            .iter()
+            .any(|szi|szi == &0)
+    }
+}
+
 impl<Index,F2,C:ChangeT<F2,Output=C2>,C2> ChangeT<F2> for Cropped<Index,C> {
     type Output=Cropped<Index,C2>;
 }
 
-impl<Index, T, C> Iter<T> for Cropped<Index,C> where Self : IndexedIter<Index,T> {
+impl<Index, T, C> Iter<T> for Cropped<Index,C> where Self : IterIndexed<Index,T> {
     fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a T> where T:'a {
-        self.indexed_iter()
+        self.iter_indexed()
             .map(|(_,t)|t)
     }
 }
 
-impl<Index : Clone+ContainerIndex, T,
-     C : IndexedIter<Index,T>> IndexedIter<Index,T> for Cropped<Index,C> {
-    fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(Index,&'a T)> where T:'a {
+impl<Index : Clone+ContainerSize, T,
+     C : IterIndexed<Index,T>> IterIndexed<Index,T> for Cropped<Index,C> {
+    fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(Index,&'a T)> where T:'a {
         let size=self.size();
-        let len=size.len();
+        let numel=size.numel();
         self.c
-            .indexed_iter()
+            .iter_indexed()
             .filter(move |(ind,_)| ind.is_elem_wise_strictly_smaller(&size))
-            .into_exact_size_iter(len)
+            .into_exact_size_iter(numel)
     }
 }
 
-impl<Index : 'static+ContainerIndex, T,
+impl<Index : 'static+ContainerSize, T,
      C : IntoIter<(Index,T)>> IntoIter<(Index,T)> for Cropped<Index,C> {
     fn into_iterator(self) -> impl ExactSizeIterator<Item=(Index,T)> {
         let size=self.size();
-        let len=size.len();
+        let numel=size.numel();
         self.c
             .into_iterator()
             .filter(move |(ind,_)| ind.is_elem_wise_strictly_smaller(&size))
-            .into_exact_size_iter(len)
+            .into_exact_size_iter(numel)
     }
 }
 
@@ -105,21 +113,21 @@ impl<Index:ContainerIndex,T,C:GetMut<Index,T>> GetMut<Index,T> for Cropped<Index
     }
 }
 
-impl<Index,T,C> IterMut<T> for Cropped<Index,C> where Self : IndexedIterMut<Index,T> {
+impl<Index,T,C> IterMut<T> for Cropped<Index,C> where Self : IterMutIndexed<Index,T> {
     fn iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=&'a mut T> where T:'a {
-        self.indexed_iter_mut()
+        self.iter_mut_indexed()
             .map(|(_,t)|t)
     }
 }
 
-impl<Index:ContainerIndex,T,C:IndexedIterMut<Index,T>> IndexedIterMut<Index,T> for Cropped<Index,C> {
-    fn indexed_iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(Index,&'a mut T)> where T:'a {
+impl<Index:ContainerSize,T,C:IterMutIndexed<Index,T>> IterMutIndexed<Index,T> for Cropped<Index,C> {
+    fn iter_mut_indexed<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(Index,&'a mut T)> where T:'a {
         let size=self.size();
-        let len=size.len();
+        let numel=size.numel();
         self.c
-            .indexed_iter_mut()
+            .iter_mut_indexed()
             .filter(move |(ind,_)| ind.is_elem_wise_strictly_smaller(&size))            
-            .into_exact_size_iter(len)
+            .into_exact_size_iter(numel)
     }
 }
 

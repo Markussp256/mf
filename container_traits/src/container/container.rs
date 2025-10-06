@@ -1,15 +1,15 @@
-use crate::{ContainerView, IntoIndexedIter, IntoIter, TryIntoElement};
+use crate::{ContainerView, IntoIterIndexed, IntoIter, TryIntoElement};
 
 
 pub trait Container<Index>
           : ContainerView  <Index>
-           +IntoIndexedIter<Index,Self::T>
+           +IntoIterIndexed<Index,Self::T>
            +IntoIter       <      Self::T>
            +TryIntoElement <Index,Self::T> {}
 
 
 impl<T,Index,
      C : ContainerView  <Index,T=T>
-        +IntoIndexedIter<Index,T>
+        +IntoIterIndexed<Index,T>
         +IntoIter       <      T>
         +TryIntoElement <Index,T>> Container<Index> for C {}

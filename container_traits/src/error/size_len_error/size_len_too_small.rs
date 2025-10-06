@@ -29,7 +29,7 @@ impl LenTooSmallError {
 // this error is similar as indexoutofbounds but the focus is more on the size relative to index than index relative to size 
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq)]
-#[error("The provided size ({provided_size}) is not elementwise larger equal than the required size ({required_size})")]
+#[error("The provided size ({provided_size:?}) is not elementwise larger equal than the required size ({required_size:?})")]
 pub struct SizeTooSmallError<Index> {
     required_size:Index,
     provided_size:Index

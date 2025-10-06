@@ -1,7 +1,7 @@
 use crate::ContainerIndex;
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq)]
-#[error("index ({index}) is out of bounds ({bounds})")]
+#[error("index ({index:?}) is out of bounds ({bounds:?})")]
 pub struct IndexOutOfBoundsError<Index> {
     index:Index,
     bounds:Index

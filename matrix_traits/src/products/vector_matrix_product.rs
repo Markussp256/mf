@@ -1,6 +1,5 @@
-use container_traits::{AnyFromIterator, LinearContainerConstructError};
 
-use crate::{ColVectorView, Matrix, MatrixView, RowVector, RowVectorTryConstruct, RowVectorView};
+use crate::{Matrix, MatrixView, RowVector, RowVectorTryConstruct, RowVectorView, VectorCanNotBeMultipliedWithMatrixError, VectorConstructError};
 use super::vector_vector_product::{TryVectorVectorProduct,TryIntoVectorVectorProduct};
 
 pub trait VectorMatrixProduct<Rhs : MatrixView> : RowVectorView {
@@ -23,27 +22,28 @@ pub fn try_into_vector_matrix_product_impl
     <F3,
      Lhs    : Clone+RowVector+TryIntoVectorVectorProduct<Rhs::Col,Output=F3>,
      Rhs    : Matrix,
-     Out    : RowVectorTryConstruct<T=F3>>(lhs:&Lhs,rhs:Rhs) -> Option<Out> {
-    if lhs.len() != rhs.nrows() { return None; }
+     Out    : RowVectorTryConstruct<T=F3>>(lhs:&Lhs,rhs:Rhs) -> Result<Out,VectorConstructError> {
+    VectorCanNotBeMultipliedWithMatrixError::try_new(lhs.len(),rhs.nrows())?;
     Out::any_from_iter(
         None,
         rhs.into_cols()
-                .map(|r|lhs.clone().try_into_vector_vector_product(r).unwrap())).ok()
+                .map(|r|lhs.clone().try_into_vector_vector_product(r).unwrap()))
+            .map_err(|e|e.into())
 }
 
 pub fn try_vector_matrix_product_impl
-    <F2 : Clone,
+    <'a,
+     F2 : Clone,
      F3,
-     Lhs    : RowVector+TryVectorVectorProduct<Rhs::ColView,Output=F3>,
-     Rhs    : MatrixView<T=F2, ColView = RhsColView>,
-     Out    : RowVectorTryConstruct<T=F3>>(lhs:&Lhs,rhs:&Rhs) -> Option<Out> {
-    if lhs.len() != rhs.nrows() { return None; }
+     Lhs    : RowVector+TryVectorVectorProduct<Rhs::ColView<'a>,Output=F3>,
+     Rhs    : 'a+MatrixView<T=F2>,
+     Out    : RowVectorTryConstruct<T=F3>>(lhs:&'a Lhs,rhs:&'a Rhs) -> Result<Out,VectorConstructError> {
+    VectorCanNotBeMultipliedWithMatrixError::try_new(lhs.len(),rhs.nrows())?;
     Out::any_from_iter(
         None,
-            (0..rhs.ncols())
-                    .into_iter()
-                    .map(|j|rhs.col_view(j).unwrap())
-                    .map(|rhs_col|lhs.try_vector_vector_product(&rhs_col).unwrap())).ok()
+        rhs.col_views()
+                 .map(|rhs_col|lhs.try_vector_vector_product(&rhs_col).unwrap()))
+            .map_err(|e|e.into())
 }
 
 

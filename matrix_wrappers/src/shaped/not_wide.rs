@@ -12,7 +12,7 @@ type U2=(usize,usize);
          container_derive::ChangeT,
          container_derive::TryIntoElement,
          container_derive::IntoIterator,
-         container_derive::IntoIndexedIter,
+         container_derive::IntoIterIndexed,
          container_derive::ContainerMut,
          container_derive::NewUnchecked,
          container_derive::IntoInner,

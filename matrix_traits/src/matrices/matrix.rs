@@ -28,17 +28,27 @@ pub trait Matrix : MatrixView + Container<U2> {
     // not possible because matrix is maybe not saved rowwise
     // fn get_row(&self, i:usize) -> Option<&Self::Row>
 
-    fn row(&self, i:usize) -> Result<Self::Row, IndexOutOfBoundsError<usize>> where Self::T : Clone {
+    fn try_row(&self, i:usize) -> Result<Self::Row, IndexOutOfBoundsError<usize>> where Self::T : Clone {
         IndexOutOfBoundsError::try_new(&self.nrows(),&i)?;
         Ok(Self::Row::any_from_iter(None,(0..self.ncols()).map(|j|self.get((i,j)).unwrap().clone())).ok().unwrap())
+    }
+
+    fn rows(&self) -> impl ExactSizeIterator<Item=Self::Row> where Self::T : Clone {
+        (0..self.nrows())
+            .map(|i|self.try_row(i).unwrap())
     }
 
     // not possible because matrix is maybe not saved colwise
     // fn get_col(&self, j:usize) -> Option<&Self::Col>
 
-    fn col(&self, j:usize) -> Result<Self::Col,IndexOutOfBoundsError<usize>> where Self::T : Clone {
+    fn try_col(&self, j:usize) -> Result<Self::Col,IndexOutOfBoundsError<usize>> where Self::T : Clone {
         IndexOutOfBoundsError::try_new(&self.ncols(),&j)?;
         Ok(Self::Col::any_from_iter(None, (0..self.nrows()).map(|i|self.get((i,j)).unwrap().clone())).ok().unwrap())
+    }
+
+    fn cols(&self) -> impl ExactSizeIterator<Item=Self::Col> where Self::T : Clone {
+        (0..self.ncols())
+            .map(|j|self.try_col(j).unwrap())
     }
 
     fn into_diagonal(self) -> impl ExactSizeIterator<Item=Self::T> {
@@ -58,7 +68,7 @@ pub fn into_iterator_impl<M:Matrix>(m:M) -> impl ExactSizeIterator<Item=M::T> {
         .into_exact_size_iter(len)
 }
 
-pub fn into_indexed_iterator_impl<M:Matrix>(m:M) -> impl ExactSizeIterator<Item=(U2,M::T)> {
+pub fn into_iter_indexedator_impl<M:Matrix>(m:M) -> impl ExactSizeIterator<Item=(U2,M::T)> {
     let len=m.len();
     m.into_rows()
      .enumerate()
@@ -93,8 +103,8 @@ macro_rules! algebra_matrix_impl {
         fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Result<Self::T,container_traits::IndexOutOfBoundsError<usize>> where Self::T : Clone
         {
             Ok(<Self::Col as algebra_traits::TryScalarproduct>::try_scalar_product(
-                self.col(j0)?,
-                self.col(j1)?).unwrap())
+                self.try_col(j0)?,
+                self.try_col(j1)?).unwrap())
         }
     };
 }

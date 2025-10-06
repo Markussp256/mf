@@ -1,19 +1,16 @@
 macro_rules! as_x_slice {
     ($tr:ident,$fn:ident $(,$m:ident)?) => {
-        pub trait $tr {
-            type T;
-            fn $fn(& $($m)? self) -> & $($m)? [Self::T];
+        pub trait $tr<T> {
+            fn $fn(& $($m)? self) -> & $($m)? [T];
         }
         
-        impl<T> $tr for Vec<T> {
-            type T=T;
+        impl<T> $tr<T> for Vec<T> {
             fn $fn(& $($m)? self) -> & $($m)? [T] {
                 self.$fn()
             }
         }
         
-        impl<T,const N:usize> $tr for [T;N] {
-            type T=T;
+        impl<T,const N:usize> $tr<T> for [T;N] {
             fn $fn(& $($m)? self) -> & $($m)? [T] {
                 self.$fn()
             }

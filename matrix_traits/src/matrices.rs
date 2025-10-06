@@ -16,8 +16,8 @@ pub use matrix_dynamically_sized::MatrixDynamicallySized;
 pub mod matrix_index_iterator;
 pub use matrix_index_iterator::MatrixIndexIterator;
 
-pub mod matrix_mut;
-pub use matrix_mut::MatrixMut;
+pub mod matrix_view_mut;
+pub use matrix_view_mut::MatrixViewMut;
 
 pub mod matrix_normal;
 pub use matrix_normal::MatrixNormal;

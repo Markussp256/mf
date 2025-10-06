@@ -4,18 +4,35 @@ use utils::iter::ChainExactSize;
 use std::ops::Mul;
 use crate::{crop_to_square::{CropToSquareMatrixIfTall, CropToSquareMatrixIfWide}, *};
 
+use container_traits::IntoSum;
+
 use nalgebra::{
-    ComplexField, DMatrix, DVector, DVectorView, Dim, RawStorage, RowDVector, RowSVector, SMatrix, SVector, Scalar
+    ComplexField, Const, DMatrix, DVector, DVectorViewMut, DVectorView, Dim, Dyn, RawStorage, RowDVector, RowSVector, SMatrix, SVectorViewMut, SVectorView, SVector, Scalar, VecStorage, ViewStorageMut, ViewStorage
 };
 
-use container_traits::{CommonLengthError, Get, LenNotEqualToRequiredLenError, TryCommonLength};
+use container_traits::{CommonLengthError, Get, IndexOutOfBoundsError, LenNotEqualToRequiredLenError, TryCommonLength};
 
-impl<'a,F:Scalar> ColVectorView for DVectorView<'a,F> {}
+type RowDVectorView   <'a,F>=nalgebra::Matrix<F,Const<1>,Dyn,ViewStorage<'a, F, Const<1>, Dyn, Const<1>, Dyn>>;
+type RowDVectorViewMut<'a,F>=nalgebra::Matrix<F,Const<1>,Dyn,ViewStorageMut<'a, F, Const<1>, Dyn, Const<1>, Dyn>>;
 
-impl<F:Scalar> ColVectorView for DVector<F>    {}
-impl<F:Scalar> RowVectorView for RowDVector<F> {}
-impl<F:Scalar, const N:usize> ColVectorView for SVector<F,N>    {} 
-impl<F:Scalar, const N:usize> RowVectorView for RowSVector<F,N> {}
+type RowSVectorView   <'a,F, const M:usize, const N:usize>=nalgebra::MatrixView   <'a,F,Const<1>,Const<N>,Const<1>,Const<M>>;
+type RowSVectorViewMut<'a,F, const M:usize, const N:usize>=nalgebra::MatrixViewMut<'a,F,Const<1>,Const<N>,Const<1>,Const<M>>;
+
+impl<   F:Scalar>                ColVectorView for    DVector       <   F>   {}
+impl<   F:Scalar>                RowVectorView for RowDVector       <   F>   {}
+impl<   F:Scalar, const N:usize> ColVectorView for    SVector       <   F,N> {} 
+impl<   F:Scalar, const N:usize> RowVectorView for RowSVector       <   F,N> {}
+
+impl<'a,F:Scalar>                               ColVectorView for    DVectorView   <'a,F>     {}
+impl<'a,F:Scalar>                               RowVectorView for RowDVectorView   <'a,F>     {}
+impl<'a,F:Scalar,                const N:usize> ColVectorView for    SVectorView   <'a,F,  N> {}
+impl<'a,F:Scalar, const M:usize, const N:usize> RowVectorView for RowSVectorView   <'a,F,M,N> {}
+
+impl<'a,F:Scalar>                               ColVectorView for    DVectorViewMut<'a,F>     {}
+impl<'a,F:Scalar>                               RowVectorView for RowDVectorViewMut<'a,F>     {}
+impl<'a,F:Scalar,                const N:usize> ColVectorView for    SVectorViewMut<'a,F,  N> {}
+impl<'a,F:Scalar, const M:usize, const N:usize> RowVectorView for RowSVectorViewMut<'a,F,M,N> {}
+
 
 impl<T:Scalar> Transpose for DMatrix<T> {
     type Output=Self;
@@ -45,15 +62,65 @@ impl<T:Scalar> Transpose for RowDVector<T> {
     }
 }
 
-impl<F:Scalar+Mul<F2,Output=F3>,
-     F2:Scalar,
-     F3:Scalar+Zero,
-     const N:usize> VectorVectorProduct<SVector<F2,N>> for RowSVector<F,N> {
-        type Output=F3;
-     
-        fn vector_vector_product(&self, rhs:&SVector<F2,N>) -> F3 {
-            try_vector_vector_product_impl(self,rhs).unwrap()
+macro_rules! impl_svec_svec {
+    ($lhs:ident <$($a:lifetime,)? $f:ident, $m:ident $(,$n:ident)?>, $rhs:ident <$($b:lifetime,)? $f2:ident, $m2:ident>) => {
+        impl<$($a,)?
+             $($b,)?
+             $f :Scalar+Mul<$f2,Output=F3>,
+             $f2:Scalar,
+             F3:Scalar+Zero,
+             $(const $n:usize,)?
+             const $m:usize> VectorVectorProduct<$rhs<$($b,)? $f2, $m2>> for $lhs<$($a,)? $f,$m $(,$n)?> {
+                type Output=F3;
+            
+                fn vector_vector_product(&self, rhs:&$rhs<$($b,)? $f2, $m2>) -> F3 {
+                    try_vector_vector_product_impl(self,rhs).unwrap()
+                }
         }
+
+        // impl<$($a,)?
+        //      $($b,)?
+        //      $f :Scalar+Mul<$f2,Output=F3>,
+        //      $f2:Scalar,
+        //      F3:Scalar+Zero,
+        //      $(const $n:usize,)?
+        //      const $m:usize> TryVectorVectorProduct<$rhs<$($b,)? $f2, $m2>> for $lhs<$($a,)? $f,$m $(,$n)?> {
+        //         type Output=F3;
+            
+        //         fn try_vector_vector_product(&self, rhs:&$rhs<$($b,)? $f2, $m2>) -> Option<F3> {
+        //             try_vector_vector_product_impl(self,rhs)
+        //         }
+        // }
+
+    };
+}
+impl_svec_svec!(RowSVector       <   F,M  >, SVector       <   F2,M>);
+impl_svec_svec!(RowSVectorView   <'a,F,M,N>, SVector       <   F2,M>);
+impl_svec_svec!(RowSVectorViewMut<'a,F,M,N>, SVector       <   F2,M>);
+impl_svec_svec!(RowSVector       <   F,M  >, SVectorView   <'b,F2,M>);
+impl_svec_svec!(RowSVectorView   <'a,F,M,N>, SVectorView   <'b,F2,M>);
+impl_svec_svec!(RowSVectorViewMut<'a,F,M,N>, SVectorView   <'b,F2,M>);
+impl_svec_svec!(RowSVector       <   F,M  >, SVectorViewMut<'b,F2,M>);
+impl_svec_svec!(RowSVectorView   <'a,F,M,N>, SVectorViewMut<'b,F2,M>);
+impl_svec_svec!(RowSVectorViewMut<'a,F,M,N>, SVectorViewMut<'b,F2,M>);
+
+
+impl<F0  : Scalar+Mul<F1,Output=F2>,
+     F1  : Scalar,
+     F2  : Zero+Scalar,
+     D0  : Dim,
+     RS0 : RawStorage<F0,Const<1>,D0>,
+     D1  : Dim,
+     RS1 : RawStorage<F1,D1,Const<1>>> TryVectorVectorProduct<nalgebra::Matrix<F1,D1,Const<1>,RS1>> for nalgebra::Matrix<F0,Const<1>,D0,RS0> {
+    type Output=F2;
+    fn try_vector_vector_product(&self, rhs:&nalgebra::Matrix<F1,D1,Const<1>,RS1>) -> Option<F2> {
+        (self.ncols() == rhs.nrows()).then(||
+            self.iter()
+                .zip(rhs.iter())
+                .map(|(l,r)|l.clone()*r.clone())
+                .into_sum()
+        )
+    }
 }
 
 impl<F:Scalar+Mul<F2,Output=F3>,
@@ -71,18 +138,6 @@ impl<F:Scalar+Mul<F2,Output=F3>,
 impl<F:Scalar+Mul<F2,Output=F3>,
      F2:Scalar,
      F3:Scalar+Zero,
-     const N:usize> TryVectorVectorProduct<SVector<F2,N>> for RowSVector<F,N> {
-        type Output=F3;
-     
-        fn try_vector_vector_product(&self, rhs:&SVector<F2,N>) -> Option<F3> {
-            try_vector_vector_product_impl(self,rhs)
-        }
-}
-
-
-impl<F:Scalar+Mul<F2,Output=F3>,
-     F2:Scalar,
-     F3:Scalar+Zero,
      const N:usize> TryIntoVectorVectorProduct<SVector<F2,N>> for RowSVector<F,N> {
         type Output=F3;
      
@@ -91,15 +146,6 @@ impl<F:Scalar+Mul<F2,Output=F3>,
         }
 }
 
-
-impl<F:Scalar+Mul<F2,Output=F3>,
-     F2:Scalar,
-     F3:Scalar+Zero> TryVectorVectorProduct<DVector<F2>> for RowDVector<F> {
-        type Output=F3;
-        fn try_vector_vector_product(&self, rhs:&DVector<F2>) -> Option<F3> {
-            try_vector_vector_product_impl(self,rhs)
-        }
-}
 
 
 impl<F:Scalar+Mul<F2,Output=F3>,
@@ -183,7 +229,7 @@ impl<F :Scalar+Mul<F2,Output=F3>,
      const N:usize> TryMatrixVectorProduct<SVector<F2,N>> for SMatrix<F,M,N> {
         type Output=SVector<F3,M>;
      
-        fn try_matrix_vector_product(&self, rhs:&SVector<F2,N>) -> Option<Self::Output> {
+        fn try_matrix_vector_product(&self, rhs:&SVector<F2,N>) -> Result<Self::Output,VectorConstructError> {
             try_matrix_vector_product_impl(self,rhs)
         }
 }
@@ -196,7 +242,7 @@ impl<F :Scalar+Mul<F2,Output=F3>,
      const N:usize> TryIntoMatrixVectorProduct<SVector<F2,N>> for SMatrix<F,M,N> {
         type Output=SVector<F3,M>;
      
-        fn try_into_matrix_vector_product(self, rhs:SVector<F2,N>) -> Option<Self::Output> {
+        fn try_into_matrix_vector_product(self, rhs:SVector<F2,N>) -> Result<Self::Output,VectorConstructError> {
             try_into_matrix_vector_product_impl(self,rhs)
         }
 }
@@ -206,7 +252,7 @@ impl<F :Scalar+Mul<F2,Output=F3>,
      F3:Scalar+Zero> TryMatrixVectorProduct<DVector<F2>> for DMatrix<F> {
         type Output=DVector<F3>;
      
-        fn try_matrix_vector_product(&self, rhs:&DVector<F2>) -> Option<Self::Output> {
+        fn try_matrix_vector_product(&self, rhs:&DVector<F2>) -> Result<Self::Output,VectorConstructError> {
             try_matrix_vector_product_impl(self,rhs)
         }
 }
@@ -217,7 +263,7 @@ impl<F :Scalar+Mul<F2,Output=F3>,
      F3:Scalar+Zero> TryIntoMatrixVectorProduct<DVector<F2>> for DMatrix<F> {
         type Output=DVector<F3>;
      
-        fn try_into_matrix_vector_product(self, rhs:DVector<F2>) -> Option<Self::Output> {
+        fn try_into_matrix_vector_product(self, rhs:DVector<F2>) -> Result<Self::Output,VectorConstructError> {
             try_into_matrix_vector_product_impl(self,rhs)
         }
 }
@@ -257,7 +303,7 @@ impl<F:Scalar+Mul<F2,Output=F3>,
      const N:usize> TryMatrixMatrixProduct<SMatrix<F2,M,N>> for SMatrix<F,L,M> {
         type Output=SMatrix<F3,L,N>;
      
-        fn try_matrix_matrix_product(&self, rhs:&SMatrix<F2,M,N>) -> Option<Self::Output> {
+        fn try_matrix_matrix_product(&self, rhs:&SMatrix<F2,M,N>) -> Result<Self::Output,MatrixConstructError> {
             try_matrix_matrix_product_impl(self,rhs)
         }
 }
@@ -271,7 +317,7 @@ impl<F:Scalar+Mul<F2,Output=F3>,
      const N:usize> TryIntoMatrixMatrixProduct<SMatrix<F2,M,N>> for SMatrix<F,L,M> {
         type Output=SMatrix<F3,L,N>;
      
-        fn try_into_matrix_matrix_product(self, rhs:SMatrix<F2,M,N>) -> Option<Self::Output> {
+        fn try_into_matrix_matrix_product(self, rhs:SMatrix<F2,M,N>) -> Result<Self::Output,MatrixMatrixProduct> {
             try_into_matrix_matrix_product_impl(self,rhs)
         }
 }
@@ -282,7 +328,7 @@ impl<F:Scalar+Mul<F2,Output=F3>,
      F3:Scalar+Zero> TryMatrixMatrixProduct<DMatrix<F2>> for DMatrix<F> {
         type Output=DMatrix<F3>;
      
-        fn try_matrix_matrix_product(&self, rhs:&DMatrix<F2>) -> Option<Self::Output> {
+        fn try_matrix_matrix_product(&self, rhs:&DMatrix<F2>) -> Result<Self::Output,MatrixConstructError> {
             try_matrix_matrix_product_impl(self,rhs)
         }
 }
@@ -293,7 +339,7 @@ impl<F:Scalar+Mul<F2,Output=F3>,
      F3:Scalar+Zero> TryIntoMatrixMatrixProduct<DMatrix<F2>> for DMatrix<F> {
         type Output=DMatrix<F3>;
      
-        fn try_into_matrix_matrix_product(self, rhs:DMatrix<F2>) -> Option<Self::Output> {
+        fn try_into_matrix_matrix_product(self, rhs:DMatrix<F2>) -> Result<Self::Output,MatrixConstructError> {
             try_into_matrix_matrix_product_impl(self,rhs)
         }
 }
@@ -321,39 +367,89 @@ crate::impl_op_diag_stat!(RowSVector,SMatrix,Scalar);
 //         }
 // }
 
+fn get_stride<F:Scalar,R:Dim,C:Dim,RS:RawStorage<F,R,C>>(rs:RS) -> (RS::RStride,RS::CStride){
+    rs.strides()
+}
+
+fn vec_stor_strides<F:Scalar>(rs:VecStorage<F,Dyn,Dyn>) -> (Const<1>,Dyn) {
+    rs.strides()
+}
+
+// fn view_dmat<'a,F:Scalar>(m:&'a DMatrix<F>)
+//     -> nalgebra::Matrix<F, Const<1>, Dyn,
+//         ViewStorage<'a, F, Const<1>, Dyn,
+//         <VecStorage<F, Dyn, Dyn> as RawStorage<F, Dyn, Dyn>>::RStride,
+//         <VecStorage<F, Dyn, Dyn> as RawStorage<F, Dyn, Dyn>>::CStride>> { //
+//     m.row(0)
+// }
+
+fn view_dmat<'a,F:Scalar>(m:&'a DMatrix<F>)
+    -> nalgebra::Matrix<F, Const<1>, Dyn,
+        ViewStorage<'a, F, Const<1>, Dyn,
+        Const<1>,
+        Dyn>> { //
+    m.row(0)
+}
+
 impl<F:Scalar> MatrixView for DMatrix<F> {
-    type ColView = DVector<F>;
-    type RowView = RowDVector<F>;
-    
+    type ColView<'a> =    DVectorView<'a,F>;
+    type RowView<'a> = RowDVectorView<'a,F>;
+
     fn nrows(&self) -> usize {
         DMatrix::nrows(self)
     }
-    
+
     fn ncols(&self) -> usize {
         DMatrix::ncols(self)
     }
 
+    fn try_row_view<'a>(&'a self, i:usize) -> Result<Self::RowView<'a>,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&self.nrows(),&i)?;
+        Ok(self.row(i))
+    }
+
+    fn row_views<'a>(&'a self) -> impl ExactSizeIterator<Item=Self::RowView<'a>> {
+        self.row_iter()
+    }
+
+    fn try_col_view<'a>(&'a self, j:usize) -> Result<Self::ColView<'a>,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&self.ncols(),&j)?;
+        Ok(self.column(j))
+    }
+
+    fn col_views<'a>(&'a self) -> impl ExactSizeIterator<Item=Self::ColView<'a>> {
+        self.column_iter()
+    }
+
 }
+
+
 
 impl<F:Scalar> Matrix for DMatrix<F> {
     type Col = DVector<F>;
     type Row = RowDVector<F>;
     
+    fn rows(&self) -> impl ExactSizeIterator<Item=Self::Row> {
+        self.row_iter()
+                .map(|r|r.into_owned())
+    }
+
     fn into_rows(self) -> impl ExactSizeIterator<Item=Self::Row> {
         let rows:Vec<Self::Row>=
-        (0..self.nrows())
-            .into_iter()
-            .map(|r_ind|<Self as Matrix>::row(&self,r_ind).unwrap().into())
-            .collect();
+            <Self as Matrix>::rows(&self)
+                .collect();
         rows.into_iter()
+    }
+
+    fn cols(&self) -> impl ExactSizeIterator<Item=Self::Col> {
+        self.column_iter()
+            .map(|c|c.into_owned())
     }
     
     fn into_cols(self) -> impl ExactSizeIterator<Item=Self::Col> {
         let cols:Vec<Self::Col>=
-        (0..self.ncols())
-            .into_iter()
-            .map(|c_ind|<Self as Matrix>::col(&self,c_ind).unwrap().into())
-            .collect();
+            self.cols()
+                .collect();
         cols.into_iter()
     }
 }
@@ -397,9 +493,8 @@ impl<F:Scalar, const M:usize, const N:usize> MatrixFixedNumberOfRows<M> for SMat
 
 impl<F:Scalar, const M:usize, const N:usize> MatrixView for SMatrix<F, M, N> {
     
-    type RowView=RowSVector<F, N>;
-
-    type ColView=SVector<F, M>;
+    type RowView<'a>=RowSVectorView<'a,F,M,N>;
+    type ColView<'a>=   SVectorView<'a,F,M>;
 
     fn nrows(&self) -> usize {
         M
@@ -407,7 +502,25 @@ impl<F:Scalar, const M:usize, const N:usize> MatrixView for SMatrix<F, M, N> {
 
     fn ncols(&self) -> usize {
         N
-    }    
+    }
+
+    fn try_row_view<'a>(&'a self, i:usize) -> Result<Self::RowView<'a>,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&self.nrows(),&i)?;
+        Ok(self.row(i))
+    }
+
+    fn row_views<'a>(&'a self) -> impl ExactSizeIterator<Item=Self::RowView<'a>> {
+        self.row_iter()
+    }
+
+    fn try_col_view<'a>(&'a self, j:usize) -> Result<Self::ColView<'a>,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&self.ncols(),&j)?;
+        Ok(self.column(j))
+    }
+
+    fn col_views<'a>(&'a self) -> impl ExactSizeIterator<Item=Self::ColView<'a>> {
+        self.column_iter()
+    }
 }
 
 impl<F:Scalar, const M:usize, const N:usize> Matrix for SMatrix<F, M, N> {
@@ -416,21 +529,27 @@ impl<F:Scalar, const M:usize, const N:usize> Matrix for SMatrix<F, M, N> {
 
     type Col=SVector<F, M>;
     
+    fn rows(&self) -> impl ExactSizeIterator<Item=Self::Row> {
+        self.row_iter()
+            .map(|r|r.into_owned())
+    }
+
     fn into_rows(self) -> impl ExactSizeIterator<Item=Self::Row> {
         let rows:Vec<Self::Row>=
-        (0..self.nrows())
-            .into_iter()
-            .map(|r_ind|<Self as Matrix>::row(&self,r_ind).unwrap().into())
-            .collect();
+            <Self as Matrix>::rows(&self)
+                .collect();
         rows.into_iter()
     }
     
+    fn cols(&self) -> impl ExactSizeIterator<Item=Self::Col> {
+        self.column_iter()
+            .map(|c|c.into_owned())
+    }
+
     fn into_cols(self) -> impl ExactSizeIterator<Item=Self::Col> {
         let cols:Vec<Self::Col>=
-        (0..self.ncols())
-            .into_iter()
-            .map(|c_ind|<Self as Matrix>::col(&self,c_ind).unwrap().into())
-            .collect();
+            <Self as Matrix>::cols(&self)
+                .collect();
         cols.into_iter()
     }
 }
@@ -593,7 +712,7 @@ impl<F:Clone+Scalar> TryPopCol for DMatrix<F> {
         if nc == 0 {
             return None;
         }
-        let c=<Self as Matrix>::col(&self,nc-1).unwrap();
+        let c=<Self as Matrix>::try_col(&self,nc-1).unwrap();
         Some((Self::try_from_cols(self.into_cols().take(nc-1)).unwrap(),c))
     }
 }
@@ -604,7 +723,7 @@ impl<F:Clone+Scalar> TryPopRow for DMatrix<F> {
         if nr == 0 {
             return None;
         }
-        let r=<Self as Matrix>::row(&self,nr-1).unwrap();
+        let r=<Self as Matrix>::try_row(&self,nr-1).unwrap();
         Some((Self::try_from_rows(self.into_rows().take(nr-1)).unwrap(),r))
     }
 }
@@ -633,7 +752,7 @@ macro_rules! pop_push {
         impl<F:Clone+Scalar, const M:usize> PopCol for SMatrix<F,M,$K1> {
             type Output = SMatrix<F,M,$K>;
             fn pop_col(self) -> (Self::Output, <Self as Matrix>::Col) {
-                let c=<Self as Matrix>::col(&self,$K).unwrap();
+                let c=<Self as Matrix>::try_col(&self,$K).unwrap();
                 let m=SMatrix::<F,M,$K>::try_from_cols(self.into_cols().take($K)).unwrap();
                 (m,c)
             }
@@ -666,7 +785,7 @@ macro_rules! pop_push {
         impl<F:Clone+Scalar, const N:usize> PopRow for SMatrix<F,$K1,N> {
             type Output = SMatrix<F,$K,N>;
             fn pop_row(self) -> (Self::Output, <Self as Matrix>::Row) {
-                let r=<Self as Matrix>::row(&self,$K).unwrap();
+                let r=<Self as Matrix>::try_row(&self,$K).unwrap();
                 let m=SMatrix::<F,$K,N>::try_from_rows(self.into_rows().take($K)).unwrap();
                 (m,r)
             }

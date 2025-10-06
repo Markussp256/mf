@@ -1,4 +1,4 @@
-use crate::{ContainerIndex, Get};
+use crate::{index_iterator::ContainerIndexIterator, ContainerSize, Get};
 
 
 pub trait Iter<T> {
@@ -25,10 +25,10 @@ impl<T, const N:usize> Iter<T> for [T;N] {
 
 pub fn impl_iter_from_get
     <'a,
-     Index : ContainerIndex,
+     Index : ContainerSize,
      T : 'a,
      G : 'a+Get<Index,T>>(g:&'a G,size:Index) -> impl ExactSizeIterator<Item=&'a T> {
-        size.index_iterator()
+        ContainerIndexIterator::new_exact_size(size)
             .map(move |index:Index|g.get(index).unwrap())
 }
 

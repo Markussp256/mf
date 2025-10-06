@@ -1,9 +1,6 @@
 pub mod row_col_vector;
 pub use row_col_vector::*;
 
-pub mod row_col_vector_view;
-pub use row_col_vector_view::View;
-
 
 // use crate::Transpose;
 

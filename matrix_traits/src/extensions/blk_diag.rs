@@ -1,8 +1,8 @@
 use crate::{Matrix, MatrixView};
-use container_traits::{Concatenated, ContainerIndex, Get, IndexOutOfBoundsError, IndexedIter, IntoIndexedIter, IntoIter, ItemT, Iter, NumberOfDegreesOfFreedom, OCTSize, Size, TryFromVec, TryIntoElement};
+use container_traits::{AnyFromIterator, ContainerIndex, Get, IndexOutOfBoundsError, IntoIter, IntoIterIndexed, IsEmpty, ItemT, Iter, IterIndexed, LinearContainerConstructError, NumberOfDegreesOfFreedom, OCTSize, Size, TryFromVec, TryIntoElement};
 use num_traits::Zero;
 use utils::iter::{ChainExactSize, IntoExactSizeIterator};
-
+use container::Concatenated;
 type U2=(usize,usize);
 
 // tl=top left
@@ -67,9 +67,9 @@ impl<F:Zero, TL:MatrixView<T=F>, BR:MatrixView<T=F>> Iter<F> for BlockDiagonal<T
     }
 }
 
-impl<F:Zero, TL:MatrixView<T=F>, BR:MatrixView<T=F>> IndexedIter<U2,F> for BlockDiagonal<TL,BR> {
-    fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a F)> where F:'a {
-        container_traits::indexed_iter::impl_indexed_iter_from_get(self, self.size_total())
+impl<F:Zero, TL:MatrixView<T=F>, BR:MatrixView<T=F>> IterIndexed<U2,F> for BlockDiagonal<TL,BR> {
+    fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a F)> where F:'a {
+        container_traits::iter_indexed::impl_iter_indexed_from_get(self, self.size_total())
     }
 }
 
@@ -103,8 +103,8 @@ impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> IntoIter<F> for BlockDiagonal<TL,BR>
     }
 }
 
-impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> IntoIndexedIter<U2,F> for BlockDiagonal<TL,BR> {
-    fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(U2,F)> {
+impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> IntoIterIndexed<U2,F> for BlockDiagonal<TL,BR> {
+    fn into_iter_indexed(self) -> impl ExactSizeIterator<Item=(U2,F)> {
         let len=self.len_total();
         self.into_rows_impl()
             .enumerate()
@@ -122,6 +122,13 @@ impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> Size<U2> for BlockDiagonal<T
     }
 }
 
+impl<F:Zero, TL:MatrixView<T=F>, BR:MatrixView<T=F>> IsEmpty for BlockDiagonal<TL,BR> {
+    fn is_empty(&self) -> bool {
+        self.tl.is_empty() &&
+        self.br.is_empty()
+    }
+}
+
 impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> OCTSize<U2> for BlockDiagonal<TL,BR> {
     const OCTSIZE:Option<U2> = match (TL::OCTSIZE,BR::OCTSIZE) {
         (Some((r0,c0)),Some((r1,c1))) => Some((r0+r1,c0+c1)),
@@ -136,19 +143,56 @@ impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> NumberOfDegreesOfFreedom<F> 
     }
 }
 
-impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> MatrixView for BlockDiagonal<TL,BR> {
-    
-    type RowView=Concatenated<TL::RowView,BR::RowView>;
+impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> MatrixView for BlockDiagonal<TL,BR>
+    where for<'a> TL::RowView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
+          for<'a> TL::ColView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
+          for<'a> BR::RowView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
+          for<'a> BR::ColView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError> {
+    type RowView<'a>=Concatenated<TL::RowView<'a>,BR::RowView<'a>> where TL : 'a, BR : 'a;
 
-    type ColView=Concatenated<TL::ColView,BR::ColView>;
+    type ColView<'a>=Concatenated<TL::ColView<'a>,BR::ColView<'a>> where TL : 'a, BR : 'a;
 
     fn nrows(&self) -> usize { self.nrows_total() }
 
     fn ncols(&self) -> usize { self.ncols_total() }
+
+    fn try_row_view<'a>(&'a self, i:usize) -> Result<Self::RowView<'a>,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&self.nrows(),&i)?;
+        let ntl=self.tl.nrows();
+        let nbr=self.br.nrows();
+        let (tl,br)=if i < ntl {
+            (self.tl.try_row_view(i).unwrap(),
+            BR::RowView::<'a>::any_from_iter(None,std::iter::from_fn(||Some(F::zero())).take(nbr)).unwrap())
+            
+        } else {
+            (TL::RowView::<'a>::any_from_iter(None,std::iter::from_fn(||Some(F::zero())).take(ntl)).unwrap(),
+            self.br.try_row_view(i-ntl).unwrap())
+        };
+        Ok(Concatenated::new(tl,br))
+    }
+
+    fn try_col_view<'a>(&'a self, j:usize) -> Result<Self::ColView<'a>,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&self.ncols(),&j)?;
+        let ntl=self.tl.ncols();
+        let nbr=self.br.ncols();
+        let (tl,br)=if j < ntl {
+            (self.tl.try_col_view(j).unwrap(),
+            BR::ColView::<'a>::any_from_iter(None,std::iter::from_fn(||Some(F::zero())).take(nbr)).unwrap())
+            
+        } else {
+            (TL::ColView::<'a>::any_from_iter(None,std::iter::from_fn(||Some(F::zero())).take(ntl)).unwrap(),
+            self.br.try_col_view(j-ntl).unwrap())
+        };
+        Ok(Concatenated::new(tl,br))
+    }
+
 }
 
-impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> Matrix for BlockDiagonal<TL,BR> {
-    
+impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> Matrix for BlockDiagonal<TL,BR>
+    where for<'a> TL::RowView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
+          for<'a> TL::ColView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
+          for<'a> BR::RowView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
+          for<'a> BR::ColView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError> {
     type Row=Concatenated<TL::Row,BR::Row>;
 
     type Col=Concatenated<TL::Col,BR::Col>;

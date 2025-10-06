@@ -580,6 +580,7 @@ dependencies = [
  "algebra",
  "algebra_derive",
  "algebra_traits",
+ "container",
  "container_derive",
  "container_traits",
  "derive_more",

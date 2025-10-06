@@ -1,6 +1,7 @@
 use crate::{Container,LinearContainerView, IntoVec};
 
 pub trait LinearContainer : Container<usize>
+        +LinearContainerView
         +IntoVec<Self::T> {}
 
 impl<C : Container<usize>

@@ -1,8 +1,6 @@
 
 use std::fmt::Debug;
-use crate::{ContainerConstructError, IntoInner, IntoIter, IntoProduct, Iter, LenTooSmallError, TryFromIterator};
-
-use super::index_type::IndexN;
+use crate::{index_type::IndexN, ContainerConstructError, IndexOutOfBoundsError, IntoIter, IntoProduct, Iter, IterMut, LenTooSmallError, TryFromIterator};
 
 pub trait ContainerIndex
     : Debug
@@ -11,10 +9,11 @@ pub trait ContainerIndex
      +PartialOrd
      +Ord
      +Iter<usize>
+     +IterMut<usize>
      +IntoIter<usize>
      +TryFromIterator<usize,ContainerConstructError<usize>> {
 
-    fn index_iterator(self) -> impl ExactSizeIterator<Item=Self>;
+    const DIM:usize;
 
     fn is_elem_wise_op(&self,rhs:&Self, f:impl Fn(&usize,&usize) -> bool) -> bool {
         self.iter()
@@ -36,12 +35,6 @@ pub trait ContainerIndex
  
     fn is_elem_wise_strictly_larger(&self,rhs:&Self) -> bool {
         self.is_elem_wise_op(rhs, |l,r|l > r)
-    }
-
-    fn len(&self) -> usize {
-        self.iter()
-            .cloned()
-            .into_product()
     }
 
     fn elem_wise_binary(self, rhs:Self, f:impl Fn(usize,usize) -> usize) -> Self {
@@ -84,6 +77,28 @@ pub trait ContainerIndex
 
 }
 
+pub trait ContainerSize : ContainerIndex {
+
+    // number of different indizes for the given size
+    fn numel(&self) -> usize {
+        self.iter()
+            .cloned()
+            .into_product()
+    }
+
+    // linear index for ptr
+    fn linear_index(&self,c:Self) -> Result<usize,IndexOutOfBoundsError<Self>> {
+        IndexOutOfBoundsError::try_new(self, &c)?;
+        let css:Vec<(usize,usize)>=c.into_iterator().zip(self.iter().cloned()).collect();
+        let mut current=css.last().unwrap().0;
+        for (ci,si) in css.into_iter().rev().skip(1) {
+            current *= si;
+            current += ci;
+        }
+        Ok(current)
+    }
+}
+
 
 impl Iter<usize> for usize {
     fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a usize> where usize : 'a {
@@ -91,14 +106,15 @@ impl Iter<usize> for usize {
     }
 }
 
-impl IntoIter<usize> for usize {
-    fn into_iterator(self) -> impl ExactSizeIterator<Item=usize> {
+impl IterMut<usize> for usize {
+    fn iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=&'a mut usize> where usize : 'a {
         std::iter::once(self)
     }
 }
-impl ContainerIndex for usize {
-    fn index_iterator(self) -> impl ExactSizeIterator<Item=Self> {
-        0..self
+
+impl IntoIter<usize> for usize {
+    fn into_iterator(self) -> impl ExactSizeIterator<Item=usize> {
+        std::iter::once(self)
     }
 }
 
@@ -117,42 +133,32 @@ impl Iter<usize> for (usize,usize) {
     }
 }
 
+impl IterMut<usize> for (usize,usize) {
+    fn iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=&'a mut usize> where usize : 'a {
+        [&mut self.0,& mut self.1].into_iter()
+    }
+}
+
 impl IntoIter<usize> for (usize,usize) {
     fn into_iterator(self) -> impl ExactSizeIterator<Item=usize> {
         [self.0,self.1].into_iter()
     }
 }
 
+impl ContainerIndex for usize {
+    const DIM:usize = 1;
+}
 
+impl ContainerSize for usize {}
 
 impl ContainerIndex for (usize,usize) {
-    fn index_iterator(self) -> impl ExactSizeIterator<Item=Self> {
-        IndexN::<2>::from(self)
-            .index_iterator()
-            .map(|s|s.into_inner().into())
-    }
+    const DIM:usize=2;
 }
 
+impl ContainerSize for (usize,usize) {}
 
-
-pub fn row_major_index_iterator(size:(usize,usize)) -> impl ExactSizeIterator<Item=(usize,usize)> {
-    size.index_iterator()
+impl<const N:usize> ContainerIndex for IndexN<N> {
+    const DIM:usize=N;
 }
 
-pub fn column_major_index_iterator(size:(usize,usize)) -> impl ExactSizeIterator<Item=(usize,usize)> {
-    let flip=|(l,r)|(r,l);
-    flip(size).index_iterator()
-              .map(flip)
-}
-
-#[test]
-fn test23() {
-    let mut iter=(3,2).index_iterator();
-    assert_eq!(iter.next(),Some((0,0)));
-    assert_eq!(iter.next(),Some((0,1)));
-    assert_eq!(iter.next(),Some((1,0)));
-    assert_eq!(iter.next(),Some((1,1)));
-    assert_eq!(iter.next(),Some((2,0)));
-    assert_eq!(iter.next(),Some((2,1)));
-    assert_eq!(iter.next(),None);
-}
+impl<const N:usize> ContainerSize for IndexN<N> {}

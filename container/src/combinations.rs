@@ -4,17 +4,11 @@ pub use concatenated::Concatenated;
 pub mod cropped;
 pub use cropped::Cropped;
 
-pub mod col_view_mut;
-pub use col_view_mut::ColViewMut;
-
-pub mod col_view;
-pub use col_view::ColView;
+pub mod col_row_view;
+pub use col_row_view::{ColView, ColViewMut, RowView, RowViewMut};
 
 pub mod jit_sized;
 pub use jit_sized::JITSized;
-
-pub mod multid_slice;
-pub use multid_slice::MultiDSlice;
 
 pub mod multid_slice_view;
 pub use multid_slice_view::MultiDSliceView;
@@ -25,11 +19,11 @@ pub use multid_slice_view_mut::MultiDSliceViewMut;
 pub mod repeated;
 pub use repeated::Repeated;
 
-pub mod row_view_mut;
-pub use row_view_mut::RowViewMut;
+pub mod sparse_view;
+pub use sparse_view::ContainerSparseView;
 
-pub mod row_view;
-pub use row_view::RowView;
+pub mod sparse;
+pub use sparse::ContainerSparse;
 
 pub mod without_view_mut;
 pub use without_view_mut::WithoutViewMut;

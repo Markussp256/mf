@@ -1,4 +1,4 @@
-use crate::{Get, IndexedIter, ItemT, Iter, NumberOfDegreesOfFreedom, OCTSize, Size, SizeFromORef};
+use crate::{Get, IsEmpty, ItemT, Iter, IterIndexed, NumberOfDegreesOfFreedom, OCTSize, Size, SizeFromORef};
 
 pub trait ContainerView<Index>
           : Sized
@@ -7,7 +7,8 @@ pub trait ContainerView<Index>
            +OCTSize        <Index>
            +SizeFromORef   <Index>
            +Get            <Index,Self::T>
-           +IndexedIter    <Index,Self::T>
+           +IsEmpty
+           +IterIndexed    <Index,Self::T>
            +Iter           <      Self::T>
            +ItemT {}
 
@@ -19,7 +20,8 @@ impl<T,Index,
         +OCTSize        <Index>
         +SizeFromORef   <Index>  
         +Get            <Index,T>
-        +IndexedIter    <Index,T>
+        +IsEmpty
+        +IterIndexed    <Index,T>
         +Iter           <      T>
         +ItemT              <T=T>> ContainerView<Index> for C {}
 

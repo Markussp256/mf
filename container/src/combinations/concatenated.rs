@@ -51,8 +51,8 @@ impl<T,A:Iter<T>,B:Iter<T>> Iter<T> for Concatenated<A,B> {
     }
 }
 
-impl<T,A,B> IndexedIter<usize,T> for Concatenated<A,B> where Self : Iter<T> {
-    fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(usize,&'a T)> where T : 'a {
+impl<T,A,B> IterIndexed<usize,T> for Concatenated<A,B> where Self : Iter<T> {
+    fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(usize,&'a T)> where T : 'a {
         self.iter()
             .enumerate()
     }
@@ -82,8 +82,8 @@ impl<T,
 
 impl<T,
      A : ItemT<T=T>,
-     B : ItemT<T=T>> IntoIndexedIter<usize,T> for Concatenated<A, B> where Self : IntoIter<T> {
-    fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(usize,T)> {
+     B : ItemT<T=T>> IntoIterIndexed<usize,T> for Concatenated<A, B> where Self : IntoIter<T> {
+    fn into_iter_indexed(self) -> impl ExactSizeIterator<Item=(usize,T)> {
         self.into_iterator().enumerate()
     }
 }
@@ -113,6 +113,13 @@ impl<A:Size<usize>,B:Size<usize>> Size<usize> for Concatenated<A,B> {
     fn size(&self) -> usize {
          self.0.size()
         +self.1.size()
+    }
+}
+
+impl<A:IsEmpty,B:IsEmpty> IsEmpty for Concatenated<A,B> {
+    fn is_empty(&self) -> bool {
+        self.0.is_empty() &&
+        self.1.is_empty()
     }
 }
 
@@ -163,17 +170,23 @@ impl<T,
     }
 }
 
-impl<T, A : First<T>, B> First<T> for Concatenated<A,B> {
-    fn first(&self) -> Option<&T> {
+impl<T,
+     A : IsEmpty+First<T>,
+     B : First<T>> First<T> for Concatenated<A,B> {
+    fn first(&self) -> Result<&T,EmptyContainerError> {
         self.0
             .first()
+            .or_else(|_|self.1.first())
     }
 }
 
-impl<T, A , B : Last<T>> Last<T> for Concatenated<A,B> {
-    fn last(&self) -> Option<&T> {
+impl<T,
+     A : Last<T>,
+     B : IsEmpty+Last<T>> Last<T> for Concatenated<A,B> {
+    fn last(&self) -> Result<&T,EmptyContainerError> {
         self.1
             .last()
+            .or_else(|_|self.0.last())
     }
 }
 
@@ -273,8 +286,8 @@ impl<T,A:IterMut<T>,B:IterMut<T>> IterMut<T> for Concatenated<A,B> {
     }
 }
 
-impl<T,A,B> IndexedIterMut<usize,T> for Concatenated<A,B> where Self : IterMut<T> {
-    fn indexed_iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(usize,&'a mut T)> where T:'a {
+impl<T,A,B> IterMutIndexed<usize,T> for Concatenated<A,B> where Self : IterMut<T> {
+    fn iter_mut_indexed<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(usize,&'a mut T)> where T:'a {
         self.iter_mut()
             .enumerate()
     }
@@ -289,13 +302,6 @@ impl<T,A,B:Extend<T>> Extend<T> for Concatenated<A,B> {
 impl<A:Empty,B:Empty> Empty for Concatenated<A,B> {
     fn empty() -> Self {
         Self::new(A::empty(),B::empty())
-    }
-}
-
-impl<A:IsEmpty,B:IsEmpty> IsEmpty for Concatenated<A,B> {
-    fn is_empty(&self) -> bool {
-        self.0.is_empty() &&
-        self.1.is_empty()
     }
 }
 

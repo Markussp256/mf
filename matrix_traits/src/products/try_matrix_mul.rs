@@ -1,5 +1,5 @@
 use crate::*;
-use container_traits::{IntoSum, IntoVec};
+use container_traits::{IntoIter, IntoSum};
 use std::ops::Mul;
 
 use num_traits::Zero;
@@ -17,8 +17,8 @@ impl<M      : Matrix<T=F>,
         fn try_matrix_mul<Out:MatrixTryConstruct<T=F3>> (self, rhs:Rhs) -> Option<Out> {
             if self.ncols() != rhs.nrows() { return None; }
             Out::try_from_fn((self.nrows(),rhs.ncols()),|(i,j)|
-               self.row(i).unwrap().into_vec().into_iter()
-                   .zip(rhs.col(j).unwrap().into_vec().into_iter())
+               self.try_row(i).unwrap().into_iterator()
+                   .zip(rhs.try_col(j).unwrap().into_iterator())
                    .map(|(l,r)|l*r)
                    .into_sum()
             ).ok()

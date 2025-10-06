@@ -40,6 +40,9 @@ pub use into_sum::IntoSum;
 pub mod into_vec;
 pub use into_vec::IntoVec;
 
+pub mod is_empty;
+pub use is_empty::IsEmpty;
+
 pub mod item_t;
 pub use item_t::ItemT;
 
@@ -54,6 +57,9 @@ pub use map::{Map,ClosedMap};
 
 pub mod new_unchecked;
 pub use new_unchecked::NewUnchecked;
+
+pub mod parameters;
+pub use parameters::*;
 
 pub mod reverse;
 pub use reverse::Reverse;

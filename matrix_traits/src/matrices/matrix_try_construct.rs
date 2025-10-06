@@ -3,7 +3,7 @@ use crate::Matrix;
 use crate::error::MatrixConstructError;
 
 use algebra_traits::ClosedNeg;
-use container_traits::{TryCommonLength, AnyFromIterator, TryMap, CommonLengthError, ContainerTryConstruct, Get, IntoIter, Iter};
+use container_traits::{AnyFromIterator, CommonLengthError, ContainerTryConstruct, DimensionMismatchError, Get, IndexOutOfBoundsError, IntoIter, Iter, TryCommonLength, TryMap};
 use utils::iter::{ChainExactSize, IntoExactSizeIterator};
 
 type U2=(usize,usize);
@@ -83,7 +83,8 @@ pub trait MatrixTryConstruct : Matrix + ContainerTryConstruct<U2,MatrixConstruct
     // }
 
     fn try_neg_row(self,i:usize) -> Result<Self,MatrixConstructError> where Self::T : ClosedNeg {
-        if i >= self.nrows() { return Err(MatrixConstructError::DimensionMismatch); }
+        IndexOutOfBoundsError::try_new(&self.nrows(),&i)
+            .map_err(|e|DimensionMismatchError::<usize>::from(e))?;
         let neg_row=|r:Self::Row|r.try_map(Neg::neg).ok().unwrap();
         Self::try_from_rows(self.into_rows()
                                 .enumerate()
@@ -91,11 +92,12 @@ pub trait MatrixTryConstruct : Matrix + ContainerTryConstruct<U2,MatrixConstruct
     }
 
     fn try_neg_col(self,j:usize) -> Result<Self,MatrixConstructError> where Self::T : ClosedNeg {
-        if j >= self.ncols() { return Err(MatrixConstructError::DimensionMismatch); }
+        IndexOutOfBoundsError::try_new(&self.ncols(),&j)?;
         let neg_col=|c:Self::Col|c.try_map(Neg::neg).ok().unwrap();
-        Self::try_from_cols(self.into_cols()
-                                .enumerate()
-                                .map(|(jj,c)|if jj == j { neg_col(c) } else { c }))
+        Self::try_from_cols(
+            self.into_cols()
+                .enumerate()
+                .map(|(jj,c)|if jj == j { neg_col(c) } else { c }))
     }
 
     fn try_concat_vertically(self, rhs:Self) -> Result<Self,MatrixConstructError> {
@@ -104,7 +106,7 @@ pub trait MatrixTryConstruct : Matrix + ContainerTryConstruct<U2,MatrixConstruct
                 self.into_rows()
                     .chain_exact_size(rhs.into_rows()))
         } else {
-            Err(MatrixConstructError::DimensionMismatch)
+            Err(MatrixConstructError::RowsDoNotHaveTheSameLength(vec!{self.ncols(),rhs.ncols()}))
         }
     }
 
@@ -114,7 +116,7 @@ pub trait MatrixTryConstruct : Matrix + ContainerTryConstruct<U2,MatrixConstruct
                 self.into_cols()
                     .chain_exact_size(rhs.into_cols()))
         } else {
-            Err(MatrixConstructError::DimensionMismatch)
+            Err(MatrixConstructError::ColsDoNotHaveTheSameLength(vec!{self.nrows(),rhs.nrows()}))
         }
     }
 }

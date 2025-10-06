@@ -1,7 +1,7 @@
 
 use std::ops::Neg;
 use algebra_derive::{ClosedMul, ClosedTryDiv, ClosedTryMul, ClosedDiv};
-use container_traits::{Get, IndexOutOfBoundsError, IndexedIter, IntoIndexedIter, IntoIter, ItemT, Iter, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
+use container_traits::{Get, IndexOutOfBoundsError, IntoIter, IntoIterIndexed, IsEmpty, ItemT, Iter, IterIndexed, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
 
 use crate::matrix_shapes::{MatrixNotTall, MatrixNotWide};
 use crate::{Matrix, MatrixView, MatrixSquare, MatrixConstructError, MatrixSquareTryConstruct};
@@ -62,9 +62,9 @@ impl<M:MatrixSquare> Iter<M::T> for MatrixWithDet<M> {
     }
 }
 
-impl<M:MatrixSquare> IndexedIter<U2,M::T> for MatrixWithDet<M> {
-    fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a M::T)> where M::T:'a {
-        self.m.indexed_iter()
+impl<M:MatrixSquare> IterIndexed<U2,M::T> for MatrixWithDet<M> {
+    fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a M::T)> where M::T:'a {
+        self.m.iter_indexed()
     }
 }
 
@@ -86,10 +86,10 @@ impl<M:Matrix+MatrixSquare> IntoIter<M::T> for MatrixWithDet<M> {
     }
 }
 
-impl<M:Matrix+MatrixSquare> IntoIndexedIter<U2,M::T> for MatrixWithDet<M> {
-    fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(U2,M::T)> {
+impl<M:Matrix+MatrixSquare> IntoIterIndexed<U2,M::T> for MatrixWithDet<M> {
+    fn into_iter_indexed(self) -> impl ExactSizeIterator<Item=(U2,M::T)> {
         self.m
-            .into_indexed_iter()
+            .into_iter_indexed()
     }
 }
 
@@ -97,6 +97,13 @@ impl<M:MatrixSquare> Size<U2> for MatrixWithDet<M> {
     fn size(&self) -> U2 {
         self.m
             .size()
+    }
+}
+
+impl<M:MatrixSquare+IsEmpty> IsEmpty for MatrixWithDet<M> {
+    fn is_empty(&self) -> bool {
+        self.m
+            .is_empty()
     }
 }
 
@@ -114,9 +121,9 @@ impl<M:MatrixSquare> NumberOfDegreesOfFreedom<M::T> for MatrixWithDet<M> {
 
 impl<M:MatrixSquare> MatrixView for MatrixWithDet<M> {
     
-    type RowView=M::RowView;
+    type RowView<'a>=M::RowView<'a> where M : 'a;
 
-    type ColView=M::ColView;
+    type ColView<'a>=M::ColView<'a> where M : 'a;
 
     fn nrows(&self) -> usize {
         self.m
@@ -126,6 +133,16 @@ impl<M:MatrixSquare> MatrixView for MatrixWithDet<M> {
     fn ncols(&self) -> usize {
         self.m
             .ncols()
+    }
+    
+    fn try_row_view<'a>(&'a self, i:usize) -> Result<Self::RowView<'a>,IndexOutOfBoundsError<usize>> {
+        self.m
+            .try_row_view(i)
+    }
+    
+    fn try_col_view<'a>(&'a self, j:usize) -> Result<Self::ColView<'a>,IndexOutOfBoundsError<usize>> {
+        self.m
+            .try_col_view(j)
     }
 }
 

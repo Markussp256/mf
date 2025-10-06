@@ -1,4 +1,4 @@
-use crate::{IntoIndexedIter, container::{Container, ContainerIndex, ContainerTryConstruct, ContainerConstructError}};
+use crate::{IntoIterIndexed, container::{Container, ContainerIndex, ContainerTryConstruct, ContainerConstructError}};
 
 use crate::error::SizeTooSmallError;
 
@@ -18,7 +18,7 @@ impl<Index:ContainerIndex,
         let f=|ind:Index|c2.get(start.clone().elem_wise_add(ind)).unwrap();
         Self::try_accept(size.clone(),f)?;
         Self::any_from_iter(None,
-            <C2 as IntoIndexedIter<Index,T>>::into_indexed_iter(c2)
+            <C2 as IntoIterIndexed<Index,T>>::into_iter_indexed(c2)
             //c2.into_iterator()
               .filter(|(ind,_)|start.is_elem_wise_smaller_eq(ind) &&
                                          ind.is_elem_wise_strictly_smaller(&required_size))

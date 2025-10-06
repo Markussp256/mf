@@ -1,5 +1,5 @@
-use crate::container::index_trait::{column_major_index_iterator,row_major_index_iterator};
-use nalgebra::{allocator::Allocator, DMatrix, DefaultAllocator, Dim, Matrix, OMatrix, RawStorage, RawStorageMut, Scalar};
+use crate::container::index_iterator::{column_major_index_iterator,row_major_index_iterator};
+use nalgebra::{allocator::Allocator, DMatrix, DefaultAllocator, Dim, IsContiguous, Matrix, OMatrix, RawStorage, RawStorageMut, Scalar};
 use num_traits::Zero;
 use crate::*;
 use super::*;
@@ -96,6 +96,16 @@ impl<T : Scalar,
 impl<T : Scalar,
      R : Dim,
      C : Dim,
+     S : RawStorage<T,R,C>> IsEmpty for Matrix<T,R,C,S> {
+    fn is_empty(&self) -> bool {
+        self.nrows() == 0 ||
+        self.ncols() == 0
+    }
+}
+
+impl<T : Scalar,
+     R : Dim,
+     C : Dim,
      S : RawStorage<T,R,C>> Size<usize> for Matrix<T,R,C,S> {
     fn size(&self) -> usize {
         if self.nrows() == 1 {
@@ -178,8 +188,9 @@ impl<T : Scalar,
      R : Dim,
      C : Dim,
      S : RawStorage<T,R,C>> First<T> for Matrix<T,R,C,S> {
-    fn first(&self) -> Option<& T> {
-       self.get(0)
+    fn first(&self) -> Result<&T,EmptyContainerError> {
+        self.get((0,0))
+            .ok_or(EmptyContainerError)
     }
 }
 
@@ -187,17 +198,35 @@ impl<T : Scalar,
      R : Dim,
      C : Dim,
      S : RawStorage<T,R,C>> Last<T> for Matrix<T,R,C,S> {
-    fn last(&self) -> Option<& T> {
-       if self.is_empty() { return None; }
-       self.get((self.nrows()-1,self.ncols()-1))
+    fn last(&self) -> Result<&T,EmptyContainerError> {
+       let sz:(usize,usize)=self.size();
+       if sz.iter().any(|szi|szi == &0) {
+           return Err(EmptyContainerError);
+       }
+       let index=<(usize,usize)>::try_from_iter(sz.into_iterator().map(|szi|szi-1)).unwrap();
+       Ok(self.get(index).unwrap())
+    }
+}
+
+impl<T:Scalar, R:Dim, C:Dim, S : RawStorage<T,R,C>+IsContiguous> AsSlice<T> for Matrix<T,R,C,S>
+    where DefaultAllocator : Allocator<R,C> {
+    fn as_slice(&self) ->  &[T] {
+        self.as_slice()
+    }
+}
+
+impl<T:Scalar, R:Dim, C:Dim, S : RawStorageMut<T,R,C>+IsContiguous> AsMutSlice<T> for Matrix<T,R,C,S>
+    where DefaultAllocator : Allocator<R,C> {
+    fn as_mut_slice(& mut self) ->  & mut [T] {
+        self.as_mut_slice()
     }
 }
 
 impl<T : Scalar,
      R : Dim,
      C : Dim,
-     S : RawStorageMut<T,R,C>> IndexedIterMut<usize, T> for Matrix<T,R,C,S> {
-    fn indexed_iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(usize,&'a mut T)> where T:'a {
+     S : RawStorageMut<T,R,C>> IterMutIndexed<usize, T> for Matrix<T,R,C,S> {
+    fn iter_mut_indexed<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(usize,&'a mut T)> where T:'a {
         self.iter_mut()
             .enumerate()
     }
@@ -206,8 +235,8 @@ impl<T : Scalar,
 impl<T : Scalar,
      R : Dim,
      C : Dim,
-     S : RawStorageMut<T,R,C>> IndexedIterMut<U2, T> for Matrix<T,R,C,S> {
-    fn indexed_iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(U2,&'a mut T)> where T:'a {
+     S : RawStorageMut<T,R,C>> IterMutIndexed<U2, T> for Matrix<T,R,C,S> {
+    fn iter_mut_indexed<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(U2,&'a mut T)> where T:'a {
         column_major_index_iterator(self.size())
             .zip(self.iter_mut())
     }
@@ -216,8 +245,8 @@ impl<T : Scalar,
 impl<T : Scalar,
      R : Dim,
      C : Dim,
-     S : RawStorage<T,R,C>> IndexedIter<usize, T> for Matrix<T,R,C,S> {
-    fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(usize,&'a T)> where T:'a {
+     S : RawStorage<T,R,C>> IterIndexed<usize, T> for Matrix<T,R,C,S> {
+    fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(usize,&'a T)> where T:'a {
         self.iter()
             .enumerate()
     }
@@ -226,8 +255,8 @@ impl<T : Scalar,
 impl<T : Scalar,
      R : Dim,
      C : Dim,
-     S : RawStorage<T,R,C>> IndexedIter<U2, T> for Matrix<T,R,C,S> {
-    fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a T)> where T:'a {
+     S : RawStorage<T,R,C>> IterIndexed<U2, T> for Matrix<T,R,C,S> {
+    fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a T)> where T:'a {
         column_major_index_iterator(self.size())
             .zip(self.iter())
     }
@@ -236,8 +265,8 @@ impl<T : Scalar,
 impl<T : Scalar,
      R : Dim,
      C : Dim,
-     S : RawStorage<T,R,C>> IntoIndexedIter<usize, T> for Matrix<T,R,C,S> {
-    fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(usize,T)> {
+     S : RawStorage<T,R,C>> IntoIterIndexed<usize, T> for Matrix<T,R,C,S> {
+    fn into_iter_indexed(self) -> impl ExactSizeIterator<Item=(usize,T)> {
         // nalgebra does not seem to have an appropriate into_iter method
         let v:Vec<(usize,T)>=
             self.iter()
@@ -264,8 +293,8 @@ impl<T : Scalar,
 impl<T : Scalar,
      R : Dim,
      C : Dim,
-     S : RawStorage<T,R,C>> IntoIndexedIter<U2,T> for Matrix<T,R,C,S> {
-    fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(U2,T)> {
+     S : RawStorage<T,R,C>> IntoIterIndexed<U2,T> for Matrix<T,R,C,S> {
+    fn into_iter_indexed(self) -> impl ExactSizeIterator<Item=(U2,T)> {
         let v:Vec<T>=
             self.iter()
                 .cloned()

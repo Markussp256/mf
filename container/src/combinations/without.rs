@@ -65,6 +65,13 @@ impl<Index:Clone, C> Size<Index> for Without<Index,C> {
     }
 }
 
+impl<Index:Iter<usize>,C> IsEmpty for Without<Index,C> {
+    fn is_empty(&self) -> bool {
+        self.size
+            .iter()
+            .any(|szi|szi == &0)
+    }
+}
 
 impl<Index : ContainerIndex, T, C : Get<Index,T>> Get<Index,T> for Without<Index,C> {
     fn get(&self, index:Index) -> Result<&T,IndexOutOfBoundsError<Index>> {
@@ -73,22 +80,22 @@ impl<Index : ContainerIndex, T, C : Get<Index,T>> Get<Index,T> for Without<Index
     }
 }
 
-impl<Index : ContainerIndex, T, C : IndexedIter<Index, T>> IndexedIter<Index,T> for Without<Index, C> {
-    fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(Index,&'a T)> where T : 'a {
+impl<Index : ContainerIndex, T, C : IterIndexed<Index, T>> IterIndexed<Index,T> for Without<Index, C> {
+    fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(Index,&'a T)> where T : 'a {
         let ndofs:usize=<Self as NumberOfDegreesOfFreedom<T>>::ndofs(&self);
         let no_common_coord_fn=no_common_coord_fn(self.wo_index.clone());
         let c_index_into_index_fn=c_index_into_index_fn(self.wo_index.clone());
         self.c
-            .indexed_iter()
+            .iter_indexed()
             .filter(move |(i,_)|no_common_coord_fn(i))
             .map(move |(i,t)|(c_index_into_index_fn(i),t))
             .into_exact_size_iter(ndofs)
     }
 }
 
-impl<Index, T, C> Iter<T> for Without<Index, C> where Self : IndexedIter<Index,T> {
+impl<Index, T, C> Iter<T> for Without<Index, C> where Self : IterIndexed<Index,T> {
     fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a T> where T:'a {
-        self.indexed_iter()
+        self.iter_indexed()
             .map(|(_,t)|t)
     }
 }
@@ -97,22 +104,22 @@ impl<Index, T, C : ItemT<T=T>> ItemT for Without<Index, C> {
     type T = T;
 }
 
-impl<Index : 'static+ContainerIndex, T, C : 'static+IntoIndexedIter<Index,T>> IntoIndexedIter<Index, T> for Without<Index,C> {
-    fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(Index,T)> {
+impl<Index : 'static+ContainerIndex, T, C : 'static+IntoIterIndexed<Index,T>> IntoIterIndexed<Index, T> for Without<Index,C> {
+    fn into_iter_indexed(self) -> impl ExactSizeIterator<Item=(Index,T)> {
         let ndofs:usize=<Self as NumberOfDegreesOfFreedom<T>>::ndofs(&self);
         let no_common_coord_fn=no_common_coord_fn(self.wo_index.clone());
         let c_index_into_index_fn=c_index_into_index_fn(self.wo_index.clone());
         self.c
-            .into_indexed_iter()
+            .into_iter_indexed()
             .filter(move |(i,_)|no_common_coord_fn(i))
             .map(move |(i,t)|(c_index_into_index_fn(i),t))
             .into_exact_size_iter(ndofs)
     }
 }
 
-impl<Index, T, C> IntoIter<T> for Without<Index, C> where Self : IntoIndexedIter<Index, T> {
+impl<Index, T, C> IntoIter<T> for Without<Index, C> where Self : IntoIterIndexed<Index, T> {
     fn into_iterator(self) -> impl ExactSizeIterator<Item=T> {
-        self.into_indexed_iter()
+        self.into_iter_indexed()
             .map(|(_,t)|t)
     }
 }
@@ -126,22 +133,22 @@ impl<Index : ContainerIndex, T, C : TryIntoElement<Index, T>> TryIntoElement<Ind
 }
 
 
-impl<Index : ContainerIndex, T, C : IndexedIterMut<Index,T>> IndexedIterMut<Index, T> for Without<Index,C> {
-    fn indexed_iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(Index,&'a mut T)> where T:'a {
+impl<Index : ContainerIndex, T, C : IterMutIndexed<Index,T>> IterMutIndexed<Index, T> for Without<Index,C> {
+    fn iter_mut_indexed<'a>(&'a mut self) -> impl ExactSizeIterator<Item=(Index,&'a mut T)> where T:'a {
         let ndofs:usize=<Self as NumberOfDegreesOfFreedom<T>>::ndofs(&self);
         let no_common_coord_fn=no_common_coord_fn(self.wo_index.clone());
         let c_index_into_index_fn=c_index_into_index_fn(self.wo_index.clone());
         self.c
-            .indexed_iter_mut()
+            .iter_mut_indexed()
             .filter(move |(i,_)|no_common_coord_fn(i))
             .map(move |(i,t)|(c_index_into_index_fn(i),t))
             .into_exact_size_iter(ndofs)
     }
 }
 
-impl<Index, T, C> IterMut<T> for Without<Index, C> where Self : IndexedIterMut<Index, T> {
+impl<Index, T, C> IterMut<T> for Without<Index, C> where Self : IterMutIndexed<Index, T> {
     fn iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=&'a mut T> where T:'a {
-        self.indexed_iter_mut()
+        self.iter_mut_indexed()
             .map(|(_,t)|t)
     }
 }

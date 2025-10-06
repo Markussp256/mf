@@ -29,18 +29,20 @@ where
         let len = self.len;
         (len, Some(len))
     }
-
 }
 
 
-impl<I:Iterator> ExactSizeIterator for WithExactSize<I> {
-    // not necessary because there is default impl based on size_hint
-    // fn len(&self) -> usize {
-    //     self.len
-    // }
+impl<I:Iterator> ExactSizeIterator for WithExactSize<I> {}
+
+impl<I:DoubleEndedIterator> DoubleEndedIterator for WithExactSize<I> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let next_back = self.iter.next_back();
+        if next_back.is_some() {
+            self.len += 1;
+        }
+        next_back
+    }
 }
-
-
 
 
 pub trait IntoExactSizeIterator : Sized+IntoIterator {

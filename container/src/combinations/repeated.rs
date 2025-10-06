@@ -1,4 +1,5 @@
-use container_traits::*;
+use container_traits::{index_iterator::ContainerIndexIterator, *};
+use utils::iter::IntoExactSizeIterator;
 
 // zero elements is not allowed
 // one could add it by using Option<value>
@@ -19,6 +20,14 @@ impl<Index:Clone,C> Size<Index> for Repeated<Index,C> {
     fn size(&self) -> Index {
         self.size
             .clone()
+    }
+}
+
+impl<Index:ContainerIndex,C> IsEmpty for Repeated<Index,C> {
+    fn is_empty(&self) -> bool {
+        self.size
+            .iter()
+            .any(|szi|szi == &0)
     }
 }
 
@@ -43,22 +52,23 @@ impl<Index:ContainerIndex,C:Size<Index>> Repeated<Index,C> {
 // }
 
 
-impl<Index:ContainerIndex,C> Repeated<Index,C> {
+impl<Index:ContainerSize,C> Repeated<Index,C> {
     fn iter_gen<'a,Out>(&'a self,f:impl Fn(Index) -> Out) -> impl ExactSizeIterator<Item=Out> where Out:'a {
-        self.size()
-            .index_iterator()
-            .map(f)
+        let numel=self.size.iter().cloned().into_product();
+        ContainerIndexIterator::from_size(self.size())
+           .map(f)
+           .into_exact_size_iter(numel)
     }
 }
 
-impl<Index:ContainerIndex,T,C:Get<Index,T>+Size<Index>> Iter<T> for Repeated<Index,C> where Self : Get<Index,T> {
+impl<Index:ContainerSize,T,C:Get<Index,T>+Size<Index>> Iter<T> for Repeated<Index,C> where Self : Get<Index,T> {
     fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a T> where T:'a {
         self.iter_gen(move |ind: Index|self.get(ind).unwrap())
     }
 }
 
-impl<Index:ContainerIndex,T,C:Get<Index,T>+Size<Index>> IndexedIter<Index,T> for Repeated<Index,C> {
-    fn indexed_iter<'a>(&'a self) -> impl ExactSizeIterator<Item=(Index,&'a T)> where T:'a {
+impl<Index:ContainerSize,T,C:Get<Index,T>+Size<Index>> IterIndexed<Index,T> for Repeated<Index,C> {
+    fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(Index,&'a T)> where T:'a {
         self.iter_gen(move |ind: Index|(ind.clone(),self.get(ind).unwrap()))
     }
 }

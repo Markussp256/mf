@@ -2,7 +2,7 @@ pub mod concat;
 pub use concat::Concat;
 
 pub mod empty;
-pub use empty::{Empty,IsEmpty};
+pub use empty::Empty;
 
 pub mod from_array;
 pub use from_array::FromArray;

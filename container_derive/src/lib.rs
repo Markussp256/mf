@@ -191,12 +191,12 @@ pub fn try_accept_proc_macro(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(AsSlice)]
 pub fn as_slice_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);  
-    let (generics, wc, ty, wt) = preprocess(& mut input);
-    let tr=quote!{container_traits::AsSlice};
+    let (generics, wc, [(ty, mut wt)]) = preprocess_no_impl_add_gen_types(& mut input,vec!["TAsSlice"]);
+    let tr=quote!{container_traits::AsSlice<TAsSlice>};
+    let wt=wt.remove(0);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
-            type T=<#wt as #tr>::T;
-            fn as_slice(&self) -> &[<#wt as #tr>::T] {
+            fn as_slice(&self) -> &[TAsSlice] {
                 <#wt as #tr>::as_slice(& self.0)
             }
         }
@@ -401,7 +401,7 @@ pub fn first_proc_macro(input: TokenStream) -> TokenStream {
     let wt=wt.remove(0);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
-            fn first(&self) -> Option<&TFirst> {
+            fn first(&self) -> Result<&TFirst,container_traits::EmptyContainerError> {
                 <#wt as #tr>::first(&self.0)
             }
         }
@@ -436,12 +436,14 @@ pub fn last_proc_macro(input: TokenStream) -> TokenStream {
     let wt=wt.pop().unwrap();
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
-            fn last(&self) -> Option<&TLast> {
+            fn last(&self) -> Result<&TLast,container_traits::EmptyContainerError> {
                 <#wt as #tr>::last(&self.0)
             }
         }
     }.into()
 }
+
+
 
 /// Implements [`container_traits::GetMut`]
 ///
@@ -522,37 +524,37 @@ pub fn iter_proc_macro(input: TokenStream) -> TokenStream {
     }.into()
 }
 
-/// Implements [`std::iter::IndexedIter`]
+/// Implements [`std::iter::IterIndexed`]
 ///
 /// # Example
 /// 
 /// ```rust
-/// use container_derive::IndexedIter;
-/// use container_traits::IndexedIter;
+/// use container_derive::IterIndexed;
+/// use container_traits::IterIndexed;
 /// 
-/// #[derive(IndexedIter, Debug, PartialEq)]
+/// #[derive(IterIndexed, Debug, PartialEq)]
 /// struct MyWrapper<C>(C);
 /// 
-/// let mut iter=MyWrapper([7,2,5]).indexed_iter();
+/// let mut iter=MyWrapper([7,2,5]).iter_indexed();
 /// assert_eq!(iter.next(),Some((0,&7)));
 /// assert_eq!(iter.next(),Some((1,&2)));
 /// assert_eq!(iter.next(),Some((2,&5)));
 /// assert_eq!(iter.next(),None);
 /// 
 /// ```
-#[proc_macro_derive(IndexedIter)]
-pub fn indexed_iter_proc_macro(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(IterIndexed)]
+pub fn iter_indexed_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=quote!{ container_traits::IndexedIter<IndexIndexedIter,TIndexedIter> };
+    let tr=quote!{ container_traits::IterIndexed<IndexIterIndexed,TIterIndexed> };
     let (generics, wc, [(ty, mut wt)])=
-    preprocess_no_impl_add_gen_types(& mut input,vec!["IndexIndexedIter","TIndexedIter"]);
+    preprocess_no_impl_add_gen_types(& mut input,vec!["IndexIterIndexed","TIterIndexed"]);
     let wt=wt.remove(0);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
-    fn indexed_iter<'indexed_iter_lifetime>(&'indexed_iter_lifetime self)
-        -> impl ExactSizeIterator<Item=(IndexIndexedIter,&'indexed_iter_lifetime TIndexedIter)>
-            where TIndexedIter : 'indexed_iter_lifetime {
-                <#wt as #tr>::indexed_iter(&self.0)
+    fn iter_indexed<'iter_indexed_lifetime>(&'iter_indexed_lifetime self)
+        -> impl ExactSizeIterator<Item=(IndexIterIndexed,&'iter_indexed_lifetime TIterIndexed)>
+            where TIterIndexed : 'iter_indexed_lifetime {
+                <#wt as #tr>::iter_indexed(&self.0)
             }
         }
     }.into()
@@ -577,13 +579,54 @@ pub fn indexed_iter_proc_macro(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(AsMutSlice)]
 pub fn as_mut_slice_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);  
-    let (generics, wc, ty, wt) = preprocess(& mut input);
-    let tr=quote!{container_traits::AsMutSlice};
+    let (generics, wc, [(ty, mut wt)]) = preprocess_no_impl_add_gen_types(& mut input,vec!["TAsMutSlice"]);
+    let tr=quote!{container_traits::AsMutSlice<TAsMutSlice>};
+    let wt=wt.remove(0);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
-            type T=<#wt as #tr>::T;
-            fn as_mut_slice(&mut self) -> &mut [<#wt as #tr>::T] {
+            fn as_mut_slice(&mut self) -> &mut [TAsMutSlice] {
                 <#wt as #tr>::as_mut_slice(& mut self.0)
+            }
+        }
+    }.into()
+}
+
+/// Implements [`container_traits::TryIterMutBounded`]
+/// 
+/// # Example
+/// 
+/// ```rust
+/// use container_derive::TryIterMutBounded;
+/// use container_traits::TryIterMutBounded;
+/// 
+/// #[derive(TryIterMutBounded, PartialEq, Debug)]
+/// struct MyWrapper<C>(C);
+/// 
+/// let mut vec:MyWrapper::<Vec<i32>>=MyWrapper(vec![0,1,2,3]);
+///
+/// for vi in vec.try_iter_mut_bounded(1,2) {
+///     *vi+=2;
+/// }
+///
+/// assert_eq!(vec, MyWrapper(vec![0,3,4,3]));
+/// ```
+#[proc_macro_derive(TryIterMutBounded)]
+pub fn try_iter_mut_bounded_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);  
+    let tr=quote!{container_traits::TryIterMutBounded<IndexTryIterMutBounded,TTryIterMutBounded>};
+    let (generics, wc, [(ty, wt)]) =
+    preprocess_no_impl_add_gen_types::<1>(& mut input, vec!["IndexTryIterMutBounded","TTryIterMutBounded"]);
+    quote! {
+        impl #generics #tr for #ty where #(#wt : #tr)*, #wc {
+            fn try_iter_mut_bounded<'try_iter_mut_bounded_lifetime>(&'try_iter_mut_bounded_lifetime mut self,lb:IndexTryIterMutBounded,ub:IndexTryIterMutBounded)
+            -> impl ExactSizeIterator<Item=(IndexTryIterMutBounded,&'try_iter_mut_bounded_lifetime mut TTryIterMutBounded)>
+            where TTryIterMutBounded : 'try_iter_mut_bounded_lifetime {
+                let mut iter=container_traits::ContainerIndexIterator::try_from_lb_ub(&lb,$ub)?;
+                container_traits::IndexOutOfBoundsError::try_new(&self.size(),&ub)?;
+                
+                Ok(self.iter_mut()
+                       .skip(lb)
+                       .into_exact_size())
             }
         }
     }.into()
@@ -632,37 +675,74 @@ pub fn iter_mut_proc_macro(input: TokenStream) -> TokenStream {
     }.into()
 }
 
-/// Implements [`std::iter::IndexedIterMut`]
+/// Implements [`std::iter::TryTryIterMutBoundedIndexed`]
 ///
 /// # Example
 /// 
 /// ```rust
-/// use container_derive::IndexedIterMut;
-/// use container_traits::IndexedIterMut;
+/// use container_derive::TryTryIterMutBoundedIndexed;
+/// use container_traits::TryTryIterMutBoundedIndexed;
 /// 
-/// #[derive(IndexedIterMut, Debug, PartialEq)]
+/// #[derive(TryTryIterMutBoundedIndexed, Debug, PartialEq)]
 /// struct MyWrapper([i32;3]);
 /// 
 /// let mut a=MyWrapper([7,2,5]);
-/// for (i, ai) in a.indexed_iter_mut() {
+/// for (i, ai) in a.try_iter_mut_bounded_indexed(0,1) {
+///   *ai += i as i32;
+/// }
+/// assert_eq!(a,MyWrapper([7,3,5]));
+/// 
+/// ```
+#[proc_macro_derive(TryTryIterMutBoundedIndexed)]
+pub fn try_iter_mut_bounded_indexed_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let tr=quote!{ container_traits::TryTryIterMutBoundedIndexed<IndexTryTryIterMutBoundedIndexed,TTryTryIterMutBoundedIndexed> };
+    let (generics, wc, [(ty, wt)])=
+    preprocess_no_impl_add_gen_types(& mut input,vec!["IndexTryTryIterMutBoundedIndexed", "TTryTryIterMutBoundedIndexed"]);
+    quote! {
+        impl #generics #tr for #ty where #(#wt : #tr,)* #wc {
+            fn try_iter_mut_bounded_indexed<'try_iter_mut_bounded_indexed_lifetime>(&'try_iter_mut_bounded_indexed_lifetime mut self)
+                -> impl ExactSizeIterator<Item=(IndexTryTryIterMutBoundedIndexed,&'try_iter_mut_bounded_indexed_lifetime mut TTryTryIterMutBoundedIndexed)>
+                where TTryTryIterMutBoundedIndexed : 'try_iter_mut_bounded_indexed_lifetime {
+                self.0
+                    .try_iter_mut_bounded_indexed()
+            }
+        }
+    }.into()
+}
+
+
+/// Implements [`std::iter::IterMutIndexed`]
+///
+/// # Example
+/// 
+/// ```rust
+/// use container_derive::IterMutIndexed;
+/// use container_traits::IterMutIndexed;
+/// 
+/// #[derive(IterMutIndexed, Debug, PartialEq)]
+/// struct MyWrapper([i32;3]);
+/// 
+/// let mut a=MyWrapper([7,2,5]);
+/// for (i, ai) in a.iter_mut_indexed() {
 ///   *ai += i as i32;
 /// }
 /// assert_eq!(a,MyWrapper([7,3,7]));
 /// 
 /// ```
-#[proc_macro_derive(IndexedIterMut)]
-pub fn indexed_iter_mut_proc_macro(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(IterMutIndexed)]
+pub fn iter_mut_indexed_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=quote!{ container_traits::IndexedIterMut<IndexIndexedIterMut,TIndexedIterMut> };
+    let tr=quote!{ container_traits::IterMutIndexed<IndexIterMutIndexed,TIterMutIndexed> };
     let (generics, wc, [(ty, wt)])=
-    preprocess_no_impl_add_gen_types(& mut input,vec!["IndexIndexedIterMut", "TIndexedIterMut"]);
+    preprocess_no_impl_add_gen_types(& mut input,vec!["IndexIterMutIndexed", "TIterMutIndexed"]);
     quote! {
         impl #generics #tr for #ty where #(#wt : #tr,)* #wc {
-            fn indexed_iter_mut<'indexed_iter_mut_lifetime>(&'indexed_iter_mut_lifetime mut self)
-                -> impl ExactSizeIterator<Item=(IndexIndexedIterMut,&'indexed_iter_mut_lifetime mut TIndexedIterMut)>
-                where TIndexedIterMut : 'indexed_iter_mut_lifetime {
+            fn iter_mut_indexed<'iter_mut_indexed_lifetime>(&'iter_mut_indexed_lifetime mut self)
+                -> impl ExactSizeIterator<Item=(IndexIterMutIndexed,&'iter_mut_indexed_lifetime mut TIterMutIndexed)>
+                where TIterMutIndexed : 'iter_mut_indexed_lifetime {
                 self.0
-                    .indexed_iter_mut()
+                    .iter_mut_indexed()
             }
         }
     }.into()
@@ -785,7 +865,7 @@ pub fn empty_proc_macro(input: TokenStream) -> TokenStream {
 pub fn is_empty_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let (generics, wc, ty, wt) = preprocess(& mut input);
-    let tr=quote!{container_traits::for_dynamic::IsEmpty};
+    let tr=quote!{container_traits::IsEmpty};
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
                 fn is_empty(&self) -> bool {
@@ -1885,35 +1965,69 @@ pub fn into_local_parameters_proc_macro(input: TokenStream) -> TokenStream {
     }.into()
 }
 
-/// Implements [`std::iter::IntoIndexedIter`]
+/// Implements [`std::iter::TryIntoTryIterBounded`]
 ///
 /// # Example
 /// 
 /// ```rust
-/// use container_derive::IntoIndexedIter;
-/// use container_traits::IntoIndexedIter;
+/// use container_derive::TryIntoTryIterBounded;
+/// use container_traits::TryIntoTryIterBounded;
 /// 
-/// #[derive(IntoIndexedIter, Debug, PartialEq)]
+/// #[derive(TryIntoTryIterBounded, Debug, PartialEq)]
 /// struct MyWrapper<C>(C);
 /// 
-/// let mut iter=MyWrapper([7,2,5]).into_indexed_iter();
+/// let mut iter=MyWrapper([7,2,5]).try_into_try_iter_bounded(1,2);
+/// assert_eq!(iter.next(),Some(2));
+/// assert_eq!(iter.next(),Some(5));
+/// assert_eq!(iter.next(),None);
+/// 
+/// ```
+#[proc_macro_derive(TryIntoTryIterBounded)]
+pub fn try_into_try_iter_bounded_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let tr=quote!{ container_traits::TryIntoTryIterBounded<IndexTryIntoTryIterBounded,TTryIntoTryIterBounded> };
+    let (generics, wc, [(ty, mut wt)])=
+    preprocess_no_impl_add_gen_types(& mut input,vec!["IndexTryIntoTryIterBounded","TTryIntoTryIterBounded"]);
+    let wt=wt.remove(0);
+    quote! {
+        impl #generics #tr for #ty where #wt : #tr, #wc {
+            fn try_into_try_iter_bounded(self,lb:IndexTryIntoTryIterBounded,ub:IndexTryIntoTryIterBounded) -> Result<impl ExactSizeIterator<Item=TTryIntoTryIterBounded>,container_traits::DimensionMismatchError<IndexTryIntoTryIterBounded>> {
+                <#wt as #tr>::try_into_try_iter_bounded(self.0,lb,ub)
+            }
+        }
+    }.into()
+}
+
+
+/// Implements [`std::iter::IntoIterIndexed`]
+///
+/// # Example
+/// 
+/// ```rust
+/// use container_derive::IntoIterIndexed;
+/// use container_traits::IntoIterIndexed;
+/// 
+/// #[derive(IntoIterIndexed, Debug, PartialEq)]
+/// struct MyWrapper<C>(C);
+/// 
+/// let mut iter=MyWrapper([7,2,5]).into_iter_indexed();
 /// assert_eq!(iter.next(),Some((0,7)));
 /// assert_eq!(iter.next(),Some((1,2)));
 /// assert_eq!(iter.next(),Some((2,5)));
 /// assert_eq!(iter.next(),None);
 /// 
 /// ```
-#[proc_macro_derive(IntoIndexedIter)]
-pub fn into_indexed_iter_proc_macro(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(IntoIterIndexed)]
+pub fn into_iter_indexed_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=quote!{ container_traits::IntoIndexedIter<IndexIntoIndexedIter,TIntoIndexedIter> };
+    let tr=quote!{ container_traits::IntoIterIndexed<IndexIntoIterIndexed,TIntoIterIndexed> };
     let (generics, wc, [(ty, mut wt)])=
-    preprocess_no_impl_add_gen_types(& mut input,vec!["IndexIntoIndexedIter","TIntoIndexedIter"]);
+    preprocess_no_impl_add_gen_types(& mut input,vec!["IndexIntoIterIndexed","TIntoIterIndexed"]);
     let wt=wt.remove(0);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
-            fn into_indexed_iter(self) -> impl ExactSizeIterator<Item=(IndexIntoIndexedIter,TIntoIndexedIter)> {
-                <#wt as #tr>::into_indexed_iter(self.0)
+            fn into_iter_indexed(self) -> impl ExactSizeIterator<Item=(IndexIntoIterIndexed,TIntoIterIndexed)> {
+                <#wt as #tr>::into_iter_indexed(self.0)
             }
         }
     }.into()
@@ -2035,11 +2149,13 @@ pub fn for_dyn_proc_macro(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_derive(ContainerView)]
 pub fn container_view_proc_macro(input: TokenStream) -> TokenStream {
-    [  
+    [
+        as_slice_proc_macro,
+        is_empty_proc_macro,
         get_proc_macro,
         ndofs_proc_macro,
         iter_proc_macro,
-        indexed_iter_proc_macro,
+        iter_indexed_proc_macro,
         size_proc_macro,
         first_proc_macro,
         last_proc_macro,
@@ -2065,7 +2181,7 @@ pub fn just_container_proc_macro(input: TokenStream) -> TokenStream {
     [  
         container_view_proc_macro,
         into_iter_proc_macro,
-        into_indexed_iter_proc_macro,
+        into_iter_indexed_proc_macro,
         into_vec_proc_macro,
         try_into_element_proc_macro
     ].iter()
@@ -2099,23 +2215,24 @@ pub fn container_any_construct_proc_macro(input: TokenStream) -> TokenStream {
      .collect()
 }
 
-/// Implements [`container_traits::ContainerMut`]
+/// Implements [`container_traits::ContainerViewMut`]
 /// 
 /// # Example
 ///
 /// ```rust
-/// use container_derive::ContainerMut;
+/// use container_derive::ContainerViewMut;
 ///
-/// #[derive(ContainerMut)]
+/// #[derive(ContainerViewMut)]
 /// struct MyWrapper<C>(C);
 /// 
 /// ```
-#[proc_macro_derive(ContainerMut)]
-pub fn container_mut_proc_macro(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(ContainerViewMut)]
+pub fn container_view_mut_proc_macro(input: TokenStream) -> TokenStream {
     [
+        as_mut_slice_proc_macro,
         container_view_proc_macro,
         iter_mut_proc_macro,
-        indexed_iter_mut_proc_macro,
+        iter_mut_indexed_proc_macro,
         get_mut_proc_macro
     ].iter()
      .map(|f|f(input.clone()))
@@ -2138,7 +2255,6 @@ pub fn container_dynamic_proc_macro(input: TokenStream) -> TokenStream {
     [  
         container_any_construct_proc_macro,
         empty_proc_macro,
-        is_empty_proc_macro,
         one_element_proc_macro,
         pop_proc_macro,
         push_proc_macro,
@@ -2224,13 +2340,13 @@ pub fn container_proc_macro(input: TokenStream) -> TokenStream {
         get_mut_proc_macro,
         into_iter_proc_macro,
         into_parameters_proc_macro,
-        into_indexed_iter_proc_macro,
+        into_iter_indexed_proc_macro,
         into_vec_proc_macro,
         item_t_proc_macro,
         iter_mut_proc_macro,
-        indexed_iter_mut_proc_macro,
+        iter_mut_indexed_proc_macro,
         iter_proc_macro,
-        indexed_iter_proc_macro,
+        iter_indexed_proc_macro,
         linear_container_static_proc_macro,
         linear_container_sized_proc_macro,
         try_accept_proc_macro,
