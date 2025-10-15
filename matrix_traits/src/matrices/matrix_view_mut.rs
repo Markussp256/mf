@@ -6,8 +6,8 @@ use super::MatrixView;
 type U2=(usize,usize);
 
 pub trait MatrixViewMut : ContainerViewMut<U2> + MatrixView {
-    type RowViewMut<'a> : RowVectorViewMut where Self : 'a;
-    type ColViewMut<'a> : ColVectorViewMut where Self : 'a;
+    type RowViewMut<'a> : RowVectorViewMut<T=Self::T> where Self : 'a;
+    type ColViewMut<'a> : ColVectorViewMut<T=Self::T> where Self : 'a;
 
     fn try_row_view_mut<'a>(&'a mut self, i:usize) -> Result<Self::RowViewMut<'a>,IndexOutOfBoundsError<usize>>;
 

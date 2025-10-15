@@ -60,7 +60,15 @@ macro_rules! impl_int_and_float {
         }
 
         impl Conjugate for $f {
-            fn conjugate(self) -> Self {
+            type Output=$f;
+            fn conjugate(&self) -> Self {
+                 self.clone()
+            }
+        }
+
+        impl IntoConjugate for $f {
+            type Output=$f;
+            fn into_conjugate(self) -> Self {
                  self
             }
         }

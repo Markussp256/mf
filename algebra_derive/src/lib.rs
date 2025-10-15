@@ -11,6 +11,7 @@ use quote::quote;
 use derive_helper::{preprocessor::*, rhs_subfields, self_subfields, fields_trait::Fields, Arity, DeriveHelper};
 
 /// Implements [`algebra_traits::Conjugate`]
+///            [`algebra_traits::IntoConjugate`]
 ///
 /// complex conjugation
 /// 
@@ -18,28 +19,96 @@ use derive_helper::{preprocessor::*, rhs_subfields, self_subfields, fields_trait
 /// 
 /// ```rust
 /// use algebra_derive::Conjugate;
-/// use algebra_traits::Conjugate;
+/// use algebra_traits::{Conjugate,IntoConjugate};
 /// use num::complex::Complex;
 ///
 /// #[derive(Conjugate, PartialEq, Debug)]
 /// struct MyWrapper<C>(C);
 /// 
 /// let w=MyWrapper(Complex{re:1.0, im:2.0});
-/// let con_w=w.conjugate();
+/// let con_w0=w.conjugate();
+/// let con_w=w.into_conjugate();
 ///
-/// assert_eq!(con_w, MyWrapper(Complex{re:1.0, im:-2.0}));
+/// assert_eq!(con_w0, MyWrapper(Complex{re:1.0, im:-2.0}));
+/// assert_eq!(con_w,  MyWrapper(Complex{re:1.0, im:-2.0}));
 /// ```
 #[proc_macro_derive(Conjugate)]
 pub fn conjugate_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let tr=parse_quote!{algebra_traits::Conjugate};
     let fn_name=parse_quote!{ conjugate };
-    let (generics, wc, [(ty, types)], implementation)=
-    DeriveHelper::new(& mut input, &tr, &fn_name).preprocess(Arity::Unary);
+    // let (generics, wc, [(ty, mut wt),(ty2,mut wt2)])=preprocess_no_impl::<2>(& mut input);
+    let (generics, wc, [(ty, wt),(ty2, wt2)], implementation)=
+    DeriveHelper::new(& mut input, &tr, &fn_name).unary_ref::<2>(false);
+    let tr_into=parse_quote!{algebra_traits::IntoConjugate};
+    let fn_name_into=parse_quote!{ into_conjugate };
+    let (_, _, _, impl_into)=
+    DeriveHelper::new(& mut input, &tr_into, &fn_name_into).preprocess(Arity::Unary);
     quote! {
-        impl #generics #tr for #ty where #(#types : #tr,)* #wc  {
-            fn conjugate(self) ->  #ty {
+        impl #generics #tr for #ty where #(#wt : #tr<Output=#wt2>,)*  #wc  {
+            type Output=#ty2;
+            fn conjugate(&self) ->  #ty2 {
                 #implementation
+            }
+        }
+
+        impl #generics #tr_into for #ty where #(#wt : #tr_into<Output=#wt2>,)* #wc  {
+            type Output=#ty2;
+            fn into_conjugate(self) ->  #ty2 {
+                #impl_into
+            }
+        }
+    }.into()
+}
+
+/// Implements [`algebra_traits::Conjugate`]
+///            [`algebra_traits::IntoConjugate`]
+/// 
+/// with Output=Self
+/// 
+/// complex conjugation
+/// 
+/// # Example
+/// 
+/// ```rust
+/// use algebra_derive::Conjugate;
+/// use algebra_traits::{Conjugate,IntoConjugate};
+/// use num::complex::Complex;
+///
+/// #[derive(Conjugate, PartialEq, Debug)]
+/// struct MyWrapper<C>(C);
+/// 
+/// let w=MyWrapper(Complex{re:1.0, im:2.0});
+/// let con_w0=w.conjugate();
+/// let con_w=w.into_conjugate();
+///
+/// assert_eq!(con_w0, MyWrapper(Complex{re:1.0, im:-2.0}));
+/// assert_eq!(con_w,  MyWrapper(Complex{re:1.0, im:-2.0}));
+/// ```
+#[proc_macro_derive(ClosedConjugate)]
+pub fn closed_conjugate_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let tr=parse_quote!{algebra_traits::Conjugate};
+    let fn_name=parse_quote!{ conjugate };
+    // let (generics, wc, [(ty, mut wt),(ty2,mut wt2)])=preprocess_no_impl::<2>(& mut input);
+    let (generics, wc, [(ty, wt)], implementation)=
+    DeriveHelper::new(& mut input, &tr, &fn_name).unary_ref::<1>(false);
+    let tr_into=parse_quote!{algebra_traits::IntoConjugate};
+    let fn_name_into=parse_quote!{ into_conjugate };
+    let (_, _, _, impl_into)=
+    DeriveHelper::new(& mut input, &tr_into, &fn_name_into).preprocess(Arity::Unary);
+    quote! {
+        impl #generics #tr for #ty where #(#wt : #tr<Output=#wt>,)*  #wc  {
+            type Output=Self;
+            fn conjugate(&self) ->  Self {
+                #implementation
+            }
+        }
+
+        impl #generics #tr_into for #ty where #(#wt : #tr_into<Output=#wt>,)* #wc  {
+            type Output=Self;
+            fn into_conjugate(self) ->  Self {
+                #impl_into
             }
         }
     }.into()
@@ -1665,7 +1734,7 @@ pub fn vector_mul_proc_macro(input: TokenStream) -> TokenStream {
 pub fn vector_proc_macro(input: TokenStream) -> TokenStream {
     let fs=[
         inner_product_space_proc_macro,
-        conjugate_proc_macro,
+        closed_conjugate_proc_macro,
         const_element_proc_macro,
         basis_proc_macro,
         vector_mul_proc_macro,
@@ -1695,7 +1764,7 @@ pub fn vector_proc_macro(input: TokenStream) -> TokenStream {
 pub fn scalar_container_proc_macro(input: TokenStream) -> TokenStream {
     let fs=[
         vectorspace_proc_macro,
-        conjugate_proc_macro
+        closed_conjugate_proc_macro
     ];
     fs.iter()
     .map(|f|f(input.clone()))

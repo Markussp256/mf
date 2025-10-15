@@ -1,5 +1,5 @@
-use nalgebra::{Scalar, SMatrix};
-use crate::{for_static,FromElement, ContainerConstructError, LenTooSmallError, OCTSize};
+use nalgebra::{SMatrix, Scalar};
+use crate::{for_static,FromElement, ContainerConstructError, LenTooSmallError};
 
 type U2=(usize,usize);
 
@@ -19,11 +19,6 @@ impl<T : Scalar,
     }
 }
 
-impl<T : Scalar,
-     const M:usize,
-     const N:usize> OCTSize<U2> for SMatrix<T,M,N> {
-    const OCTSIZE:Option<U2>=Some((M,N));
-}
 
 impl<T : Scalar,
      const M:usize,

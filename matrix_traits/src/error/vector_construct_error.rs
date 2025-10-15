@@ -1,8 +1,8 @@
 use container_traits::error::*;
 use utils::from_via;
 
-type U2=(usize,usize);
-
+// separate into row and col vector ?
+ 
 #[derive(Clone, Debug, thiserror::Error, PartialEq)]
 #[error("Matrix with {0} columns can not be muliplied with vector of length {1}")]
 pub struct MatrixCanNotBeMultipliedWithVectorError(usize,usize);

@@ -1,5 +1,5 @@
-use nalgebra::{Const, DVector, Dyn, Matrix, RowDVector, Scalar, ViewStorage, ViewStorageMut};
-use crate::{for_dynamic::*, for_dyn_and_stat::*, ChangeLen, IntoVec, IndexOutOfBoundsError};
+use nalgebra::{Const, DVector, Dyn, OMatrix, RowDVector, Scalar};
+use crate::{for_dynamic::*, for_dyn_and_stat::*, IntoVec, ChangeLen, IndexOutOfBoundsError};
 use num_traits::{Zero,One};
 
 use crate::ContainerConstructError;
@@ -7,26 +7,17 @@ use crate::ContainerConstructError;
 type U2=(usize,usize);
 type CCE=ContainerConstructError<U2>;
 
-type    DVectorView   <'a,F>=Matrix<F,Dyn,Const<1>,ViewStorage<'a, F, Dyn, Const<1>,Const<1>, Dyn>>;
-type RowDVectorView   <'a,F>=Matrix<F,Const<1>,Dyn,ViewStorage<'a, F, Const<1>, Dyn, Const<1>, Dyn>>;
-type    DVectorViewMut<'a,F>=Matrix<F,Dyn,Const<1>,ViewStorageMut<'a, F, Dyn, Const<1>, Const<1>,Dyn>>;
-type RowDVectorViewMut<'a,F>=Matrix<F,Const<1>,Dyn,ViewStorageMut<'a, F, Const<1>, Dyn, Const<1>, Dyn>>;
 
+macro_rules! impl_vector_owned {
+    ($t:ty) => {
 
-macro_rules! impl_vector_view {
-    ($name:ident $(, $lt:lifetime )?) => {
-        impl<$($lt,)?T : Scalar> OCTSize<usize> for $name<$($lt,)?T> {
-            const OCTSIZE:Option<usize>=None;
+        impl<T:Scalar+Zero+One> StandardBasis for $t {
+            fn try_standard_basis_element(len:usize, index:usize) -> Result<Self,IndexOutOfBoundsError<usize>> {
+                <Self as TryPutAt<usize,T>>::try_put_at(len,index,T::one())
+            }
         }
-    };
-}
 
-macro_rules! impl_vector {
-    ($name:ident) => {
-
-        impl_vector_view!($name);
-
-        impl<T:Scalar> Concat for $name<T> {
+        impl<T:Scalar> Concat for $t {
             fn concat(self, rhs:Self) -> Self {
                 Self::from_vec(
                     self.into_vec().concat(
@@ -34,68 +25,58 @@ macro_rules! impl_vector {
             }
         }
 
-        impl<T:Scalar> Empty for $name<T> {
+        impl<T:Scalar> Empty for $t {
             fn empty() -> Self {
-                $name::from_vec(Vec::new())
+                <$t>::from_vec(Vec::new())
             }
         }
 
-        impl<T:Scalar> OneElement<T> for $name<T> {
+        impl<T:Scalar> OneElement<T> for $t {
             fn one_element(t:T) -> Self {
-                $name::from_vec(vec![t])
+                <$t>::from_vec(vec![t])
             }
         }
 
-        impl<T:Scalar> FromElement<usize,T> for $name<T> {
-             fn from_element(len:usize,t:T) -> Self {
-                $name::from_element(len, t)
-             }
-        }
 
-        impl<T:Scalar> FromFn<usize,T> for $name<T> {
-            fn from_fn(len:usize,f: impl Fn(usize)-> T) -> Self {
-                let iter=(0..len).map(f);
-                <Self as crate::AnyFromIterator<T,CCE>>::any_from_iter(None, iter).unwrap()
-            }
-        }
-
-        impl<T:Scalar> FromVec<T> for $name<T> {
-            fn from_vec(v:Vec<T>) -> Self {
-                $name::from_vec(v)
-            }
-        }
-
-        impl<T:Scalar+Zero> TryPutAt<usize,T> for $name<T> {
+        impl<T:Scalar+Zero> TryPutAt<usize,T> for $t {
             fn try_put_at(len:usize, index:usize, t:T) -> Result<Self,IndexOutOfBoundsError<usize>> {
                 Vec::<T>::try_put_at(len,index,t)
                     .map(|v|Self::from_vec(v))
             }
         }
 
-        impl<T:Scalar+Zero+One> StandardBasis for $name<T> {
-            fn try_standard_basis_element(len:usize, index:usize) -> Result<Self,IndexOutOfBoundsError<usize>> {
-                <Self as TryPutAt<usize,T>>::try_put_at(len,index,T::one())
+        impl<T:Scalar> FromElement<usize,T> for $t {
+            fn from_element(len:usize,t:T) -> Self {
+                <$t>::from_element(len, t)
             }
         }
 
-        impl<T:Scalar> Zeros<usize,T> for $name<T> {
+        impl<T:Scalar> FromFn<usize,T> for $t {
+            fn from_fn(len:usize,f: impl Fn(usize)-> T) -> Self {
+                let iter=(0..len).map(f);
+                <Self as crate::AnyFromIterator<T,CCE>>::any_from_iter(None, iter).unwrap()
+            }
+        }
+
+        impl<T:Scalar> FromVec<T> for $t {
+            fn from_vec(v:Vec<T>) -> Self {
+                <$t>::from_vec(v)
+            }
+        }
+
+        impl<T:Scalar> Zeros<usize,T> for $t {
             fn zeros(len:usize) -> Self where T:Zero {
-                $name::zeros(len)
+                <$t>::zeros(len)
             }
         }
-
     };
 }
-impl_vector!(DVector);
-impl_vector!(RowDVector);
+impl_vector_owned!(OMatrix<T,Dyn,Const<1>>);
+impl_vector_owned!(OMatrix<T,Const<1>,Dyn>);
 
 
-impl_vector_view!(DVectorView, 'a);
-impl_vector_view!(RowDVectorView, 'a);
-impl_vector_view!(DVectorViewMut, 'a);
-impl_vector_view!(RowDVectorViewMut, 'a);
 
-
+// can not implement this more general because of conflicting implement for 1x1 smatrix
 impl<T : Scalar> ChangeLen for DVector<T> {
     type Output<const L:usize> = nalgebra::SVector<T,L>;
 }

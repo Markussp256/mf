@@ -1,20 +1,18 @@
 
 
-use container_traits::{AnyFromIterator, LinearContainerConstructError};
-
 use crate::{error::{MatrixCanNotBeMultipliedWithVectorError, VectorConstructError}, ColVector, ColVectorTryConstruct, ColVectorView, Matrix, MatrixView};
 
 use super::vector_vector_product::TryVectorVectorProduct;
 
 pub trait MatrixVectorProduct<Rhs : ColVectorView> : MatrixView {
-    type Output : ColVectorView;
+    type Output : ColVector;
     fn matrix_vector_product(&self, rhs:&Rhs) -> Self::Output;
 }
 
 
-pub trait IntoMatrixVectorProduct<Rhs : ColVector> : Matrix {
-    type Output : ColVectorView;
-    fn into_matrix_vector_product(self, rhs:Rhs) -> Self::Output;
+pub trait IntoMatrixVectorProduct<Rhs : ColVectorView> : Matrix {
+    type Output : ColVector;
+    fn into_matrix_vector_product(self, rhs:&Rhs) -> Self::Output;
 }
 
 // impl code using only method from Matrix/Rowvector/Colvector traits
@@ -23,12 +21,10 @@ pub trait IntoMatrixVectorProduct<Rhs : ColVector> : Matrix {
 
 pub fn try_matrix_vector_product_impl
     <'a,
-     F : Clone,
-     F3,
-     Lhs    : MatrixView<T=F,RowView<'a>=LhsRow>,
-     LhsRow : AnyFromIterator<F,LinearContainerConstructError>+TryVectorVectorProduct<Rhs,Output=F3> ,
+     Lhs    : MatrixView<RowView<'a>=LhsRow>,
+     LhsRow : TryVectorVectorProduct<Rhs,Output=Out::T> ,
      Rhs    : ColVectorView,
-     Out    : ColVectorTryConstruct<T=F3>>(lhs:&'a Lhs,rhs:&'a Rhs) -> Result<Out,VectorConstructError> {
+     Out    : ColVectorTryConstruct>(lhs:&'a Lhs,rhs:&'a Rhs) -> Result<Out,VectorConstructError> {
     MatrixCanNotBeMultipliedWithVectorError::try_new(lhs.ncols(),rhs.len())?;
     Out::any_from_iter(
         None,
@@ -39,11 +35,10 @@ pub fn try_matrix_vector_product_impl
 
 
 pub fn try_into_matrix_vector_product_impl
-    <F3,
-     Lhs    : Matrix<Row=LhsRow>,
-     LhsRow : TryVectorVectorProduct<Rhs,Output=F3> ,
+    <Lhs    : Matrix<Row=LhsRow>,
+     LhsRow : TryVectorVectorProduct<Rhs,Output=Out::T> ,
      Rhs    : ColVectorView,
-     Out    : ColVectorTryConstruct<T=F3>>(lhs:Lhs,rhs:&Rhs) -> Result<Out,VectorConstructError> {
+     Out    : ColVectorTryConstruct>(lhs:Lhs,rhs:&Rhs) -> Result<Out,VectorConstructError> {
     MatrixCanNotBeMultipliedWithVectorError::try_new(lhs.ncols(),rhs.len())?;
     Out::any_from_iter(None,
         lhs.into_rows()
@@ -55,13 +50,13 @@ pub fn try_into_matrix_vector_product_impl
 
 
 pub trait TryMatrixVectorProduct<Rhs : ColVectorView> : MatrixView {
-    type Output : ColVectorView;
+    type Output : ColVector;
     fn try_matrix_vector_product(&self, rhs:&Rhs) -> Result<Self::Output,VectorConstructError>;
 }
 
-pub trait TryIntoMatrixVectorProduct<Rhs : ColVector> : Matrix {
-    type Output : ColVectorView;
-    fn try_into_matrix_vector_product(self, rhs:Rhs) -> Result<Self::Output,VectorConstructError>;
+pub trait TryIntoMatrixVectorProduct<Rhs : ColVectorView> : Matrix {
+    type Output : ColVector;
+    fn try_into_matrix_vector_product(self, rhs:&Rhs) -> Result<Self::Output,VectorConstructError>;
 }
 
 

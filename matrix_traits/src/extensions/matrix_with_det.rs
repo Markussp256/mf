@@ -170,7 +170,7 @@ impl<M:MatrixSquare> IntoBaseSquareMatrix for MatrixWithDet<M> {
     }
 }
 
-impl<M:MatrixSquare> AsBaseSquareMatrix for MatrixWithDet<M> {
+impl<M:Matrix+MatrixSquare> AsBaseSquareMatrix for MatrixWithDet<M> {
     type Output=M;
     fn base_square_matrix(&self) -> &M {
         &self.m

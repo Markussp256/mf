@@ -83,8 +83,17 @@ impl<R:RealNumber> NthRoots for Complex<R> {
     }
 }
 
-impl<T:Neg<Output=T>> Conjugate for Complex<T> {
-    fn conjugate(self) -> Self {
+impl<T:Clone+Neg<Output=T>> Conjugate for Complex<T> {
+    type Output = Self;
+    fn conjugate(&self) -> Self {
+        let [real, imag]=self.clone().into_real_imag();
+        Self::new(real, -imag)
+    }
+}
+
+impl<T:Neg<Output=T>> IntoConjugate for Complex<T> {
+    type Output = Self;
+    fn into_conjugate(self) -> Self {
         let [real, imag]=self.into_real_imag();
         Self::new(real, -imag)
     }

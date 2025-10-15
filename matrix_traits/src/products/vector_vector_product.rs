@@ -62,30 +62,3 @@ pub trait TryIntoVectorVectorProduct<Rhs : ColVector> : RowVector {
     type Output;
     fn try_into_vector_vector_product(self, rhs:Rhs) -> Option<<Self as TryIntoVectorVectorProduct<Rhs>>::Output>;
 }
-
-
-// macro_rules! row_col_vector {
-//     ($lhs:ident, $rhs:ident) => {
-//         $lhs.into_iter()
-//                 .zip($rhs.into_iter())
-//                 .map(|(ai,bi)|
-//                    ai*bi)
-//                 .into_sum()
-//     };
-// }
-
-// impl<F:Mul<F2,Output=F3>,F2,F3:Zero,Rhs:ColVector<T=F2>,Row:RowVector<T=F>> VectorVectorProduct<Rhs> for Row {
-//     type Output=F3;
-//     fn vector_vector_product(self, rhs:Rhs) -> F3 {
-//         assert_eq!(self.len(), rhs.len());
-//         row_col_vector!(self,rhs)
-//     }
-// }
-
-// impl<F:Mul<F2,Output=F3>,F2,F3:Zero,Rhs:ColVector<T=F2>,Row:RowVector<T=F>> TryVectorVectorProduct<Rhs> for Row {
-//     type Output=F3;
-//     fn try_vector_vector_product(self, rhs:Rhs) -> Option<F3> {
-//         (self.len() == rhs.len()).then(||
-//             row_col_vector!(self,rhs))
-//     }
-// }

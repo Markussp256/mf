@@ -22,7 +22,7 @@ pub use zero::{IsAZero, NonZero, IntegralDomain};
 pub mod consts;
 pub use consts::{ConstZero, ConstNonZero, ConstOne, ConstPi, ConstRad2Deg, ConstDeg2Rad};
 
-use crate::{Conjugate, DivError, FiniteDimensionalInnerProductSpace, LogError, Nonnegative, Norm, NormSquared, Origin, Pow2, PowError, SqrtError, Tolerance, TryDiv, TryIntoReal, TryLog, TryNormalize};
+use crate::{Conjugate, DivError, FiniteDimensionalInnerProductSpace, IntoConjugate, LogError, Nonnegative, Norm, NormSquared, Origin, Pow2, PowError, SqrtError, Tolerance, TryDiv, TryIntoReal, TryLog, TryNormalize};
 
 // marker trait
 use crate::{Exp, InnerProductSpace1d, Max, TryPow, TrySqrt};
@@ -39,7 +39,8 @@ pub trait CastFromf64 {
 
 pub trait Scalar : 'static
                   +Field
-                  +Conjugate
+                  +Conjugate<Output=Self>
+                  +IntoConjugate<Output=Self>
                   +Pow2<Output=Self>
                   +AddAssign+SubAssign
                   +Norm<NormT=Self::RealType>

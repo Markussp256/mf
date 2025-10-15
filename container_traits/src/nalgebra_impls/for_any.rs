@@ -10,8 +10,40 @@ type U2=(usize,usize);
 type CCE=ContainerConstructError<U2>;
 
 impl<T : Scalar,
-     R : Dim,
-     C : Dim> FromElement<U2,T> for OMatrix<T,R,C>
+     R : DimExtension,
+     C : DimExtension,
+     S : RawStorage<T, R, C>> OCTSize<U2> for Matrix<T, R, C, S>
+{
+    const OCTSIZE: Option<(usize, usize)> = {
+        // Const dims return Some(n), Dyn returns None
+        let r = R::VALUE;
+        let c = C::VALUE;
+        match (r, c) {
+            (Some(r), Some(c)) => Some((r, c)),
+            _ => None,
+        }
+    };
+}
+
+impl<T : Scalar,
+     R : DimExtension,
+     C : DimExtension,
+     S : RawStorage<T, R, C>> OCTSize<usize> for Matrix<T, R, C, S>
+{
+    const OCTSIZE: Option<usize> = {
+        // Const dims return Some(n), Dyn returns None
+        let r = R::VALUE;
+        let c = C::VALUE;
+        match (r, c) {
+            (Some(r), Some(c)) => Some(r*c),
+            _ => None,
+        }
+    };
+}
+
+impl<T : Scalar,
+     R : DimExtension,
+     C : DimExtension> FromElement<U2,T> for OMatrix<T,R,C>
     where DefaultAllocator: Allocator<R, C>, Self : OCTSize<U2> {
     fn from_element(size:U2,t:T) -> Self {
         let r=R::new(Some(size.0));
@@ -133,16 +165,11 @@ impl<T : Scalar,
 impl<T : Scalar,
      T2: Scalar,
      R : Dim,
-     C : Dim> ChangeT<T2> for OMatrix<T,R,C> where DefaultAllocator : Allocator<R, C> {
-    type Output = OMatrix<T2,R,C>;
+     C : Dim,
+     S : ChangeT<T2>> ChangeT<T2> for Matrix<T,R,C,S> {
+    type Output = Matrix<T2,R,C,<S as ChangeT<T2>>::Output>;
 }
 
-impl<T : Scalar,
-     R : Dim,
-     C : Dim,
-     S : RawStorageMut<T,R,C>> ChangeDim for Matrix<T,R,C,S> {
-    type Output<const RR:usize,const CC:usize> = nalgebra::SMatrix<T,RR,CC>;
-}
 
 impl<T : Scalar,
      R : Dim,
@@ -326,8 +353,8 @@ impl<T : Scalar,
 }
 
 impl<T : Scalar,
-     R : Dim,
-     C : Dim,
+     R : DimExtension,
+     C : DimExtension,
      S : RawStorage<T,R,C>,
      E : From<LCCE>> TryAccept<usize,T,E> for Matrix<T,R,C,S> where Self : OCTSize<usize> {
     fn try_accept<'a>(size:usize,_:impl Fn(usize) -> &'a T) -> Result<(),E> {
@@ -340,7 +367,7 @@ impl<T : Scalar,
 impl<T : Scalar,
      R : Dim,
      C : Dim,
-     S : RawStorage<T,R,C>> ItemT for Matrix<T,R,C,S> {
+     S> ItemT for Matrix<T,R,C,S> {
     type T=T;
 }
 
@@ -445,9 +472,11 @@ impl<T : Scalar,
     crate::any_from_iter_impl!(T, E);
 }
 
+
+
 impl<T : Scalar+Zero,
-     R : Dim,
-     C : Dim> TryPutAt<U2,T> for OMatrix<T,R,C>
+     R : DimExtension,
+     C : DimExtension> TryPutAt<U2,T> for OMatrix<T,R,C>
      where DefaultAllocator : Allocator<R, C> {
     fn try_put_at(size:U2, index:U2, t:T) -> Result<Self,IndexOutOfBoundsError<U2>> {
         IndexOutOfBoundsError::try_new(&size, &index)?;

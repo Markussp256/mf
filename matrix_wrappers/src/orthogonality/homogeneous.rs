@@ -1,6 +1,6 @@
 use num_traits::{Zero,One};
 
-use matrix_traits::{AlgebraMatrix, row_col::ColVectorTryConstruct, MatrixConstructError, MatrixSquare, MatrixSquareTryConstruct, Transpose};
+use matrix_traits::{row_col::ColVectorTryConstruct, AlgebraMatrix, IntoTranspose, MatrixConstructError, MatrixSquare, MatrixSquareTryConstruct, Transpose};
 use algebra_traits::{basic::Inv, TryInv, RealNumber};
 use utils::iter::IntoExactSizeIterator;
 use super::{Orthogonal, SpecialOrthogonal};
@@ -70,8 +70,16 @@ impl<M:MatrixSquare> TryFrom<SpecialOrthogonal<M>> for Homogeneous<M> where M::T
 
 impl<M:MatrixSquare+Transpose<Output=M>> Transpose for Homogeneous<M> where M::T : RealNumber {
     type Output=SpecialOrthogonal<M>;
-    fn transpose(self) -> Self::Output {
-        SpecialOrthogonal::<M>::from(self)
+    fn transpose(&self) -> Self::Output {
+        SpecialOrthogonal::<M>::from(self.0.clone())
+            .transpose()
+    }
+}
+
+impl<M:MatrixSquare+IntoTranspose<Output=M>> IntoTranspose for Homogeneous<M> where M::T : RealNumber {
+    type Output=SpecialOrthogonal<M>;
+    fn into_transpose(self) -> Self::Output {
+        SpecialOrthogonal::<M>::from(self.0)
             .transpose()
     }
 }

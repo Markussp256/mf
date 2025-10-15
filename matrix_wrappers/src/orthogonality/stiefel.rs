@@ -3,7 +3,7 @@ use std::ops::Neg;
 use algebra::Unit;
 use algebra_traits::{Conjugate, Scalar};
 use container_traits::{TryAccept, Len, Get,  IntoInner};
-use matrix_traits::{matrix::AlgebraMatrix, ColVectorTryConstruct, Matrix, MatrixConstructError, MatrixNormal, MatrixNotTall, MatrixNotWide, MatrixSquare, MatrixTall, MatrixTryConstruct, Transpose};
+use matrix_traits::{matrix::AlgebraMatrix, ColVectorTryConstruct, Matrix, MatrixView, MatrixConstructError, MatrixNormal, MatrixNotTall, MatrixNotWide, MatrixSquare, MatrixTall, MatrixTryConstruct, Transpose};
 
 use utils::kron_delta;
 use crate::RightTriangular;
@@ -28,7 +28,7 @@ pub struct Stiefel<M:MatrixView>(M);
 pub type SquareStiefel<M> = Stiefel<crate::Square<M>>;
 
 // Stiefel matrix can not be wide, otherwise inherit
-impl<M:Matrix>        MatrixNotWide for Stiefel<M> {}
+impl<M:MatrixView>    MatrixNotWide for Stiefel<M> {}
 impl<M:MatrixNotTall> MatrixNotTall for Stiefel<M> {}
 impl<M:MatrixSquare>  MatrixSquare  for Stiefel<M> {}
 impl<M:MatrixTall>    MatrixTall    for Stiefel<M> {}

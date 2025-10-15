@@ -1,17 +1,10 @@
 use nalgebra::{DMatrix, Scalar};
-use crate::{for_dynamic::{Empty, OneElement}, OCTSize};
-
-type U2=(usize,usize);
-
+use crate::for_dynamic::{Empty, OneElement};
 
 impl<T:Scalar> OneElement<T> for DMatrix<T> {
     fn one_element(t:T) -> Self {
         Self::from_vec(1,1,vec![t])
     }
-}
-
-impl<T:Scalar> OCTSize<U2> for DMatrix<T> {
-    const OCTSIZE:Option<U2>=None;
 }
 
 impl<T:Scalar> Empty for DMatrix<T> {

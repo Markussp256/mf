@@ -3,13 +3,13 @@ use container_traits::{ContainerView, IndexOutOfBoundsError};
 use num_traits::{Zero,One};
 use crate::row_col::{RowVectorView,ColVectorView};
 use utils::kronecker_delta::kron_delta;
-use algebra_traits::{Distance,Tolerance};
+use algebra_traits::{Conjugate, Distance, Tolerance};
 type U2=(usize,usize);
 
 // can be dynamic or static sized
 pub trait MatrixView : ContainerView<U2> {
-    type RowView<'a> : RowVectorView where Self : 'a;
-    type ColView<'a> : ColVectorView where Self : 'a;
+    type RowView<'a> : RowVectorView<T=Self::T> where Self : 'a;
+    type ColView<'a> : ColVectorView<T=Self::T> where Self : 'a;
     // provided methods
 
     fn nrows(&self) -> usize {
@@ -77,4 +77,22 @@ pub trait MatrixView : ContainerView<U2> {
         self.iter_indexed()
             .all(|((i,j),aij)| aij == &kron_delta(i,j)) 
     }
+}
+
+pub trait AlgebraMatrix : MatrixView + Conjugate<Output=Self> {
+    // fails if index out of bounds
+    fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Result<Self::T,IndexOutOfBoundsError<usize>> where Self::T:Clone;
+}
+
+// requires Self::ColView : TryScalarproduct<TryScProdT = Self::T>
+#[macro_export]
+macro_rules! algebra_matrix_impl {
+    () => {
+        fn try_col_sc_prod<'a>(&'a self, j0:usize, j1:usize) -> Result<<Self as container_traits::ItemT>::T,container_traits::IndexOutOfBoundsError<usize>> where Self::T : Clone
+        {
+            Ok(<Self::ColView<'a> as algebra_traits::TryScalarproduct>::try_scalar_product(
+                self.try_col_view(j0)?,
+                self.try_col_view(j1)?).unwrap())
+        }
+    };
 }

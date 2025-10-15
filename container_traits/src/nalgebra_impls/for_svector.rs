@@ -1,5 +1,5 @@
-use nalgebra::{Const, RowSVector, SMatrixViewMut, SMatrixView, SMatrix, SVector, Scalar};
-use crate::{for_static, ContainerConstructError, IndexOutOfBoundsError, LenTooSmallError, LinearContainerSized, LinearContainerStatic, OCTSize, StandardBasis, TryPutAt};
+use nalgebra::{Const, Matrix, RawStorage, RowSVector, SMatrix, SVector, Scalar};
+use crate::{for_static, ContainerConstructError, LenTooSmallError, LinearContainerSized, LinearContainerStatic};
 
 use num_traits::{Zero,One};
 
@@ -29,6 +29,7 @@ impl<T : Scalar,
     }
 }
 
+
 impl<T,
     const M:usize,
     const N:usize,
@@ -36,12 +37,6 @@ impl<T,
         const SIZE:usize = M*N;
 }
 
-impl<T,
-    const M:usize,
-    const N:usize,
-    RS> OCTSize<usize> for nalgebra::Matrix<T,Const<M>,Const<N>,RS> {
-        const OCTSIZE:Option<usize> = Some(M*N);
-}
 
 // macro_rules! size {
 //     ($name:ident<$($lt :lifetime,)? $t:ident, $m0:ident $(,$m:ident)?>, $sz:expr) => {
@@ -78,45 +73,6 @@ impl<T,
 //         }
 //     }
 // }
-
-impl<T : Scalar+Zero,
-     const M:usize,
-     const N:usize> for_static::TryPutAt<usize,T> for SMatrix<T,M,N> {
-    fn try_put_at(index:usize, t:T) -> Result<Self,IndexOutOfBoundsError<usize>> {
-        let mut res=Self::zeros();
-        if M == 1 {
-            IndexOutOfBoundsError::try_new(&N, &index)?;
-            res[(1,index)]=t;
-        } else if N == 1 {
-            IndexOutOfBoundsError::try_new(&M, &index)?;
-            res[(index,1)]=t;
-        } else {
-            assert!(false);
-            // panic!("either M or N must be 1");
-        }
-        Ok(res)
-    }
-}
-
-impl<T : Scalar+Zero+One,
-     const M:usize,
-     const N:usize> StandardBasis for SMatrix<T,M,N> {
-    fn try_standard_basis_element(_:usize, index:usize) -> Result<Self,IndexOutOfBoundsError<usize>> {
-        IndexOutOfBoundsError::try_new(&(M*N),&index)?;
-        <Self as for_static::TryPutAt<usize,T>>::try_put_at(index, <T as num_traits::One>::one())
-    }
-}
-
-impl<T : Scalar+Zero,
-     const M:usize,
-     const N:usize> TryPutAt<usize,T> for SMatrix<T,M,N> {
-    fn try_put_at(size:usize, index:usize, t:T) -> Result<Self,IndexOutOfBoundsError<usize>> {
-        if size != M*N {
-            assert!(false); // panic!("size does not coincide");
-        }
-        <Self as for_static::TryPutAt<usize,T>>::try_put_at(index,t)
-    }
-}
 
 
 impl<T : Scalar,
@@ -156,35 +112,35 @@ impl_stat!(9);
 
 
 macro_rules! impl_xyz {
-    ($m_name:ident, $uc:ident, $lc:ident, $k:literal, $n:literal $(|$lt:lifetime)?) => {
+    ($m_name:ident, $uc:ident, $lc:ident, $k:literal, $n:literal) => {
         
-        impl<$($lt,)? F : Scalar> for_static::$uc<F> for $m_name<$($lt,)?F,1,$n> {
+        impl<F : Scalar, S : RawStorage<F,Const<1>,Const<$n>>> for_static::$uc<F> for $m_name<F,Const<1>,Const<$n>,S> {
             fn $lc(&self) -> &F { &self[(0,$k)] }
         }
         
-        impl<$($lt,)? F : Scalar> for_static::$uc<F> for $m_name<$($lt,)? F,$n,1> {
+        impl<F : Scalar, S : RawStorage<F,Const<$n>,Const<1>>> for_static::$uc<F> for $m_name<F,Const<$n>,Const<1>, S> {
             fn $lc(&self) -> &F { &self[($k,0)] }
         }
     };
 
-    ($m_name:ident, $uc:ident, $lc:ident, $k:literal, $n0:literal, $($n:literal),* $(|$lt:lifetime)? ) => {
-        impl_xyz!($m_name, $uc, $lc, $k, $n0     $(|$lt)? );
-        impl_xyz!($m_name, $uc, $lc, $k, $($n),* $(|$lt)?);
+    ($m_name:ident, $uc:ident, $lc:ident, $k:literal, $n0:literal, $($n:literal),*) => {
+        impl_xyz!($m_name, $uc, $lc, $k, $n0     );
+        impl_xyz!($m_name, $uc, $lc, $k, $($n),*);
     }
 }
-impl_xyz!(SMatrix, X,x,0, 2,3,4);
-impl_xyz!(SMatrix, Y,y,1, 2,3,4);
-impl_xyz!(SMatrix, Z,z,2,   3,4);
+impl_xyz!(Matrix, X,x,0, 2,3,4);
+impl_xyz!(Matrix, Y,y,1, 2,3,4);
+impl_xyz!(Matrix, Z,z,2,   3,4);
 
 
-impl_xyz!(SMatrixView, X,x,0, 2,3,4|'a);
-impl_xyz!(SMatrixView, Y,y,1, 2,3,4|'a);
-impl_xyz!(SMatrixView, Z,z,2,   3,4|'a);
+// impl_xyz!(SMatrixView, X,x,0, 2,3,4|'a);
+// impl_xyz!(SMatrixView, Y,y,1, 2,3,4|'a);
+// impl_xyz!(SMatrixView, Z,z,2,   3,4|'a);
 
 
-impl_xyz!(SMatrixViewMut, X,x,0, 2,3,4|'a);
-impl_xyz!(SMatrixViewMut, Y,y,1, 2,3,4|'a);
-impl_xyz!(SMatrixViewMut, Z,z,2,   3,4|'a);
+// impl_xyz!(SMatrixViewMut, X,x,0, 2,3,4|'a);
+// impl_xyz!(SMatrixViewMut, Y,y,1, 2,3,4|'a);
+// impl_xyz!(SMatrixViewMut, Z,z,2,   3,4|'a);
 
 
 

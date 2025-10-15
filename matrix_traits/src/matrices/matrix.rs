@@ -1,5 +1,5 @@
 use container_traits::{AnyFromIterator, Container, IndexOutOfBoundsError, IntoIter, Map, TryIntoElement};
-use algebra_traits::{Conjugate, Distance, Tolerance};
+use algebra_traits::{Distance, Tolerance};
 use crate::row_col::*;
 use super::MatrixTryConstruct;
 use utils::iter::IntoExactSizeIterator;
@@ -89,22 +89,4 @@ pub fn impl_map
             m.into_rows()
                 .map(|r|r.map(&f))
         ).unwrap()
-}
-
-pub trait AlgebraMatrix : Matrix + Conjugate {
-    // fails if index out of bounds
-    fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Result<Self::T,IndexOutOfBoundsError<usize>> where Self::T:Clone;
-}
-
-// requires Self::Col : TryScalarproduct<TryScProdT = Self::T>
-#[macro_export]
-macro_rules! algebra_matrix_impl {
-    () => {
-        fn try_col_sc_prod(&self, j0:usize, j1:usize) -> Result<Self::T,container_traits::IndexOutOfBoundsError<usize>> where Self::T : Clone
-        {
-            Ok(<Self::Col as algebra_traits::TryScalarproduct>::try_scalar_product(
-                self.try_col(j0)?,
-                self.try_col(j1)?).unwrap())
-        }
-    };
 }

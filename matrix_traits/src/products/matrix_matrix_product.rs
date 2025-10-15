@@ -1,17 +1,14 @@
-use std::ops::Mul;
-use num_traits::Zero;
-
-use crate::{error::MatricesCanNotBeMultipliedError, ColVectorView, Matrix, MatrixConstructError, MatrixTryConstruct, MatrixView, RowVector, RowVectorTryConstruct, TryMatrixVectorProduct, TryVectorMatrixProduct};
+use crate::{error::MatricesCanNotBeMultipliedError, Matrix, MatrixConstructError, MatrixTryConstruct, MatrixView, RowVector, RowVectorTryConstruct, RowVectorView, TryVectorMatrixProduct};
 
 
-pub trait MatrixMatrixProduct<Rhs : MatrixView=Self> {
-    type Output : MatrixView;
+pub trait MatrixMatrixProduct<Rhs : MatrixView=Self> : MatrixView {
+    type Output : Matrix;
     fn matrix_matrix_product(&self, rhs:&Rhs) -> Self::Output;
 }
 
-pub trait IntoMatrixMatrixProduct<Rhs : Matrix=Self> {
-    type Output : MatrixView;
-    fn into_matrix_matrix_product(self, rhs:Rhs) -> Self::Output;
+pub trait IntoMatrixMatrixProduct<Rhs : MatrixView=Self> : Matrix {
+    type Output : Matrix;
+    fn into_matrix_matrix_product(self, rhs:&Rhs) -> Self::Output;
 }
 
 
@@ -22,44 +19,33 @@ pub trait IntoMatrixMatrixProduct<Rhs : Matrix=Self> {
 
 pub fn try_matrix_matrix_product_impl
     <'a,
-     F1     : Mul<F2,Output=F3>,
-     F2     : Clone,
-     F3     : Zero,
-     Lhs    : MatrixView<T=F1>+TryMatrixVectorProduct<RhsCol,Output=Out::Col>,
-     Rhs    : MatrixView<T=F2,ColView<'a>=RhsCol>,
-     Out    : MatrixTryConstruct<T=F3>,
-     RhsCol : ColVectorView<T=F2>>(lhs:&'a Lhs, rhs:&'a Rhs) -> Result<Out,MatrixConstructError> {
+     Lhs    : MatrixView<RowView<'a>=LhsRow>,
+     LhsRow : RowVectorView+TryVectorMatrixProduct<Rhs,Output=Out::Row>,
+     Rhs    : MatrixView,
+     Out    : MatrixTryConstruct>(lhs:&'a Lhs, rhs:&'a Rhs) -> Result<Out,MatrixConstructError> {
         let lhs_dims=lhs.matrix_dimensions();
         let rhs_dims=rhs.matrix_dimensions();
         MatricesCanNotBeMultipliedError::try_new(&lhs_dims,&rhs_dims)?;
-        let out=Out::try_from_cols(
-                rhs.col_views()
-                    .map(|col|lhs.try_matrix_vector_product(&col).unwrap()))?;
+        let out=Out::try_from_rows(
+                lhs.row_views()
+                   .map(|row|row.try_vector_matrix_product(rhs).unwrap()))?;
         let out_dims=out.matrix_dimensions();
         assert_eq!(out_dims.0, lhs_dims.0);
         assert_eq!(out_dims.1, rhs_dims.1);
         Ok(out)
-        // match &res {
-        //     Ok(r) => {
-        //         let out_dims=r.matrix_dimensions();
-        //         assert_eq!(out_dims.0, lhs_dims.0);
-        //         assert_eq!(out_dims.1, rhs_dims.1);
-        //     },
-        //     Err(e) => { panic!{"matrix_matrix_product error: {:?}",e}; }
-        // };
-        // res.ok()
 }
 
+// F1     : Mul<F2,Output=F3>,
+//      F2,
+//      F3     : Zero,
+     
 
 pub fn try_into_matrix_matrix_product_impl
-    <F1     : Mul<F2,Output=F3>,
-     F2,
-     F3     : Zero,
-     Lhs    : Clone+Matrix<T=F1,Row=LhsRow>,
-     LhsRow : RowVector<T=F1>+TryVectorMatrixProduct<Rhs,Output=OutRow>,
-     Rhs    : Matrix<T=F2>,
-     Out    : MatrixTryConstruct<T=F3,Row=OutRow>,
-     OutRow : RowVectorTryConstruct<T=F3>>(lhs:Lhs, rhs:&Rhs) -> Result<Out,MatrixConstructError> {
+    <Lhs    : Clone+Matrix<Row=LhsRow>,
+     LhsRow : RowVector+TryVectorMatrixProduct<Rhs,Output=OutRow>,
+     Rhs    : MatrixView,
+     Out    : MatrixTryConstruct<Row=OutRow>,
+     OutRow : RowVectorTryConstruct>(lhs:Lhs, rhs:&Rhs) -> Result<Out,MatrixConstructError> {
         let lhs_dims=lhs.matrix_dimensions();
         let rhs_dims=rhs.matrix_dimensions();
         MatricesCanNotBeMultipliedError::try_new(&lhs_dims,&rhs_dims)?;
@@ -73,116 +59,12 @@ pub fn try_into_matrix_matrix_product_impl
 }
 
 
-pub trait TryMatrixMatrixProduct<Rhs : MatrixView=Self> {
-    type Output : MatrixView;
+pub trait TryMatrixMatrixProduct<Rhs : MatrixView=Self> : MatrixView {
+    type Output : Matrix;
     fn try_matrix_matrix_product(&self, rhs:&Rhs) -> Result<Self::Output,MatrixConstructError>;
 }
 
-pub trait TryIntoMatrixMatrixProduct<Rhs : Matrix=Self> {
-    type Output : MatrixView;
-    fn try_into_matrix_matrix_product(self, rhs:Rhs) -> Result<Self::Output,MatrixConstructError>;
+pub trait TryIntoMatrixMatrixProduct<Rhs : MatrixView=Self> : Matrix {
+    type Output : Matrix;
+    fn try_into_matrix_matrix_product(self, rhs:&Rhs) -> Result<Self::Output,MatrixConstructError>;
 }
-
-
-// impl is for specific types
-
-
-
-        // if self.ncols() != rhs.nrows() {
-        //     return None;
-        // }
-        // let ocols:Vec<Result<M::Col,_>>=
-        //     <Rhs as Matrix>::into_cols(rhs)
-        //         .map(|col|self.clone().try_matrix_vector_product(col).unwrap())
-        //         .map(|col|M::Col::any_from_container(col))
-        //         .collect();
-        // if ocols.iter().any(Result::is_err) {
-        //     return None;
-        // }
-        // M::try_from_cols(
-        //     ocols.into_iter()
-        //          .map(|ocol|ocol.ok().unwrap())
-        //          .collect()).ok()
-
-
-
-// impl<M    : Clone+Matrix<Col=Col>+MatrixVectorProduct<Col2,Output=Col3>,
-//      M2   : Matrix<Row=Row2,Col=Col2>,
-//      M3   : MatrixTryConstruct<F=F3,Row=Row3,Col=Col3>,
-//      Col  : ChangeT<F3,Output=Col3>,
-//      Row2 : ChangeT<F3,Output=Row3>,
-//      Col2,
-//      Row3 : BuildMatrix<Col3,Matrix=M3>,
-//      Col3 : ColVector<T=F3>,
-//      F3> MatrixMatrixProduct<M2> for M {
-//     type Output=M3;
-//     fn matrix_matrix_product(self, rhs:M2) -> M3 {
-//         assert_eq!(self.ncols(), rhs.nrows());
-//         M3::try_from_cols(
-//             rhs.into_cols()
-//                .map(|c2|self.clone().matrix_vector_product(c2))
-//         ).ok().unwrap()
-//     }
-// }
-
-// impl<M    : Clone+Matrix<Col=Col>+TryMatrixVectorProduct<Col2,Output=Col3>,
-//      M2   : Matrix<Row=Row2,Col=Col2>,
-//      M3   : MatrixTryConstruct<F=F3,Row=Row3,Col=Col3>,
-//      Col  : ChangeT<F3,Output=Col3>,
-//      Row2 : ChangeT<F3,Output=Row3>,
-//      Col2,
-//      Row3 : BuildMatrix<Col3,Matrix=M3>,
-//      Col3 : ColVector<T=F3>,
-//      F3> TryMatrixMatrixProduct<M2> for M {
-//     type Output=M3;
-//     fn try_matrix_matrix_product(self, rhs:M2) -> Option<M3> {
-//         if self.ncols() != rhs.nrows() {
-//             return None;
-//         }
-//         M3::try_from_cols(
-//             rhs.into_cols()
-//                .map(|c2|self.clone().try_matrix_vector_product(c2).unwrap())
-//         ).ok()
-//     }
-// }
-
-// pub trait MatrixMatrixProduct<RHS:Matrix=Self> : MatrixTryConstruct+Sized
-//     where 
-//         // Self::F : Clone+Mul<RHS::F>,
-//         //    RHS::F : Clone,
-//         //  <Self::F as Mul<RHS::F>>::Output : Zero,
-//          Self::Row : VectorVectorProduct<RHS::Col> {
-//     type Output:MatrixTryConstruct<F=<Self::F as Mul<RHS::F>>::Output>;
-//     fn matrix_matrix_product(self, rhs:RHS) -> <Self as MatrixMatrixProduct<RHS>>::Output  {
-//         assert_eq!(self.ncols(),rhs.nrows());
-//         let f=|i, j|  Some(<Self::Row as VectorVectorProduct<RHS::Col>>::
-//                         vector_vector_product(
-//                         self.row(i).unwrap(),
-//                         rhs.col(j).unwrap()));
-//         <<Self as MatrixMatrixProduct<RHS>>::Output as MatrixTryConstruct>::try_from_dim_and_fn(
-//                 self.nrows(),
-//                 rhs.ncols(),
-//                 f).unwrap()
-//     }
-// }
-
-// pub trait TryMatrixMatrixProduct<RHS:Matrix=Self> : MatrixTryConstruct+Sized
-//     where Self::F : Clone+Mul<RHS::F>,
-//            RHS::F : Clone,
-//          <Self::F as Mul<RHS::F>>::Output : Zero,
-//          Self::Row : TryVectorVectorProduct<RHS::Col> {
-//     type Output:MatrixTryConstruct<F=<Self::F as Mul<RHS::F>>::Output>;
-//     fn try_matrix_matrix_product(self, rhs:RHS) -> Option<<Self as TryMatrixMatrixProduct<RHS>>::Output>  {
-//         if self.ncols() != rhs.nrows() {
-//             return None;
-//         }
-//         let f=|i, j|  <Self::Row as TryVectorVectorProduct<RHS::Col>>::
-//                         try_vector_vector_product(
-//                         self.row(i).unwrap(),
-//                         rhs.col(j).unwrap());
-//         <<Self as TryMatrixMatrixProduct<RHS>>::Output as MatrixTryConstruct>::try_from_dim_and_fn(
-//                 self.nrows(),
-//                 rhs.ncols(),
-//                 f)
-//     }
-// }

@@ -29,13 +29,13 @@ pub mod matrix_try_construct;
 pub use matrix_try_construct::MatrixTryConstruct;
 
 pub mod matrix_view;
-pub use matrix_view::MatrixView;
+pub use matrix_view::{MatrixView, AlgebraMatrix};
 
 pub mod matrix_construct;
 pub use matrix_construct::MatrixConstruct;
 
 pub mod matrix;
-pub use matrix::{Matrix, AlgebraMatrix};
+pub use matrix::Matrix;
 
 pub mod static_matrix;
 pub use static_matrix::{StaticMatrix,SquareStaticMatrix};

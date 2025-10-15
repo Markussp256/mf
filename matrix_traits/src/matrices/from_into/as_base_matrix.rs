@@ -5,7 +5,8 @@ pub trait AsBaseMatrix {
 }
 
 pub trait AsBaseSquareMatrix {
-    type Output:crate::MatrixSquare;
+    type Output:crate::MatrixSquare
+               +crate::Matrix;
     fn base_square_matrix(&self) -> &Self::Output;
 }
 

@@ -1,10 +1,17 @@
-use container_traits::{Map,Size, SizesNotEqualError};
+use container_traits::{Map, Size, SizesNotEqualError};
 use num_traits::Zero;
 use std::ops::Mul;
 use crate::*;
 
 use nalgebra::{
-    allocator::Allocator, ComplexField, DMatrix, DVector, DefaultAllocator, Dim, Matrix, OMatrix, RawStorage, RawStorageMut, RowDVector, SMatrix, Scalar, SquareMatrix, Storage, Vector3
+    allocator::Allocator,
+    ComplexField, Const,
+    DMatrix, DefaultAllocator, Dim,
+    Matrix,
+    OMatrix,
+    RawStorage, RawStorageMut,
+    Scalar, SquareMatrix, Storage,
+    Vector3
 };
 
 type U2=(usize,usize);
@@ -23,34 +30,28 @@ impl<T  : Scalar+Mul<T2,Output=T3>,
     }
 }
 
-macro_rules! try_scalar_impl {
-    ($name:ident) => {
-        impl<ScProdT : Zero,
-             F : Scalar+Scalarproduct<ScProdT = ScProdT>> TryScalarproduct for $name<F> {
-            type TryScProdT = ScProdT;
-            fn try_scalar_product(self, rhs:Self) -> Option<ScProdT> {
-                (self.nrows() == rhs.nrows() &&
-                 self.ncols() == rhs.ncols()).then(||
-                 self.iter().cloned()
-                     .zip(rhs.iter().cloned())
-                     .map(|(l,r)|l.scalar_product(r))
-                     .fold(ScProdT::zero(),|acc,new|acc+new))
-            }
-        }
-    };
+impl<ScProdT : Zero,
+    F : Scalar+Scalarproduct<ScProdT = ScProdT>,
+    R:Dim,
+    C:Dim,
+    S:RawStorage<F,R,C>> TryScalarproduct for Matrix<F,R,C,S> {
+    type TryScProdT=ScProdT;
+    fn try_scalar_product(self, rhs:Self) -> Option<ScProdT> {
+        (self.nrows() == rhs.nrows() &&
+         self.ncols() == rhs.ncols()).then(||
+        self.iter().cloned()
+            .zip(rhs.iter().cloned())
+            .map(|(l,r)|l.scalar_product(r))
+            .fold(ScProdT::zero(),|acc,new|acc+new))
+    }
 }
-
-try_scalar_impl!(DVector);
-try_scalar_impl!(RowDVector);
-
-
-
 
 
 impl<ScProdT : Zero,
     F : Scalar+Scalarproduct<ScProdT = ScProdT>,
     const M:usize,
-    const N:usize> Scalarproduct for SMatrix<F,M,N> {
+    const N:usize,
+    S : RawStorage<F,Const<M>,Const<N>>> Scalarproduct for Matrix<F,Const<M>,Const<N>,S> {
     type ScProdT=ScProdT;
     fn scalar_product(self, rhs:Self) -> Self::ScProdT {
         self.iter().cloned()
@@ -60,22 +61,13 @@ impl<ScProdT : Zero,
     }
 }
 
-impl<ScProdT : Zero,
-    F : Scalar+Scalarproduct<ScProdT = ScProdT>,
-    const M:usize,
-    const N:usize> TryScalarproduct for SMatrix<F,M,N> {
-    type TryScProdT=ScProdT;
-    fn try_scalar_product(self, rhs:Self) -> Option<ScProdT> {
-        Some(self.scalar_product(rhs))
-    }
-}
 
 impl< F : Scalar+Zero,
       R : Dim,
       C : Dim,
       S : RawStorage<F,R,C>> IsAZero for Matrix<F,R,C,S> {
     fn is_a_zero(&self) -> bool {
-       self.into_iter()
+       self.iter()
            .all(Zero::is_zero)
     }
 }
@@ -188,11 +180,26 @@ impl<T: Scalar, E,
 // impl_try_dist!(RowDVector);
 // impl_try_dist!(DMatrix);
 
-impl<T  : Conjugate+Scalar,
+impl<T : Conjugate<Output=T2>+Scalar,
+     T2: Scalar,
+     R : Dim,
+     C : Dim,
+     S : RawStorage<T,R,C>> Conjugate for Matrix<T,R,C,S> where Self : Clone, DefaultAllocator : Allocator<R,C> {
+    type Output = OMatrix<T2,R,C>;
+    fn conjugate(&self) -> Self::Output {
+        self.clone()
+            .map(|t|t.conjugate())
+    }
+}
+
+impl<T  : IntoConjugate<Output=T2>+Scalar,
+     T2 : Scalar,
      R  : Dim,
-     C  : Dim> Conjugate for OMatrix<T,R,C> where DefaultAllocator : Allocator<R,C> {
-    fn conjugate(self) -> Self {
-        self.map(Conjugate::conjugate)
+     C  : Dim,
+     S  : RawStorage<T,R,C>> IntoConjugate for Matrix<T,R,C,S> where DefaultAllocator : Allocator<R,C> {
+    type Output = OMatrix<T2,R,C>;
+    fn into_conjugate(self) -> Self::Output {
+        self.map(IntoConjugate::into_conjugate)
     }
 }
 

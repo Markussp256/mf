@@ -1,19 +1,25 @@
-use algebra_traits::Conjugate;
+use algebra_traits::IntoConjugate;
 
 pub trait Transpose {
     type Output;
-    fn transpose(self) -> Self::Output;
+    fn transpose(&self) -> Self::Output;
+}
+
+pub trait IntoTranspose {
+    type Output;
+    fn into_transpose(self) -> Self::Output;
 }
 
 // we can not bound trait with Conjugate because we can not implement for foreign type
 
-pub trait ConjugateTranspose : Sized+Conjugate+Transpose {
-    fn conjugate_transpose(self) -> <Self as Transpose>::Output {
-        self.conjugate()
-            .transpose()
+pub trait IntoConjugateTranspose : Sized+IntoConjugate+IntoTranspose {
+    fn into_conjugate_transpose(self) -> <<Self as IntoTranspose>::Output as IntoConjugate>::Output
+    where <Self as IntoTranspose>::Output : IntoConjugate {
+        self.into_transpose()
+            .into_conjugate()
     }
 }
-impl<X:Conjugate+Transpose> ConjugateTranspose for X {}
+impl<X:IntoConjugate+IntoTranspose> IntoConjugateTranspose for X {}
 
 #[derive(Clone,Debug, PartialEq)]
 pub struct Transposed<C>(C);
@@ -25,10 +31,17 @@ impl<C> Transposed<C> {
 }
 
 
-impl<C:Transpose<Output=Transposed<C>>> Transpose for Transposed<C> {
+impl<C:Clone> Transpose for Transposed<C> {
     type Output=C;
+    fn transpose(&self) -> Self::Output {
+        self.0
+            .clone()
+    }
+}
 
-    fn transpose(self) -> Self::Output {
+impl<C> IntoTranspose for Transposed<C> {
+    type Output = C;
+    fn into_transpose(self) -> Self::Output {
         self.0
     }
 }

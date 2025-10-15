@@ -1,6 +1,6 @@
 use algebra_traits::{RealNumber, ComplexNumber};
 use container_traits::{IntoInner, NewUnchecked, TryAccept};
-use matrix_traits::{AlgebraMatrix, MatrixConstructError, MatrixSquareTryConstruct, MatrixSquare, ConjugateTranspose, TryPopCol};
+use matrix_traits::{AlgebraMatrix, MatrixConstructError, MatrixSquareTryConstruct, MatrixSquare, IntoConjugateTranspose, TryPopCol};
 
 use super::Stiefel;
 use crate::RightTriangular;
@@ -25,6 +25,7 @@ macro_rules! def_orthogonal_or_unitary {
          matrix_derive::ClosedMatrixMatrixProduct,
          matrix_derive::MatrixMatrixProductRightTriangular,
          matrix_derive::ClosedTranspose,
+         matrix_derive::ClosedIntoTranspose,
          matrix_derive::MatrixShape)]
         pub struct $uc<M:MatrixSquare>(M) where M::T : $tr;
 

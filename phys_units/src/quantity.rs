@@ -147,9 +147,17 @@ macro_rules! base_impl {
             container_traits::try_from_iter_impl!(F);
         }
 
-        impl<F:algebra_traits::Conjugate> algebra_traits::Conjugate for $name<F> {
-            fn conjugate(self) -> Self {
-                Self::new(<F as algebra_traits::Conjugate>::conjugate(self.value), self.unit)
+        impl<F :algebra_traits::Conjugate<Output=F2>, F2> algebra_traits::Conjugate for $name<F> {
+            type Output=$name<F2>;
+            fn conjugate(&self) -> Self::Output {
+                Self::Output::new(<F as algebra_traits::Conjugate>::conjugate(&self.value), self.unit.clone())
+            }
+        }
+
+        impl<F:algebra_traits::IntoConjugate<Output=F2>,F2> algebra_traits::IntoConjugate for $name<F> {
+            type Output=$name<F2>;
+            fn into_conjugate(self) -> Self::Output {
+                Self::Output::new(<F as algebra_traits::IntoConjugate>::into_conjugate(self.value), self.unit)
             }
         }
 

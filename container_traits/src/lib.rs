@@ -10,7 +10,7 @@ pub mod linear_container;
 pub use linear_container::*;
 
 #[cfg(feature = "nalgebra_support")]
-mod nalgebra_impls;
+pub mod nalgebra_impls;
 
 // traits that only make sense for dynamic types
 pub mod for_dynamic;
