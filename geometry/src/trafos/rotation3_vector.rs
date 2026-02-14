@@ -42,7 +42,7 @@ impl<F:Debug+RealNumber, V:Debug+Vectorspace<F>> Display for ContradictingDataFo
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f,"Contradicting data to estimate Rotation3Vector transformation:
         estimating SO3-matrix with orthogonal Procrustes is M={:?}. We have 
-        {:?}=f({:?}), M*{:?}={:?} but {:?}.distance({:?})={:?}>tol={:?}",
+        {:?}=f({:?}), M*{:?}={:?} but {:?}.into_distance(({:?})={:?}>tol={:?}",
         self.so, self.y, self.x, self.x, self.yalt, self.yalt, self.y, self.d, self.tol)
     }
 }
@@ -101,7 +101,7 @@ impl<F:Clone+RealNumber> From<ProjectiveQuaternion<F>> for ScaledRotationAxis<F>
             return Self::zero();
         }
         // half of the angle
-        let a2=<F as TryATan2>::try_atan2(axssina2.clone().norm().into_signed(),
+        let a2=<F as TryATan2>::try_atan2(axssina2norm().into_signed(),
                                              q.real().clone()).unwrap();
         Self::new(axssina2.try_div(a2.sinc().div2()).unwrap())
     }
@@ -165,7 +165,7 @@ impl<F:RealNumber> Rotation3Vector<F> {
         let axb:Vector::<F, 3>=a.clone().cross_product(b.clone());
         //let axb: Vector3<F>=-(a.cross_product(b));
         let cos_angle=a.scalar_product(b);
-        let angle=<F as TryATan2>::try_atan2(axb.clone().norm().into_signed(), cos_angle).unwrap();
+        let angle=<F as TryATan2>::try_atan2(axbnorm().into_signed(), cos_angle).unwrap();
         Some(Rotation3Vector::new(ScaledRotationAxis::new(axb.try_div(angle.sinc()).unwrap())))
     }
 }
@@ -193,7 +193,7 @@ fn test_from_scaled_axispi() {
     // reversed, i.e. scaled axis from matrix
     let aest=Rotation3Vector::from(rot.clone()).scaled_rotation_axis().vector().clone();
 
-    assert!((a.clone()-aest.clone()).norm() < 1e-10 || (a.clone()+aest).norm() < 1e-10);
+    assert!((a.clone()-aest.clone()).into_norm() < 1e-10 || (a.clone()+aest).into_norm() < 1e-10);
 
     let an:Vector3<f64>=a.try_normalize().unwrap().1;
     let m=Matrix3::from_fn(|(i,j)|2.0*an[i]*an[j])-Matrix3::<f64>::identity();
@@ -224,7 +224,7 @@ fn test_from_scaled_axis2pi() {
 
 #[test]
 fn test_rot_that_trafos_a2b() {
-    use algebra_traits::Distance;
+    use algebra_traits::IntoDistance;
     // let a=Vector3::new(1.0,0.0,0.0);
     // let b=Vector3::new(1.0,0.1,0.0);
     let a=Vector3::new(2.3,-2.0,0.2);
@@ -234,7 +234,7 @@ fn test_rot_that_trafos_a2b() {
     let normalized_uw=|z:Vector3<f64>|z.try_normalize::<Vector3<f64>>().unwrap().1;
     let b:Vector3::<f64>=normalized_uw(b);
     let rota=normalized_uw(rota);
-    assert!(b.distance(rota) < 1e-8);
+    assert!(b.into_distance(rota) < 1e-8);
 }
 
 
@@ -314,7 +314,7 @@ impl<F:Scalar<RealType=R>, R:RealNumber> Rotation3Vector<F> {
         Angle::from_rad(self.scaled_rotation_axis()
                                  .vector()
                                  .clone()
-                                 .norm()
+                                 .into_norm()
                                  .into_signed()
                                  .into())
     }
@@ -420,7 +420,7 @@ impl<F:Clone+Scalar> Mul<UnitVector3<F>> for Rotation3Vector<F> {
 //         // // check
 //         // for (_,x,y) in orig_imag_pairs.clone() {
 //         //     let yalt=so3.clone() * x.clone();
-//         //     let d=yalt.distance(&y);
+//         //     let d=yalt.into_distance((&y);
 //         //     if d > tol {
 //         //         let cd4r3v= ContradictingDataForRotation3Vector{
 //         //             so: so3.clone(), x, y, yalt, d, tol};

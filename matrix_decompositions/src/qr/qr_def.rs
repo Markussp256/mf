@@ -1,7 +1,9 @@
+// qr_def.rs
+
 use std::ops::Mul;
 use num_traits::Zero;
 use matrix_traits::*;
-use algebra_traits::{TryDiv,TrySolve, TrySolveHomogeneous, Scalar, ComplexNumber, RealNumber};
+use algebra_traits::{Conjugate, TryDiv,TrySolve, TrySolveHomogeneous, Scalar, ComplexNumber, RealNumber};
 use container_traits::{ChangeT,IntoInner,ItemT,NewUnchecked};
 use matrix_wrappers::{Stiefel, SpecialOrthogonal, SpecialUnitary, RightTriangular};
 
@@ -42,18 +44,18 @@ macro_rules! def_qr {
             pub fn into_matrix(self) -> M {
                 self.q
                     .into_inner()
-                    .try_matrix_matrix_product(self.r.into_inner()).unwrap()
+                    .try_matrix_matrix_product(&self.r.into_inner()).unwrap()
             }
 
             pub fn try_solve_least_squares
             <Rhs : ColVectorTryConstruct+ChangeT<Mid::T,Output=Mid>,
              Mid : ColVectorTryConstruct,
-             Out : ColVectorTryConstruct>(self, rhs:Rhs) -> Option<Out>
-            where   MQ : ConjugateTranspose<Output=MQ>+TryMatrixVectorProduct<Rhs,T=F, Output=Mid>,
+             Out : ColVectorTryConstruct>(self, rhs:&Rhs) -> Option<Out>
+            where   MQ : Conjugate<Output=MQ>+Transpose<Output=MQ>+TryMatrixVectorProduct<Rhs,T=F, Output=Mid>,
                     F : Mul<Rhs::T,Output=Mid::T>,
                     RightTriangular<MR> : TrySolve<Mid, MatrixSolveError, Output=Out> {
                 let qt=self.q.conjugate_transpose();
-                let qtr=qt.try_matrix_vector_product(rhs)?;
+                let qtr=qt.try_matrix_vector_product(rhs).ok()?;
                 self.r.try_solve(qtr).ok()
             }
         }
@@ -73,7 +75,7 @@ macro_rules! def_qr {
 
         impl<F   : $tr+std::ops::Mul<V,Output=V>,
              V   : Zero+TryDiv<Output=F>,
-             MQ  : $qtr<T=F>+ConjugateTranspose<Output=MQ>+TryMatrixVectorProduct<Rhs,Output=Mid>,
+             MQ  : $qtr<T=F>+Conjugate<Output=MQ>+Transpose<Output=MQ>+TryMatrixVectorProduct<Rhs,Output=Mid>,
              MR  : Matrix<T=V>,
              Mid : ColVector,
              Rhs : ColVector,
@@ -83,8 +85,8 @@ macro_rules! def_qr {
             fn try_solve(self,rhs:Rhs) -> Result<Out,MatrixSolveError> {
                 let mid=
                     self.q
-                        .conjugate_transpose()
-                        .try_matrix_vector_product(rhs).unwrap();
+                        .into_conjugate_transpose()
+                        .try_matrix_vector_product(&rhs).unwrap();
                 self.r
                     .try_solve(mid)
             }
@@ -119,32 +121,5 @@ macro_rules! def_qr {
 def_qr!(QRStruct, QRTrait, Stiefel, Matrix, Scalar, n_householder);
 
 // qr with non-tall matrix resulting in a square q-matrix
-def_qr!(QROrthogonalStruct, QROrthogonalTrait, SpecialOrthogonal, MatrixSquare, RealNumber);
-def_qr!(QRUnitaryStruct, QRUnitaryTrait, SpecialUnitary, MatrixSquare, ComplexNumber);
-
-
-
-// macro_rules! impl_try_solve_from_try_solve_least_squares {
-//     ($t:ty, $rhs:ty, $out:ty, $e:ty, $trname:ident) => {
-        
-//     // impl<...> must be implemented before macro
-//         algebra_traits::TrySolve<$rhs,$e> for $t
-//             where $rhs : ColVectorAnyConstruct<T=Self::T>,
-//                   $out : ColVectorAnyConstruct<T=<Self::T as algebra_traits::TryDiv>::Output> {
-//         type Output=$out;
-//         fn try_solve(self, rhs:$rhs) -> Result<$out,$e> {
-//             algebra_traits::LenNotEqualError::try_new(self.nrows(),rhs.len())?;
-//             match <$t as $trname>::try_solve_least_squares(self,rhs) {
-//                 Some(r) => Ok(r)
-//                 None => MatrixNotRegularError.into()
-//             }
-//         }
-//     }
-//     }
-// }
-// impl<F:Scalar> impl_try_solve_from_try_solve_least_squares!(
-//     nalgebra::DMatrix<F>,
-//     nalgebra::DVector<F>,
-//     nalgebra::DVector<F>,
-//     either::Either<LenNotEqualError,MatrixNotRegularError>,
-//     QR)
+def_qr!(QROrthogonalStruct, QROrthogonalTrait, SpecialOrthogonal, MatrixViewSquare, RealNumber);
+def_qr!(QRUnitaryStruct, QRUnitaryTrait, SpecialUnitary, MatrixViewSquare, ComplexNumber);

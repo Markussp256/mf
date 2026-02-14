@@ -22,28 +22,57 @@ macro_rules! gen_vector {
         )]
         pub struct $gen<C>(C);
 
+        pub type $dyn<T>=$gen<$crate::EnhancedVec<T>>;
+        pub type $stat<T,const N:usize>=$gen<$crate::EnhancedArray<T,N>>;
+
+        impl<C:container_traits::ItemT<T=T>+container_traits::Iter<T>,T> $gen<C> {
+
+            pub fn try_max<'a>(&'a self) -> Option<&'a T> where T : algebra_traits::Max {
+                self.0
+                    .iter()
+                    .reduce(|a,b| if a > b { a } else { b })
+            }
+
+            pub fn max_norm_of_entries<SO:algebra_traits::Max+num_traits::Zero>(&self) -> algebra_traits::Nonnegative<SO>
+                where T: 'static+algebra_traits::Norm<NormT=SO> {
+                self.0
+                    .iter()
+                    .map(<T as algebra_traits::Norm>::norm)
+                    .reduce(|a,b|if a > b { a } else { b})
+                    .unwrap_or(<algebra_traits::Nonnegative<SO> as num_traits::Zero>::zero())
+            }
+        }
+
+        impl<C:container_traits::LinearContainerView<T=T>, T:std::fmt::Display> std::fmt::Display for $gen<C> {
+            container_traits::impl_display_for_linear_container!();
+        }
+
+        impl<C : algebra_traits::Norm<NormT=NT>,
+             NT: algebra_traits::RealNumber> TryFrom<$gen<C>> for $crate::Unit<$gen<C>> {
+            type Error=$gen<C>;
+            fn try_from(value:$gen<C>) -> Result<Self, $gen<C>> {
+                Self::try_new(value)
+            }
+        }
+
         impl<C:container_traits::LinearContainer> $gen<C> {
-            pub fn try_max(self) -> Option<C::T> where C::T : algebra_traits::Max {
+            pub fn try_into_max(self) -> Option<C::T> where C::T : algebra_traits::Max {
                 self.0
                     .into_iterator()
                     .reduce(<C::T as algebra_traits::Max>::into_max)
             }
 
-            pub fn max_norm_of_entries<SO:algebra_traits::Max+num_traits::Zero>(self) -> algebra_traits::Nonnegative<SO>
+            pub fn into_max_norm_of_entries<SO:algebra_traits::Max+num_traits::Zero>(self) -> algebra_traits::Nonnegative<SO>
             where C::T: 'static+algebra_traits::Norm<NormT=SO> {
                 $crate::utils::max_norm(self)
             }
         }
 
-        impl<C:container_traits::LinearContainer<T=T>, T:std::fmt::Display> std::fmt::Display for $gen<C> {
-            container_traits::impl_display_for_linear_container!();
-        }
-
         impl<C:'static+$crate::IntoEnhancedContainer> $crate::IntoEnhancedContainer for $gen<C> {
             type OutputC=<C as $crate::IntoEnhancedContainer>::OutputC;
-            fn into_enh_cont(self) -> $crate::EnhancedContainer<Self::OutputC> {
+            fn into_enhanced_container(self) -> $crate::EnhancedContainer<Self::OutputC> {
                 <C as $crate::IntoEnhancedContainer>::
-                    into_enh_cont(self.0)
+                    into_enhanced_container(self.0)
             }
         }
 
@@ -66,16 +95,6 @@ macro_rules! gen_vector {
             }
         }
 
-        impl<C : Clone+algebra_traits::Norm<NormT=NT>,
-             NT: algebra_traits::RealNumber> TryFrom<$gen<C>> for $crate::Unit<$gen<C>> {
-            type Error=$gen<C>;
-            fn try_from(value:$gen<C>) -> Result<Self, $gen<C>> {
-                Self::try_new(value)
-            }
-        }
-
-        pub type $dyn<T>=$gen<$crate::EnhancedVec<T>>;
-
         impl<T> Into<$crate::EnhancedVec<T>> for $dyn<T> {
             fn into(self) -> $crate::EnhancedVec<T> {
                 self.0
@@ -84,7 +103,6 @@ macro_rules! gen_vector {
 
         utils::    into_via!(impl<T>               Into<Vec<T>>      for $dyn<T>, via $crate::EnhancedVec<T>);
         utils::    from_via!(impl<T>               From<Vec<T>>      for $dyn<T>, via $crate::EnhancedVec<T>);
-        // utils::try_into_via!(impl<T,const N:usize> TryInto<[T;N]>    for $dyn<T>, via $stat<T,N>);
         utils::    from_via!(impl<T,const N:usize> From<[T;N]>       for $dyn<T>, via Vec<T>);
         utils::    from_via!(impl<T,const N:usize> From<$stat<T,N>>  for $dyn<T>, via Vec<T>);
         
@@ -97,8 +115,6 @@ macro_rules! gen_vector {
             }
         }
 
-        pub type $stat<T,const N:usize>=$gen<$crate::EnhancedArray<T,N>>;
-        
         impl<T> $stat<T,2> {
             pub const fn new(x:T,y:T) -> Self {
                 Self($crate::EnhancedArray::new([x,y]))

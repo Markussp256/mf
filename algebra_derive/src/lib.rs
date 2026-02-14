@@ -11,15 +11,14 @@ use quote::quote;
 use derive_helper::{preprocessor::*, rhs_subfields, self_subfields, fields_trait::Fields, Arity, DeriveHelper};
 
 /// Implements [`algebra_traits::Conjugate`]
-///            [`algebra_traits::IntoConjugate`]
-///
+/// 
 /// complex conjugation
 /// 
 /// # Example
 /// 
 /// ```rust
 /// use algebra_derive::Conjugate;
-/// use algebra_traits::{Conjugate,IntoConjugate};
+/// use algebra_traits::Conjugate;
 /// use num::complex::Complex;
 ///
 /// #[derive(Conjugate, PartialEq, Debug)]
@@ -28,41 +27,36 @@ use derive_helper::{preprocessor::*, rhs_subfields, self_subfields, fields_trait
 /// let w=MyWrapper(Complex{re:1.0, im:2.0});
 /// let con_w0=w.conjugate();
 /// let con_w=w.into_conjugate();
-///
+/// let ac=w.are_conjugates(MyWrapper(Complex{re:1.0, im:-2.0}))
+/// 
 /// assert_eq!(con_w0, MyWrapper(Complex{re:1.0, im:-2.0}));
 /// assert_eq!(con_w,  MyWrapper(Complex{re:1.0, im:-2.0}));
+/// assert!(ac);
 /// ```
 #[proc_macro_derive(Conjugate)]
 pub fn conjugate_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let tr=parse_quote!{algebra_traits::Conjugate};
-    let fn_name=parse_quote!{ conjugate };
-    // let (generics, wc, [(ty, mut wt),(ty2,mut wt2)])=preprocess_no_impl::<2>(& mut input);
-    let (generics, wc, [(ty, wt),(ty2, wt2)], implementation)=
-    DeriveHelper::new(& mut input, &tr, &fn_name).unary_ref::<2>(false);
-    let tr_into=parse_quote!{algebra_traits::IntoConjugate};
     let fn_name_into=parse_quote!{ into_conjugate };
-    let (_, _, _, impl_into)=
-    DeriveHelper::new(& mut input, &tr_into, &fn_name_into).preprocess(Arity::Unary);
+    let (generics, wc, [(ty, wt),(ty2, wt2)], impl_into)=DeriveHelper::new(& mut input, &tr, &fn_name_into).extended1();
+    let ssf: Vec<syn::Expr>=self_subfields(& mut input);
+    let rsf=rhs_subfields(&mut input);
     quote! {
         impl #generics #tr for #ty where #(#wt : #tr<Output=#wt2>,)*  #wc  {
             type Output=#ty2;
-            fn conjugate(&self) ->  #ty2 {
-                #implementation
-            }
-        }
 
-        impl #generics #tr_into for #ty where #(#wt : #tr_into<Output=#wt2>,)* #wc  {
-            type Output=#ty2;
             fn into_conjugate(self) ->  #ty2 {
                 #impl_into
+            }
+
+            fn are_conjugates(&self,rhs:&#ty2) -> bool {
+                #(#ssf.are_conjugates(&#rsf) &&)* true
             }
         }
     }.into()
 }
 
 /// Implements [`algebra_traits::Conjugate`]
-///            [`algebra_traits::IntoConjugate`]
 /// 
 /// with Output=Self
 /// 
@@ -72,7 +66,7 @@ pub fn conjugate_proc_macro(input: TokenStream) -> TokenStream {
 /// 
 /// ```rust
 /// use algebra_derive::Conjugate;
-/// use algebra_traits::{Conjugate,IntoConjugate};
+/// use algebra_traits::Conjugate;
 /// use num::complex::Complex;
 ///
 /// #[derive(Conjugate, PartialEq, Debug)]
@@ -89,26 +83,22 @@ pub fn conjugate_proc_macro(input: TokenStream) -> TokenStream {
 pub fn closed_conjugate_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let tr=parse_quote!{algebra_traits::Conjugate};
-    let fn_name=parse_quote!{ conjugate };
     // let (generics, wc, [(ty, mut wt),(ty2,mut wt2)])=preprocess_no_impl::<2>(& mut input);
-    let (generics, wc, [(ty, wt)], implementation)=
-    DeriveHelper::new(& mut input, &tr, &fn_name).unary_ref::<1>(false);
-    let tr_into=parse_quote!{algebra_traits::IntoConjugate};
     let fn_name_into=parse_quote!{ into_conjugate };
-    let (_, _, _, impl_into)=
-    DeriveHelper::new(& mut input, &tr_into, &fn_name_into).preprocess(Arity::Unary);
+    let (generics, wc, [(ty,wt)], impl_into)=
+    DeriveHelper::new(& mut input, &tr, &fn_name_into).preprocess(Arity::Unary);
+    let ssf=self_subfields(&mut input);
+    let rsf=rhs_subfields(&mut input);
     quote! {
-        impl #generics #tr for #ty where #(#wt : #tr<Output=#wt>,)*  #wc  {
-            type Output=Self;
-            fn conjugate(&self) ->  Self {
-                #implementation
-            }
-        }
 
-        impl #generics #tr_into for #ty where #(#wt : #tr_into<Output=#wt>,)* #wc  {
+        impl #generics #tr for #ty where #(#wt : #tr<Output=#wt>,)* #wc  {
             type Output=Self;
             fn into_conjugate(self) ->  Self {
                 #impl_into
+            }
+
+            fn are_conjugates(&self,rhs:&Self) ->  bool {
+                #(#ssf.are_conjugates(&#rsf) &&)* true
             }
         }
     }.into()
@@ -562,27 +552,27 @@ pub fn sub_proc_macro(input: TokenStream) -> TokenStream {
     }.into()
 }
 
-/// Implements [`algebra_traits::Distance`] whenever the wrapped type satisfies it
+/// Implements [`algebra_traits::IntoDistance`] whenever the wrapped type satisfies it
 /// 
 /// # Example
 /// 
 /// ```rust
-/// use algebra_derive::Distance;
-/// use algebra_traits::{Distance, Nonnegative};
+/// use algebra_derive::IntoDistance;
+/// use algebra_traits::{IntoDistance, Nonnegative};
 ///
-/// #[derive(Distance, PartialEq, Debug)]
+/// #[derive(IntoDistance, PartialEq, Debug)]
 /// struct MyWrapper<T>(T);
 /// 
 /// let w0=MyWrapper(3.0);
 /// let w1=MyWrapper(2.0);
-/// let wd=w0.distance(w1);
+/// let wd=w0.into_distance(w1);
 /// assert_eq!(wd.into_signed(), 1.0);
 /// ```
-#[proc_macro_derive(Distance)]
+#[proc_macro_derive(IntoDistance)]
 pub fn distance_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let try_tr=quote!{algebra_traits::TryDistance};
-    let tr=    quote!{algebra_traits::Distance};
+    let try_tr=quote!{algebra_traits::TryIntoDistance};
+    let tr=    quote!{algebra_traits::IntoDistance};
     let (generics, wc, [(ty, wt)])=
     preprocess_no_impl(&mut input);
     assert_eq!(wt.len(),1);
@@ -591,20 +581,20 @@ pub fn distance_proc_macro(input: TokenStream) -> TokenStream {
         impl #generics #try_tr for #ty where #wt : #try_tr, #wc {
             type TryDistT=<#wt as #try_tr>::TryDistT;
             type Error=<#wt as #try_tr>::Error;
-            fn try_distance(self, rhs : impl Into<Self>) -> Result<algebra_traits::Nonnegative<Self::TryDistT>,
+            fn try_into_distance(self, rhs : impl Into<Self>) -> Result<algebra_traits::Nonnegative<Self::TryDistT>,
                                                                    <#wt as #try_tr>::Error> {
                 let rhs:Self=rhs.into();
                 self.0
-                    .try_distance(rhs.0)
+                    .try_into_distance(rhs.0)
             }
         }
 
         impl #generics #tr for #ty where #wt : #tr, #wc {
             type DistT=<#wt as #tr>::DistT;
-            fn distance(self, rhs : impl Into<Self>) -> algebra_traits::Nonnegative<<#wt as #tr>::DistT> {
+            fn into_distance(self, rhs : impl Into<Self>) -> algebra_traits::Nonnegative<<#wt as #tr>::DistT> {
                 let rhs:Self=rhs.into();
                 self.0
-                    .distance(rhs.0)
+                    .into_distance(rhs.0)
             }
         }
     }.into()
@@ -1582,7 +1572,7 @@ pub fn closed_try_sub_proc_macro(input: TokenStream) -> TokenStream {
 /// struct MyWrapper<C>(C);
 /// 
 /// let vec:MyWrapper<Vec<f64>>=MyWrapper(vec![3.0,4.0]);
-/// assert_eq!(vec.norm(), 5.0);
+/// assert_eq!(vec.into_norm(), 5.0);
 /// ```
 #[proc_macro_derive(Norm)]
 pub fn norm_proc_macro(input: TokenStream) -> TokenStream {
@@ -1596,8 +1586,11 @@ pub fn norm_proc_macro(input: TokenStream) -> TokenStream {
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
             type NormT=<#wt as #tr>::NormT;
-            fn norm(self) -> algebra_traits::Nonnegative<<#wt as #tr>::NormT> {
-                <#wt as #tr>::norm(self.0)
+            fn norm(&self) -> algebra_traits::Nonnegative<<#wt as #tr>::NormT> {
+                <#wt as #tr>::norm(&self.0)
+            }
+            fn into_norm(self) -> algebra_traits::Nonnegative<<#wt as #tr>::NormT> {
+                <#wt as #tr>::into_norm(self.0)
             }
         }
     }.into()
@@ -1617,7 +1610,7 @@ pub fn norm_proc_macro(input: TokenStream) -> TokenStream {
 /// struct MyWrapper<C>(C);
 /// 
 /// let vec:MyWrapper<Vec<f64>>=MyWrapper(vec![3.0,4.0]);
-/// assert_eq!(vec.norm_squared(),25.0);
+/// assert_eq!(vec.into_norm_squared(),25.0);
 /// ```
 #[proc_macro_derive(NormSquared)]
 pub fn norm_squared_proc_macro(input: TokenStream) -> TokenStream {
@@ -1631,8 +1624,11 @@ pub fn norm_squared_proc_macro(input: TokenStream) -> TokenStream {
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #wc {
             type Norm2T=<#wt as #tr>::Norm2T;
-            fn norm_squared(self) -> algebra_traits::Nonnegative<<#wt as #tr>::Norm2T> {
-                <#wt as #tr>::norm_squared(self.0)
+            fn norm_squared(&self) -> algebra_traits::Nonnegative<<#wt as #tr>::Norm2T> {
+                <#wt as #tr>::norm_squared(&self.0)
+            }
+            fn into_norm_squared(self) -> algebra_traits::Nonnegative<<#wt as #tr>::Norm2T> {
+                <#wt as #tr>::into_norm_squared(self.0)
             }
         }
     }.into()
@@ -1718,6 +1714,7 @@ pub fn vector_mul_proc_macro(input: TokenStream) -> TokenStream {
         }
     }.into()
 }
+
 
 /// Implements 
 /// 

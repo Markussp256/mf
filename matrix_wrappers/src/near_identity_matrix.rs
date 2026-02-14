@@ -25,7 +25,7 @@ impl<F:Clone+Scalar> TryFrom<SquareMatrixDyn<F>> for NearIdentityMatrixDyn<F> {
     fn try_from(value:SquareMatrixDyn<F>) -> Result<Self,Self::Error> {
         for i in 0..value.n() {
             for j in 0..value.n() {
-                if  (value[(i,j)].clone()-delta(i,j)).norm() > F::RealType::from_f64(0.1) {
+                if  (value[(i,j)].clone()-delta(i,j)).into_norm() > F::RealType::from_f64(0.1) {
                     return Err(value)
                 }
             }

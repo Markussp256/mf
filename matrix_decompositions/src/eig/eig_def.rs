@@ -1,6 +1,6 @@
 use container_traits::{ChangeT, ClosedMap, Inner, IntoInner, Map};
 use matrix_traits::*;
-use algebra_traits::{ComplexNumber, RealNumber, TryDiv, RealAndImag};
+use algebra_traits::{ComplexNumber, Conjugate, RealNumber, TryDiv, RealAndImag};
 use algebra::Complex;
 use matrix_wrappers::{Orthogonal, SpecialOrthogonal, SpecialUnitary, Symmetric, Unitary};
 use num_traits::One;
@@ -11,13 +11,15 @@ use crate::eig::eig_impl::EigImpl;
 pub trait EigBaseConditions
     : Clone
      +MatrixSquare
-     +ConjugateTranspose    <Output=Self>
+     +Transpose<Output=Self>
+     +Conjugate<Output=Self>
      +TryMatrixMatrixProduct<Output=Self> {}
 
 impl<EBC
     : Clone
      +MatrixSquare
-     +ConjugateTranspose    <Output=EBC>
+     +Transpose<Output=EBC>
+     +Conjugate<Output=EBC>
      +TryMatrixMatrixProduct<Output=EBC>> EigBaseConditions for EBC {}
 
 macro_rules! def_impl_eig {
@@ -39,8 +41,8 @@ macro_rules! def_impl_eig {
            pub fn into_parts(self) -> ($o_or_u<M>,DiagonalMatrixGeneric<Row>) { (self.q,self.d) }
            pub fn into_matrix(self) -> M {
                let (q,d)=(self.q,self.d);
-               let dqh=d.try_matrix_matrix_product(q.inner().clone().conjugate_transpose()).unwrap();
-               q.into_inner().try_matrix_matrix_product(dqh).unwrap()
+               let dqh=d.try_matrix_matrix_product(&q.inner().conjugate_transpose()).unwrap();
+               q.into_inner().try_matrix_matrix_product(&dqh).unwrap()
             }
 
             pub fn apply_fn(self, f:impl Fn(F)->F) -> Self
@@ -57,14 +59,14 @@ macro_rules! def_impl_eig {
                         M : TryMatrixVectorProduct<Rhs,Output=Rhs>
                            +TryMatrixVectorProduct<Out,Output=Out>
             {
-                let qt=self.q.clone().conjugate_transpose();
-                let qtr=qt.try_matrix_vector_product(rhs)?;
+                let qt=self.q.conjugate_transpose();
+                let qtr=qt.try_matrix_vector_product(&rhs).ok()?;
                 let dinvqtr=Out::try_from_vec(
                     qtr.into_iterator()
                        .zip(self.d.into_diagonal().into_iter())
                        .map(|(rhsi,dii)|rhsi.try_div(dii))
                        .collect::<Result<Vec<Out::T>,_>>().ok()?).ok()?;
-                self.q.try_matrix_vector_product(dinvqtr)
+                self.q.try_matrix_vector_product(&dinvqtr).ok()
             }
     }
     };
@@ -89,7 +91,7 @@ impl<R  : RealNumber,
 
 impl<R     : RealNumber,
      M     : MatrixNormal<T=R>+IntoBaseMatrix<Output=MBase>,
-     MBase : MatrixSquare<T=R>+Map<R,Complex<R>,Output=MC>,
+     MBase : MatrixViewSquare<T=R>+Map<R,Complex<R>,Output=MC>,
      MC    : MatrixTryConstruct<T=Complex<R>,Row=MCRow>
             +ChangeT<Complex<R>,Output=MC>
             +EigBaseConditions
@@ -118,7 +120,7 @@ impl<R     : RealNumber,
 //      Out : ColVectorTryConstruct>(self, rhs:Rhs) -> Option<Out>
 //     where   <Self::T as TryDiv>::Output : Mul<Rhs::T,Output=Rhs::T>+Mul<Out::T,Output=Out::T>,
 //             Rhs::T : TryDiv<Self::T,Output=Out::T>,
-//             Self::Q : Clone+ConjugateTranspose<Output = Self::Q> + TryMatrixVectorProduct<Rhs,Output=Rhs>+TryMatrixVectorProduct<Out,Output=Out>
+//             Self::Q : Clone+Transpose<Output = Self::Q> + TryMatrixVectorProduct<Rhs,Output=Rhs>+TryMatrixVectorProduct<Out,Output=Out>
 //             {
 //         let (q,d)=self.eig();
 //         let qt=q.clone().conjugate_transpose();

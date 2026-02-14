@@ -23,7 +23,7 @@ pub fn try_solve_least_squares<
 //      V   : 'static+Clone+TryDiv<Output=F>+Mul<F::RealType,Output=V>+Mul<F,Output=V>+InnerProductSpace1d,
 //      MQR : QR<M=MatrixDyn<V>,F=F,V=V>,
 //      E>(a:MatrixDyn<V>, b:VectorDyn<V>) -> Option<VectorDyn<F>>
-//      where MQR::Q : ConjugateTranspose,
+//      where MQR::Q : Transpose,
 //      <MQR::Q as Transpose>::Output : TryMatrixVectorProduct<VectorDyn<V>,T=F>,
 //      MQR::R : TrySolve<VectorDyn<V>,E,Output=VectorDyn<F>> {
 //         MQR::new(a)

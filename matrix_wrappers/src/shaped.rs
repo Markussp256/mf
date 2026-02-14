@@ -15,7 +15,7 @@ pub mod wide;
 pub use wide::Wide;
 
 
-// use matrix_traits::{AsMatrix, IntoMatrix, Matrix, MatrixSquare};
+// use matrix_traits::{AsMatrix, IntoMatrix, Matrix, MatrixViewSquare};
 // use container_traits::IntoInner;
 
 // macro_rules! impl_matrix_square {
@@ -35,7 +35,7 @@ pub use wide::Wide;
 //                     .into_inner()
 //             }
 //         }
-//         impl<M:Matrix> MatrixSquare for $t0<$t1<M>> {}
+//         impl<M:Matrix> MatrixViewSquare for $t0<$t1<M>> {}
 
 //     };
 // }

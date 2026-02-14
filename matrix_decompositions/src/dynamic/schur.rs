@@ -1,4 +1,4 @@
-use algebra_traits::{ComplexNumber, ConjugateTranspose, MulI, Scalar, TryMul, TrySub};
+use algebra_traits::{ComplexNumber, Transpose, MulI, Scalar, TryMul, TrySub};
 
 use crate::matrix::{DiagonalMatrixDyn, SpecialStiefelMatrixDyn, SquareMatrixDyn, SquareRightTriangularMatrixDyn};
 
@@ -37,7 +37,7 @@ fn wilkinson_shift<F:Clone+ComplexNumber>(m:&SquareMatrixDyn<F>) -> F {
     let sqrt_discrs:[F;2]=(trace.clone().pow2()-det.muli(4)).nth_roots(2).try_into().ok().unwrap();
     let lambdas=sqrt_discrs.map(|sqrt_discr|(trace.clone()+sqrt_discr).div2());
     let d=s[(1,1)].clone();
-    let ds=lambdas.clone().map(|lda|lda.distance(d.clone()).into_signed());
+    let ds=lambdas.clone().map(|lda|lda.into_distance(d.clone()).into_signed());
     if ds[0] < ds[1] {
         lambdas[0].clone()
     } else {

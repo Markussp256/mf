@@ -1,5 +1,5 @@
 use container_traits::{AnyFromIterator, Container, IndexOutOfBoundsError, IntoIter, Map, TryIntoElement};
-use algebra_traits::{Distance, Tolerance};
+use algebra_traits::{IntoDistance, Tolerance};
 use crate::row_col::*;
 use super::MatrixTryConstruct;
 use utils::iter::IntoExactSizeIterator;
@@ -17,8 +17,8 @@ pub trait Matrix : MatrixView + Container<U2> {
     // provided methods
 
     fn into_is_close_to(self, rhs:impl Matrix<T=Self::T>) -> bool
-    where Self::T : Distance+Tolerance, 
-         <Self::T as Distance>::DistT : PartialOrd {
+    where Self::T : IntoDistance+Tolerance, 
+         <Self::T as IntoDistance>::DistT : PartialOrd {
         assert_eq!(self.matrix_dimensions(), rhs.matrix_dimensions());
         self.into_iterator()
             .zip(rhs.into_iterator())

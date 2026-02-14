@@ -45,8 +45,8 @@ macro_rules! gen_length_types {
         $crate::conv_meas!($pname, Meters, m, Length, meters);
         $crate::conv_meas!($dname, Meters, m, Length, meters);
 
-        $crate::conv_simple_si_units!($pname, Meters, m, simple_si_units::base::Distance::<f64>, meters);
-        $crate::conv_simple_si_units!($dname, Meters, m, simple_si_units::base::Distance::<f64>, meters);
+        $crate::conv_simple_si_units!($pname, Meters, m, simple_si_units::base::IntoDistance::<f64>, meters);
+        $crate::conv_simple_si_units!($dname, Meters, m, simple_si_units::base::IntoDistance::<f64>, meters);
 
         paste::paste!(
             $crate::impl_PhysQuant!([<$dname _generic>]::$dname<F>, Meters, m, LENG_DIM=1);
@@ -79,7 +79,10 @@ use algebra_traits::{Pow2, RealNumber, Nonnegative};
 use crate::generic::Area;
 impl<F:Clone+RealNumber> algebra_traits::NormSquared for Length_generic::Length<F> {
     type Norm2T = Area<F>;
-    fn norm_squared(self) -> Nonnegative<Self::Norm2T> {
+    fn norm_squared(&self) -> Nonnegative<Self::Norm2T> {
+        Nonnegative::try_new(self.clone().pow2()).unwrap()
+    }
+    fn into_norm_squared(self) -> Nonnegative<Self::Norm2T> {
         Nonnegative::try_new(self.pow2()).unwrap()
     }
 }
@@ -90,7 +93,7 @@ fn test_norm_on_length() {
     use algebra_traits::Norm;
     let f=2.3; //positive float
     let a=Length::from_m(f);
-    assert_eq!(a, a.norm().into_signed());
+    assert_eq!(a, a.into_norm().into_signed());
 }
 
 #[test]
@@ -98,5 +101,5 @@ fn test_norm_on_neg_length() {
     use algebra_traits::Norm;
     let f=-2.3; //positive float
     let a=Length::from_m(f);
-    assert_eq!(-a, a.norm().into_signed());
+    assert_eq!(-a, a.into_norm().into_signed());
 }

@@ -147,17 +147,16 @@ macro_rules! base_impl {
             container_traits::try_from_iter_impl!(F);
         }
 
-        impl<F :algebra_traits::Conjugate<Output=F2>, F2> algebra_traits::Conjugate for $name<F> {
+        impl<F :algebra_traits::Conjugate<Output=F2>,
+             F2:algebra_traits::RealNumber> algebra_traits::Conjugate for $name<F> {
             type Output=$name<F2>;
-            fn conjugate(&self) -> Self::Output {
-                Self::Output::new(<F as algebra_traits::Conjugate>::conjugate(&self.value), self.unit.clone())
-            }
-        }
 
-        impl<F:algebra_traits::IntoConjugate<Output=F2>,F2> algebra_traits::IntoConjugate for $name<F> {
-            type Output=$name<F2>;
             fn into_conjugate(self) -> Self::Output {
-                Self::Output::new(<F as algebra_traits::IntoConjugate>::into_conjugate(self.value), self.unit)
+                Self::Output::new(<F as algebra_traits::Conjugate>::into_conjugate(self.value), self.unit)
+            }
+            fn are_conjugates(&self, rhs:&$name<F2>) -> bool {
+                self.value
+                    .are_conjugates(&rhs.clone().value_in(self.unit.clone()))
             }
         }
 
@@ -462,42 +461,49 @@ macro_rules! quantity {
                
             impl<F:algebra_traits::RealNumber+Clone> algebra_traits::Norm for $dname<F> {
                 type NormT=Self;
-                fn norm(self) -> algebra_traits::Nonnegative<Self> {
+
+                fn norm(&self) -> algebra_traits::Nonnegative<Self> {
                     algebra_traits::Nonnegative::try_new(
-                        Self::new(self.value.norm().into_signed(), self.unit)
+                        Self::new(self.value.norm().into_signed(), self.unit.clone())
+                    ).unwrap()
+                }
+
+                fn into_norm(self) -> algebra_traits::Nonnegative<Self> {
+                    algebra_traits::Nonnegative::try_new(
+                        Self::new(self.value.into_norm().into_signed(), self.unit)
                     ).unwrap()
                 }
             }
 
-            impl<F:algebra_traits::RealNumber> algebra_traits::Distance for $dname<F> {
+            impl<F:algebra_traits::RealNumber> algebra_traits::IntoDistance for $dname<F> {
                 type DistT=Self;
-                fn distance(self, rhs:impl Into<Self>) -> algebra_traits::Nonnegative<Self> {
+                fn into_distance(self, rhs:impl Into<Self>) -> algebra_traits::Nonnegative<Self> {
                     let rhs:Self=rhs.into();
-                    <Self as algebra_traits::Norm>::norm(rhs-self)
+                    <Self as algebra_traits::Norm>::into_norm(rhs-self)
                 }
             }
 
-            impl<F:algebra_traits::RealNumber> algebra_traits::TryDistance for $dname<F> {
+            impl<F:algebra_traits::RealNumber> algebra_traits::TryIntoDistance for $dname<F> {
                 type TryDistT=Self;
                 type Error=std::convert::Infallible;
-                fn try_distance(self, rhs:impl Into<Self>) -> Result<algebra_traits::Nonnegative<Self>, Self::Error> {
-                    Ok(<Self as algebra_traits::Distance>::distance(self,rhs))
+                fn try_into_distance(self, rhs:impl Into<Self>) -> Result<algebra_traits::Nonnegative<Self>, Self::Error> {
+                    Ok(<Self as algebra_traits::IntoDistance>::into_distance(self,rhs))
                 }
             }
 
-            impl<F:algebra_traits::RealNumber> algebra_traits::Distance for $pname<F> {
+            impl<F:algebra_traits::RealNumber> algebra_traits::IntoDistance for $pname<F> {
                 type DistT=$dname<F>;
-                fn distance(self, rhs:impl Into<Self>) -> algebra_traits::Nonnegative<$dname<F>> {
+                fn into_distance(self, rhs:impl Into<Self>) -> algebra_traits::Nonnegative<$dname<F>> {
                     let rhs:Self=rhs.into();
-                    <$dname<F> as algebra_traits::Norm>::norm(rhs-self)
+                    <$dname<F> as algebra_traits::Norm>::into_norm(rhs-self)
                 }
             }
 
-            impl<F:algebra_traits::RealNumber> algebra_traits::TryDistance for $pname<F> {
+            impl<F:algebra_traits::RealNumber> algebra_traits::TryIntoDistance for $pname<F> {
                 type TryDistT=$dname<F>;
                 type Error=std::convert::Infallible;
-                fn try_distance(self, rhs:impl Into<Self>) -> Result<algebra_traits::Nonnegative<$dname<F>>, Self::Error> {
-                    Ok(<Self as algebra_traits::Distance>::distance(self,rhs))
+                fn try_into_distance(self, rhs:impl Into<Self>) -> Result<algebra_traits::Nonnegative<$dname<F>>, Self::Error> {
+                    Ok(<Self as algebra_traits::IntoDistance>::into_distance(self,rhs))
                 }
             }
 

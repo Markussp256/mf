@@ -56,14 +56,7 @@ impl<T:Scalar,
     fn transpose(&self) -> Self::Output {
          nalgebra::Matrix::<T,R,C,S>::transpose(&self)
     }
-}
 
-impl<T:Scalar,
-     R:DimExtension,
-     C:DimExtension,
-     S:RawStorage<T,R,C>> IntoTranspose for nalgebra::Matrix<T,R,C,S>
-     where DefaultAllocator : Allocator<C,R> {
-    type Output = nalgebra::OMatrix<T,C,R>;
     fn into_transpose(self) -> Self::Output {
          self.transpose()
     }
@@ -506,9 +499,9 @@ impl<F:Scalar> MatrixDynamicallySized for DMatrix<F> {}
 //     type Matrix=DMatrix<F>;
 // }
 
-impl<F:Scalar, const M:usize, const N:usize> MatrixFixedNumberOfCols<N> for SMatrix<F,M,N> {}
+impl<F:Scalar, const M:usize, const N:usize> MatrixViewFixedNumberOfCols<N> for SMatrix<F,M,N> {}
 
-impl<F:Scalar, const M:usize, const N:usize> MatrixFixedNumberOfRows<M> for SMatrix<F,M,N> {}
+impl<F:Scalar, const M:usize, const N:usize> MatrixViewFixedNumberOfRows<M> for SMatrix<F,M,N> {}
 
 
 // // cam not implement this for general N:usize therefore macro
@@ -782,7 +775,7 @@ impl<F:Clone+Scalar, const N:usize> TryPopRow for SMatrix<F,0,N> {
 }
 
 
-impl<F:Scalar, const M:usize> SquareStaticMatrix for SMatrix<F,M,M> {
+impl<F:Scalar, const M:usize> SquareStaticMatrixView for SMatrix<F,M,M> {
     const M:usize = M;
 }
 

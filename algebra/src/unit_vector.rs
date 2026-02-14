@@ -22,11 +22,10 @@ pub struct Unit<C>(C);
 pub type UnitVector<T,const N:usize>=Unit<Vector<T,N>>;
 pub type UnitVectorDyn<T>=Unit<VectorDyn<T>>;
 
-impl<C:Clone+Norm> Unit<C> where C::NormT : Scalar {
+impl<C:Norm> Unit<C> where C::NormT : Scalar {
     pub fn try_new(c:C) -> Result<Self, C> {
         let is_ok=
-            c.clone()
-             .norm()
+            c.norm()
              .is_close_to_one();
         if is_ok {
             Ok(Self(c))
@@ -59,12 +58,12 @@ impl<C:algebra_traits::ScalarMul<F>, F:'static> std::ops::Mul<F> for Unit<C> {
 }
 
 // impl<C     : Clone,
-//      NormT : num_traits::One+algebra_traits::Tolerance+algebra_traits::Distance<DistT=DistT>,
+//      NormT : num_traits::One+algebra_traits::Tolerance+algebra_traits::IntoDistance<DistT=DistT>,
 //      DistT : PartialOrd> TryFrom<C> for Unit<C>
 //     where C : algebra_traits::Norm<NormT=NormT> {
 //     type Error=C;
 //     fn try_from(c: C) -> Result<Self, C> {
-//         let norm:NormT=<C as algebra_traits::Norm>::norm(c.clone()).into_signed();
+//         let norm:NormT=<C as algebra_traits::Norm>::into_norm(c.clone()).into_signed();
 //         if <NormT as algebra_traits::Tolerance>::is_close_to_one(norm) {
 //             Ok(Self(c))
 //         } else {
@@ -164,12 +163,12 @@ impl<C:'static> Unit<C> {
 //             }
 
 //             impl<C     : Clone,
-//                  NormT : num_traits::One+algebra_traits::Tolerance+algebra_traits::Distance<DistT=DistT>,
+//                  NormT : num_traits::One+algebra_traits::Tolerance+algebra_traits::IntoDistance<DistT=DistT>,
 //                  DistT : PartialOrd> TryFrom<C> for Unit<C>
 //                 where C : algebra_traits::Norm<NormT=NormT> {
 //                 type Error=C;
 //                 fn try_from(c: C) -> Result<Self, C> {
-//                     let norm:NormT=<C as algebra_traits::Norm>::norm(c.clone()).into_signed();
+//                     let norm:NormT=<C as algebra_traits::Norm>::into_norm(c.clone()).into_signed();
 //                     if <NormT as algebra_traits::Tolerance>::is_close_to_one(norm) {
 //                         Ok(Self(c))
 //                     } else {

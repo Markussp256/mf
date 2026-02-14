@@ -14,7 +14,7 @@ pub type UnitVector3<T>=UnitVector<T,3>;
 //        NormT::DistT : PartialOrd {
 //     type Error=Vector<V,N>;
 //     fn try_from(value: Vector<V,N>) -> Result<Self, Self::Error> {
-//         if value.clone().norm().is_close_to_one() {
+//         if valuenorm().is_close_to_one() {
 //             Ok(Self(value))
 //         } else {
 //             Err(value)

@@ -2,8 +2,8 @@ use num_traits::Zero;
 
 
 use algebra_traits::RealNumber;
-use container_traits::{ IntoIter, IntoParameters, LenTooSmallError, TryAccept};
-use matrix_traits::{Matrix, MatrixConstructError, MatrixMut, MatrixSquare, MatrixSquareTryConstruct, SquareStaticMatrix};
+use container_traits::{LensNotEqualError, IntoIter, IntoParameters, LenTooSmallError, TryAccept};
+use matrix_traits::{Matrix, MatrixConstructError, MatrixViewMut, MatrixViewSquare, MatrixSquareTryConstruct, SquareStaticMatrixView};
 use utils::iter::IntoExactSizeIterator;
 
 
@@ -25,12 +25,12 @@ type U2=(usize,usize);
          matrix_derive::MatrixShape,
          matrix_derive::MatrixNormal,
          derive_more::Index)]
-pub struct SkewSymmetric<M:MatrixSquare>(M) where M::T:RealNumber;
+pub struct SkewSymmetric<M:MatrixViewSquare>(M) where M::T:RealNumber;
 
 impl<F : Clone+RealNumber,
      M : MatrixSquareTryConstruct<T=F>> TryAccept<U2,F,MatrixConstructError> for SkewSymmetric<M> {
     fn try_accept<'a>((nrows,ncols):U2,f:impl Fn(U2) -> &'a F) -> Result<(),MatrixConstructError> where F: 'a {
-        if nrows != ncols { return Err(MatrixConstructError::DimensionMismatch); }
+        LensNotEqualError::try_new(nrows, ncols)?;
         for i in 0..nrows {
             for j in 0..i {
                if f((i,j)) != &-f((j,i)).clone() {
@@ -57,7 +57,7 @@ impl<F : Clone+RealNumber,
 
 
 
-impl<M : MatrixSquare<T=F>,
+impl<M : Matrix+MatrixViewSquare<T=F>,
      F : RealNumber> IntoParameters<F> for SkewSymmetric<M> {
     fn into_parameters(self) -> impl ExactSizeIterator<Item=F> {
         let n=self.n();
@@ -70,7 +70,7 @@ impl<M : MatrixSquare<T=F>,
     }
 }
 
-impl<M : SquareStaticMatrix+MatrixSquareTryConstruct<T=F>+MatrixMut<T=F>+Zero, F:Clone+RealNumber>
+impl<M : SquareStaticMatrixView+MatrixSquareTryConstruct<T=F>+MatrixViewMut<T=F>+Zero, F:Clone+RealNumber>
 container_traits::for_static::TryFromParameters<F,MatrixConstructError>
 for SkewSymmetric<M> {
     fn try_take_away<I: Iterator<Item=F>>(iter:& mut I) -> Result<Self,MatrixConstructError> {

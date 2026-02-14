@@ -1,6 +1,6 @@
 use algebra_traits::RealNumber;
-use container_traits::TryAccept;
-use matrix_traits::{MatrixConstructError, MatrixSquare, MatrixSquareTryConstruct};
+use container_traits::{LensNotEqualError, TryAccept};
+use matrix_traits::{MatrixConstructError, MatrixViewSquare, MatrixSquareTryConstruct};
 
 type U2=(usize,usize);
 
@@ -17,12 +17,12 @@ type U2=(usize,usize);
          matrix_derive::MatrixNormal,
          matrix_derive::ClosedTranspose,
          derive_more::Index)]
-pub struct Symmetric<M:MatrixSquare>(M) where M::T : RealNumber;
+pub struct Symmetric<M:MatrixViewSquare>(M) where M::T : RealNumber;
 
 impl<F : Clone+RealNumber,
      M : MatrixSquareTryConstruct<T=F>> TryAccept<U2,F,MatrixConstructError> for Symmetric<M> {
     fn try_accept<'a>((nrows,ncols):U2,f:impl Fn(U2) -> &'a F) -> Result<(),MatrixConstructError> where F: 'a {
-        if nrows != ncols { return Err(MatrixConstructError::DimensionMismatch); }
+        LensNotEqualError::try_new(nrows, ncols)?;
         for i in 0..nrows {
             for j in 0..i {
                if f((i,j)) != &-f((j,i)).clone() {

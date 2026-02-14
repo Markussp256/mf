@@ -1,7 +1,9 @@
 use nalgebra::{SMatrix, Scalar};
-use crate::{for_static,FromElement, ContainerConstructError, LenTooSmallError};
+use crate::{ContainerConstructError, FromElement, IndexOutOfBoundsError, LenTooSmallError, for_static};
 
 type U2=(usize,usize);
+
+use num_traits::{Zero,One};
 
 impl<T : Scalar,
      const M:usize,
@@ -51,4 +53,24 @@ impl<T : Scalar,
     }
 
     crate::try_from_iter_impl!(T, ContainerConstructError<U2>);
+}
+
+impl<T : Scalar, const M:usize, const N:usize> for_static::TryPutAt<usize,T> for SMatrix<T,M,N> {
+    fn try_put_at(index:usize,t:T) -> Result<Self,IndexOutOfBoundsError<usize>> where T : num_traits::Zero {
+        IndexOutOfBoundsError::try_new(&(M*N),&index)?;
+        let mut res=SMatrix::<T,M,N>::from_element(T::zero());
+        res[(index % M,index/M)]=t;
+        Ok(res)
+    }
+}
+
+
+impl<T : Scalar+Zero+One, const M:usize, const N:usize> for_static::StandardBasis for SMatrix<T,M,N> {
+    fn try_standard_basis_element(index:usize) -> Result<Self,IndexOutOfBoundsError<usize>> {
+        <Self as for_static::TryPutAt<usize,T>>::try_put_at(index,T::one())
+    }
+    
+    fn standard_basis() -> impl ExactSizeIterator<Item=Self> {
+        (0..M*N).map(|i|<Self as for_static::StandardBasis>::try_standard_basis_element(i).unwrap())
+    }
 }

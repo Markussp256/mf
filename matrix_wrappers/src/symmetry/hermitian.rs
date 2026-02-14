@@ -1,6 +1,6 @@
 use algebra_traits::ComplexNumber;
-use container_traits::TryAccept;
-use matrix_traits::{MatrixConstructError, MatrixSquare};
+use container_traits::{LensNotEqualError, TryAccept};
+use matrix_traits::{MatrixConstructError, MatrixViewSquare};
 
 type U2=(usize,usize);
 
@@ -17,14 +17,14 @@ type U2=(usize,usize);
          matrix_derive::ClosedTranspose,
          matrix_derive::MatrixShape,
 )]
-pub struct Hermitian<M:MatrixSquare>(M) where M::T : Clone+ComplexNumber;
+pub struct Hermitian<M:MatrixViewSquare>(M) where M::T : Clone+ComplexNumber;
 
 // crate::macros::as_square_into_square!(Hermitian);
 
 
-impl<F:Clone+ComplexNumber, M:MatrixSquare<T=F>> TryAccept<U2,F,MatrixConstructError> for Hermitian<M> {
+impl<F:Clone+ComplexNumber, M:MatrixViewSquare<T=F>> TryAccept<U2,F,MatrixConstructError> for Hermitian<M> {
     fn try_accept<'a>((nrows,ncols):U2,f:impl Fn(U2) -> &'a F) -> Result<(),MatrixConstructError> where F: 'a {
-        if nrows != ncols { return Err(MatrixConstructError::DimensionMismatch); }
+        LensNotEqualError::try_new(nrows, ncols)?;
         for i in 0..nrows {
             for j in 0..i {
                if f((i,j)) != &f((j,i)).clone().conjugate() {

@@ -3,7 +3,7 @@ use container_traits::{ContainerView, IndexOutOfBoundsError};
 use num_traits::{Zero,One};
 use crate::row_col::{RowVectorView,ColVectorView};
 use utils::kronecker_delta::kron_delta;
-use algebra_traits::{Conjugate, Distance, Tolerance};
+use algebra_traits::{Conjugate, IntoDistance, Tolerance};
 type U2=(usize,usize);
 
 // can be dynamic or static sized
@@ -35,8 +35,8 @@ pub trait MatrixView : ContainerView<U2> {
     }
 
     fn is_close_to(&self, rhs:&impl MatrixView<T=Self::T>) -> bool
-    where Self::T : Clone+Distance+Tolerance, 
-         <Self::T as Distance>::DistT : PartialOrd {
+    where Self::T : Clone+IntoDistance+Tolerance, 
+         <Self::T as IntoDistance>::DistT : PartialOrd {
         assert_eq!(self.matrix_dimensions(),rhs.matrix_dimensions());
         self.iter().cloned()
             .zip(rhs.iter().cloned())

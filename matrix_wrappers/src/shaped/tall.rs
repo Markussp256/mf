@@ -1,6 +1,6 @@
 use std::fmt::Debug;
-use container_traits::{IntoInner, TryAccept};
-use matrix_traits::{Matrix, MatrixView, MatrixNotWide, MatrixTall, MatrixConstructError, MatrixTryConstruct, Transpose, TryFromMatrix};
+use container_traits::{IntoInner, OtherDimensionMismatchError, TryAccept};
+use matrix_traits::{Matrix, MatrixView, MatrixViewNotWide, MatrixViewTall, MatrixConstructError, MatrixTryConstruct, Transpose, TryFromMatrix};
 
 use super::{wide::Wide, NotWide, Square};
 
@@ -11,7 +11,7 @@ type U2=(usize,usize);
          PartialEq,
          algebra_derive::ScalarContainer,
          container_derive::ChangeT,
-         container_derive::ContainerMut,
+         container_derive::ContainerViewMut,
          container_derive::TryIntoElement,
          container_derive::IntoIterator,
          container_derive::IntoIterIndexed,
@@ -25,14 +25,14 @@ type U2=(usize,usize);
 )]
 pub struct Tall<M:MatrixView>(M);
 
-impl<M:MatrixView> MatrixNotWide for Tall<M> {}
-impl<M:MatrixView> MatrixTall    for Tall<M> {}
+impl<M:MatrixView> MatrixViewNotWide for Tall<M> {}
+impl<M:MatrixView> MatrixViewTall    for Tall<M> {}
 
 impl<M:MatrixView+Transpose<Output=MT>,MT:MatrixTryConstruct> Transpose for Tall<M> {
     type Output=Wide<MT>;
 
-    fn transpose(self) -> Self::Output {
-        Wide::try_from_matrix(self.0.transpose()).ok().unwrap()
+    fn into_transpose(self) -> Self::Output {
+        Wide::try_from_matrix(self.0.into_transpose()).ok().unwrap()
     }
 }
 
@@ -54,7 +54,7 @@ impl<M:MatrixTryConstruct> TryAccept<U2,M::T,MatrixConstructError> for Tall<M> {
         if nrows > ncols {
             Ok(())
         } else {
-            Err(MatrixConstructError::DimensionMismatch)
+            Err(OtherDimensionMismatchError.into())
         }
     }
 }

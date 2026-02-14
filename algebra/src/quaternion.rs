@@ -106,7 +106,7 @@ impl<T:Clone+Scalar> TryInv for Quaternion<T> {
         self.is_invertible()?;
         Ok(NonZero::try_new(
            self.clone()
-               .norm_squared()
+               .into_norm_squared()
                .into_signed()
                .into())
             .map(|norm_squared: NonZero<T>|
@@ -205,8 +205,8 @@ impl<T:Clone+Scalar> std::ops::Div for UnitQuaternion<T> {
 impl<T:Clone+Scalar> TryFrom<Quaternion<T>> for UnitQuaternion<T>  {
     type Error = Nonnegative<T::RealType>;
     fn try_from(value: Quaternion<T>) -> Result<Self, Self::Error> {
-        let norm=value.clone().norm();
-        if  norm.clone().is_close_to_one() {
+        let norm=value.norm();
+        if norm.clone().is_close_to_one() {
             Ok(Self(value))
         } else {
             Err(norm)
@@ -235,7 +235,7 @@ impl<T:Clone+RealNumber> IntoParameters<T> for ProjectiveQuaternion<T> {
 impl<T:Clone+RealNumber> TryFromParameters<T,LinearContainerConstructError> for ProjectiveQuaternion<T> {
     fn try_take_away<I: Iterator<Item = T>>(iter: &mut I) -> Result<Self,LinearContainerConstructError> {
         let imag:[T;3]=<[T;3] as TryFromIterator<T,LinearContainerConstructError>>::try_from_iter(iter)?;
-        let norm=imag.clone().norm().into_signed();
+        let norm=imag.norm().into_signed();
         if norm > T::one() {
             return Err(LinearContainerConstructError::DataDoesNotSatisfyRequiredPropertiesOfTargetContainer);
         }
@@ -262,7 +262,7 @@ impl<T> ProjectiveQuaternion<T> {
 
 // #[cfg(test)]
 // fn test_norm<T:Clone+RealNumber>(q:Quaternion<T>) -> T {
-//     <Quaternion<T> as Norm>::norm(q).into_signed()
+//     <Quaternion<T> as Norm>::into_norm(q).into_signed()
 // }
 
 impl<T:RealNumber> TryDiv<T> for Quaternion<T> {

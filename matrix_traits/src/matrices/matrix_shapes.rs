@@ -1,24 +1,21 @@
 
-use crate::{MatrixView, MatrixTryConstruct};
+use crate::{MatrixView, Matrix, MatrixTryConstruct};
 
-pub trait MatrixFixedNumberOfRows<const NROWS:usize> : MatrixView {}
-pub trait MatrixFixedNumberOfCols<const NCOLS:usize> : MatrixView {}
+pub trait MatrixViewFixedNumberOfRows<const NROWS:usize> : MatrixView {}
+pub trait MatrixViewFixedNumberOfCols<const NCOLS:usize> : MatrixView {}
 
-pub trait MatrixFixedSize<const M:usize, const N:usize>
-    : MatrixFixedNumberOfRows<M>
-    + MatrixFixedNumberOfCols<N> {}
-
-
+pub trait MatrixViewFixedSize<const M:usize, const N:usize>
+    : MatrixViewFixedNumberOfRows<M>
+    + MatrixViewFixedNumberOfCols<N> {}
 
 
-
-pub trait MatrixNotTall : MatrixView {}
-pub trait MatrixNotWide : MatrixView {}
+pub trait MatrixViewNotTall : MatrixView {}
+pub trait MatrixViewNotWide : MatrixView {}
 
 
 
 
-pub trait MatrixSquare : MatrixNotTall+MatrixNotWide {
+pub trait MatrixViewSquare : MatrixViewNotTall+MatrixViewNotWide {
     fn n(&self) -> usize {
         let (nrows, ncols)=self.matrix_dimensions();
         assert_eq!(ncols, ncols);
@@ -26,29 +23,31 @@ pub trait MatrixSquare : MatrixNotTall+MatrixNotWide {
     }
 }
 
+pub trait MatrixSquare : MatrixViewSquare+Matrix {}
+
 #[macro_export]
 macro_rules! impl_matrix_square {
     ($t:ident $(,$tr:ident)?) => {
-        impl<F :'static $(+ $tr)?, const N:usize> $crate::matrices::matrix_shapes::MatrixNotTall   for $t<F,N,N> {}
-        impl<F :'static $(+ $tr)?, const N:usize> $crate::matrices::matrix_shapes::MatrixNotWide   for $t<F,N,N> {}
-        impl<F :'static $(+ $tr)?, const N:usize> $crate::matrices::matrix_shapes::MatrixSquare    for $t<F,N,N> {}
+        impl<F :'static $(+ $tr)?, const N:usize> $crate::matrices::matrix_shapes::MatrixViewNotTall for $t<F,N,N> {}
+        impl<F :'static $(+ $tr)?, const N:usize> $crate::matrices::matrix_shapes::MatrixViewNotWide for $t<F,N,N> {}
+        impl<F :'static $(+ $tr)?, const N:usize> $crate::matrices::matrix_shapes::MatrixViewSquare  for $t<F,N,N> {}
     };
 }
 
 #[macro_export]
 macro_rules! impl_matrix_square_one_param {
     ($t:ident $(,$tr:ident)?) => {
-        impl<F :'static $(+ $tr)?, const N:usize> $crate::matrices::matrix_shapes::MatrixNotTall for $t<F,N> {}
-        impl<F :'static $(+ $tr)?, const N:usize> $crate::matrices::matrix_shapes::MatrixNotWide for $t<F,N> {}
-        impl<F :'static $(+ $tr)?, const N:usize> $crate::matrices::matrix_shapes::MatrixSquare  for $t<F,N> {}
+        impl<F :'static $(+ $tr)?, const N:usize> $crate::matrices::matrix_shapes::MatrixViewNotTall for $t<F,N> {}
+        impl<F :'static $(+ $tr)?, const N:usize> $crate::matrices::matrix_shapes::MatrixViewNotWide for $t<F,N> {}
+        impl<F :'static $(+ $tr)?, const N:usize> $crate::matrices::matrix_shapes::MatrixViewSquare  for $t<F,N> {}
     };
 }
 
 
-pub trait MatrixSquareTryConstruct : MatrixSquare + MatrixTryConstruct {}
+pub trait MatrixSquareTryConstruct : MatrixViewSquare + MatrixTryConstruct {}
 
-pub trait MatrixTall : MatrixNotWide {}
-pub trait MatrixWide : MatrixNotTall {}
+pub trait MatrixViewTall : MatrixViewNotWide {}
+pub trait MatrixViewWide : MatrixViewNotTall {}
 
 // some fun with macro_rules!
 // macro_rules! def_stat {
@@ -62,9 +61,9 @@ pub trait MatrixWide : MatrixNotTall {}
 macro_rules! impl_stat {
     ($t:ident<$f:ident $(: $tr:ident)?, $i:literal,$j:literal>, $shape:ident, $shape_not:ident) => {
         paste::paste!(
-            impl<$f :'static $(+ $tr)?> $crate::matrices::matrix_shapes::[<Matrix $shape_not>]  for $t<$f,$i,$j> {}
-            impl<$f :'static $(+ $tr)?> $crate::matrices::matrix_shapes::[<Matrix $shape>]      for $t<$f,$i,$j> {}
-            impl<$f :'static $(+ $tr)?> $crate::matrices::matrix_shapes::MatrixFixedSize<$i,$j> for $t<$f,$i,$j> {}
+            impl<$f :'static $(+ $tr)?> $crate::matrices::matrix_shapes::[<MatrixView $shape_not>]  for $t<$f,$i,$j> {}
+            impl<$f :'static $(+ $tr)?> $crate::matrices::matrix_shapes::[<MatrixView $shape>]      for $t<$f,$i,$j> {}
+            impl<$f :'static $(+ $tr)?> $crate::matrices::matrix_shapes::MatrixViewFixedSize<$i,$j> for $t<$f,$i,$j> {}
         );
     }; 
 }
@@ -80,12 +79,12 @@ macro_rules! impl_stat {
 macro_rules! impl_matrixii {
     ($t:ident , $tr:ident $(,$i:literal)*) => {
         paste::paste!(
-        $(impl<F :'static + $tr> $crate::matrices::matrix_shapes::MatrixFixedSize<$i, $i> for $t<F,$i,$i> {} )*
+        $(impl<F :'static + $tr> $crate::matrices::matrix_shapes::MatrixViewFixedSize<$i, $i> for $t<F,$i,$i> {} )*
         );
     };
     ($t:ident $(,$i:literal)*) => {
         paste::paste!(
-        $( impl<F :'static > $crate::matrices::matrix_shapes::MatrixFixedSize< $i, $i> for $t<F,$i,$i> {} )*
+        $( impl<F :'static > $crate::matrices::matrix_shapes::MatrixViewFixedSize< $i, $i> for $t<F,$i,$i> {} )*
         );
     }
 }
@@ -93,12 +92,12 @@ macro_rules! impl_matrixii {
 macro_rules! impl_matrixii_one_param {
     ($t:ident , $tr:ident $(,$i:literal)*) => {
         paste::paste!(
-        $( impl<F :'static +$tr> $crate::matrices::matrix_shapes::MatrixFixedSize<$i, $i> for $t<F,$i> {} )*
+        $( impl<F :'static +$tr> $crate::matrices::matrix_shapes::MatrixViewFixedSize<$i, $i> for $t<F,$i> {} )*
         );
     };
     ($t:ident $(,$i:literal)*) => {
         paste::paste!(
-        $( impl<F :'static  > $crate::matrices::matrix_shapes::MatrixFixedSize<$i, $i> for $t<F,$i> {} )*
+        $( impl<F :'static  > $crate::matrices::matrix_shapes::MatrixViewFixedSize<$i, $i> for $t<F,$i> {} )*
         );
     }
 }

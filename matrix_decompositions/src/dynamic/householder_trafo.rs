@@ -1,6 +1,6 @@
 use std::ops::Mul;
 
-use algebra_traits::{AdditiveGroup, ComplexNumber, Conjugate, ConjugateTranspose, MulI, RealNumber, Scalar, ScalarMul, TryDiv, TryMul, TryNormalize, TrySub};
+use algebra_traits::{AdditiveGroup, ComplexNumber, Conjugate, Transpose, MulI, RealNumber, Scalar, ScalarMul, TryDiv, TryMul, TryNormalize, TrySub};
 
 use crate::{UnitVectorDyn, VectorDyn};
 use crate::matrix::{MatrixColDyn, MatrixDyn, MatrixRowDyn, OrthogonalMatrixDyn, StiefelMatrixDyn, SymmetricMatrixDyn, UnitaryMatrixDyn};
@@ -89,9 +89,9 @@ use algebra_traits::{Norm, Tolerance};
 #[cfg(test)]
 fn are_collinear<F:Scalar>(a:VectorDyn<F>, b:VectorDyn<F>) -> bool
 where VectorDyn<F> : Norm<NormT=F::RealType> {
-    let an=a.clone().norm();
-    let bn=b.clone().norm();
-    let sp=a.try_scalar_product(b).unwrap().norm();
+    let an=anorm();
+    let bn=bnorm();
+    let sp=a.try_scalar_product(b).unwrap().into_norm();
     Tolerance::is_close_to(sp, an*bn)
 }
 

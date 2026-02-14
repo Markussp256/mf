@@ -1,18 +1,32 @@
 use std::ops::Mul;
 use num_traits::Zero;
 
-mod impl_row_col;
-
 use algebra::{Unit, Vector, VectorGeneric};
 
 use container_traits::{FromInner, IntoInner, LinearContainer};
-use matrix_traits::{try_vector_vector_product_impl, ColVector, RowVector, TryVectorVectorProduct, VectorVectorProduct};
+use matrix_traits::{
+    try_vector_vector_product_impl,
+    try_into_vector_vector_product_impl,
+    ColVectorView,
+    IntoTranspose,
+    IntoVectorVectorProduct,
+    RowVectorView,
+    Transpose,
+    TryVectorVectorProduct,
+    TryIntoVectorVectorProduct,
+    VectorVectorProduct};
+
+algebra::gen_vector_view!(MatrixColViewGeneric, MatrixColViewDyn, MatrixColView);
+algebra::gen_vector_view!(MatrixRowViewGeneric, MatrixRowViewDyn, MatrixRowView);
 
 algebra::gen_vector!(MatrixColGeneric, MatrixColDyn, MatrixCol);
 algebra::gen_vector!(MatrixRowGeneric, MatrixRowDyn, MatrixRow);
 
-impl<C:LinearContainer> RowVector for MatrixRowGeneric<C> {}
-impl<C:LinearContainer> ColVector for MatrixColGeneric<C> {}
+impl<C:LinearContainer> RowVectorView for MatrixRowViewGeneric<C> {}
+impl<C:LinearContainer> ColVectorView for MatrixColViewGeneric<C> {}
+
+impl<C:LinearContainer> RowVectorView for MatrixRowGeneric<C> {}
+impl<C:LinearContainer> ColVectorView for MatrixColGeneric<C> {}
 
 pub type UnitMatrixColGeneric<C> = Unit<MatrixColGeneric<C>>;
 pub type UnitMatrixRowGeneric<C> = Unit<MatrixRowGeneric<C>>;
@@ -23,35 +37,49 @@ pub type UnitMatrixRow<T,const N:usize>=Unit<MatrixRow<T,N>>;
 pub type UnitMatrixColDyn<T>=Unit<MatrixColDyn<T>>;
 pub type UnitMatrixRowDyn<T>=Unit<MatrixRowDyn<T>>;
 
-
-impl<F1 : Mul<F2,Output=F3>, F2, F3 : Zero,
-     C1 : LinearContainer<T=F1>,
-     C2 : LinearContainer<T=F2>> TryVectorVectorProduct<MatrixColGeneric<C2>> for MatrixRowGeneric<C1> {
-    type Output=F3;
-    fn try_vector_vector_product(self, rhs:MatrixColGeneric<C2>) -> Option<F3> {
-        try_vector_vector_product_impl(self,rhs)
+macro_rules! vec_vec_impl {
+    ($lhs : ident, $rhs : ident) => {
+        impl<F1 : Mul<F2,Output=F3>+Clone, F2:Clone, F3 : Zero,
+             C1 : LinearContainer<T=F1>,
+             C2 : LinearContainer<T=F2>> TryVectorVectorProduct<$rhs<C2>> for $lhs<C1> {
+            type Output=F3;
+            fn try_vector_vector_product(&self, rhs:&$rhs<C2>) -> Option<F3> {
+                try_vector_vector_product_impl(self,rhs)
+            }
+        }
+        impl<F1 : Mul<F2,Output=F3>, F2, F3 : Zero,
+             C1 : LinearContainer<T=F1>,
+             C2 : LinearContainer<T=F2>> TryIntoVectorVectorProduct<$rhs<C2>> for $lhs<C1> {
+            type Output=F3;
+            fn try_into_vector_vector_product(self, rhs:$rhs<C2>) -> Option<F3> {
+                try_into_vector_vector_product_impl(self,rhs)
+            }
+        }
     }
 }
 
-impl<F1 : Mul<F2,Output=F3>, F2, F3 : Zero,
+
+vec_vec_impl!(MatrixRowGeneric,MatrixColGeneric);
+
+impl<F1 : Mul<F2,Output=F3>+Clone, F2:Clone, F3 : Zero,
      C1 : LinearContainer<T=F1>,
      C2 : LinearContainer<T=F2>> TryVectorVectorProduct<VectorGeneric<C2>> for MatrixRowGeneric<C1> {
     type Output=F3;
-    fn try_vector_vector_product(self, rhs:VectorGeneric<C2>) -> Option<F3> {
+    fn try_vector_vector_product(&self, rhs:&VectorGeneric<C2>) -> Option<F3> {
         try_vector_vector_product_impl(self,rhs)
     }
 }
 
-impl<F1 : Mul<F2,Output=F3>,F2,F3:Zero, const N:usize> VectorVectorProduct<MatrixCol<F2,N>> for MatrixRow<F1,N> {
+impl<F1 : Mul<F2,Output=F3>+Clone,F2:Clone,F3:Zero, const N:usize> VectorVectorProduct<MatrixCol<F2,N>> for MatrixRow<F1,N> {
     type Output = F3;
-    fn vector_vector_product(self, rhs:MatrixCol<F2,N>) -> F3 {
+    fn vector_vector_product(&self, rhs:&MatrixCol<F2,N>) -> F3 {
         try_vector_vector_product_impl(self,rhs).unwrap()
     }
 }
 
-impl<F1 : Mul<F2,Output=F3>,F2,F3:Zero, const N:usize> VectorVectorProduct<Vector<F2,N>> for MatrixRow<F1,N> {
+impl<F1 : Mul<F2,Output=F3>+Clone,F2:Clone,F3:Zero, const N:usize> VectorVectorProduct<Vector<F2,N>> for MatrixRow<F1,N> {
     type Output = F3;
-    fn vector_vector_product(self, rhs:Vector<F2,N>) -> F3 {
+    fn vector_vector_product(&self, rhs:&Vector<F2,N>) -> F3 {
         try_vector_vector_product_impl(self,rhs).unwrap()
     }
 }
@@ -84,11 +112,32 @@ impl<C:'static> Into<VectorGeneric<C>> for MatrixColGeneric<C> {
 }
 
 
-// impl<F   : Clone+ComplexNumber,
-//      C   : LinearContainerTryConstruct<T=F>+ChangeT<F,Output=C>+ChangeT<MatrixRowGeneric<C>,Output=C2>,
-//      C2  : 'static+Clone+Conjugate+PartialEq+LinearContainerTryConstruct<T=MatrixRowGeneric<C>>+ChangeT<MatrixRowGeneric<C>,Output=C2>> HermitianOuterProduct for MatrixColGeneric<C> {
-//     type Output=Hermitian<Square<MatrixGeneric<MatrixRowGeneric<C>,MatrixColGeneric<C>>>>;
-// }
+fn test_is_rvtc<F, const N:usize>(a:MatrixRow<F, N>) -> impl matrix_traits::RowVectorTryConstruct {
+    a
+}
+
+macro_rules! impl_row_col_vector {
+    ($name:ident, $lc_name:ident, $other:ident) => {
+        paste::paste!(
+            impl<C:LinearContainer> Transpose for [<Matrix $name Generic>]<C> {
+                type Output=[<Matrix $other Generic>]<C>;
+                fn transpose(&self) -> Self::Output where Self : Clone {
+                    self.clone()
+                        .0
+                        .into()
+                }
+
+                fn into_transpose(self) -> Self::Output {
+                    self.0
+                        .into()
+                }
+            }
+        );
+    };
+}
+impl_row_col_vector!(Row,row,Col);
+impl_row_col_vector!(Col,col,Row);
+
 
 #[cfg(test)]
 use container_traits::FromVec;

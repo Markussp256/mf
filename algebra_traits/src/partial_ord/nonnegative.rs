@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use crate::{metric::TryDistance, TryAdd, TrySub, Distance, Max, Sqrt, TryLog, TryPow, TrySqrt};
+use crate::{metric::TryIntoDistance, TryAdd, TrySub, IntoDistance, Max, Sqrt, TryLog, TryPow, TrySqrt};
 
 use std::ops::{Add,Div,Mul,Neg,Sub};
 use num_traits::{One, Pow, Zero};
@@ -135,21 +135,21 @@ impl<T:TrySub<Output=T>> TrySub<T> for Nonnegative<T> {
     }  
 }
 
-impl<T:TryDistance> TryDistance for Nonnegative<T> {
+impl<T:TryIntoDistance> TryIntoDistance for Nonnegative<T> {
     type TryDistT=T::TryDistT;
-    type Error=<T as TryDistance>::Error;
-    fn try_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<T::TryDistT>,<T as TryDistance>::Error> {
+    type Error=<T as TryIntoDistance>::Error;
+    fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<T::TryDistT>,<T as TryIntoDistance>::Error> {
         let rhs:Self=rhs.into();
         self.0
-            .try_distance(rhs.0)
+            .try_into_distance(rhs.0)
     }
 }
 
-impl<T:Distance> Distance for Nonnegative<T> {
+impl<T:IntoDistance> IntoDistance for Nonnegative<T> {
     type DistT=T::DistT;
-    fn distance(self, rhs:impl Into<Self>) -> Nonnegative<Self::DistT> {
+    fn into_distance(self, rhs:impl Into<Self>) -> Nonnegative<Self::DistT> {
         let rhs:Self=rhs.into();
-        self.0.distance(rhs.0)
+        self.0.into_distance(rhs.0)
     }
 }
 

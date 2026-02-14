@@ -17,7 +17,7 @@ pub mod to_diagonal;
 pub use to_diagonal::{diagonal_matrix,into_diagonal_matrix};
 
 pub mod transpose;
-pub use transpose::{Transpose, IntoTranspose, IntoConjugateTranspose};
+pub use transpose::Transpose;
 
 pub mod try_inv_coarse;
 pub use try_inv_coarse::TryInvCoarse;

@@ -1,4 +1,4 @@
-use crate::{matrix_operations::Transpose, transpose::Transposed, IntoTranspose};
+use crate::{matrix_operations::Transpose, transpose::Transposed};
 use algebra::VectorGeneric;
 use container_traits::{
     IndexOutOfBoundsError, LinearContainer, LinearContainerConstruct, LinearContainerDynamic, LinearContainerTryConstruct, LinearContainerView, LinearContainerViewMut};
@@ -40,16 +40,11 @@ row_col_traits!(Col);
 impl<A : Transpose<Output=AT>,AT,
      B : Transpose<Output=BT>,BT> Transpose for Concatenated<A,B> {
     type Output = Concatenated<AT,BT>;
-    fn transpose(&self) -> Self::Output {
-        Concatenated::new(
-        self.a().transpose(),
-        self.b().transpose())
+    fn transpose(&self) -> Self::Output where Self:Clone {
+        self.clone()
+            .into_transpose()
     }
-}
 
-impl<A : IntoTranspose<Output=AT>,AT,
-     B : IntoTranspose<Output=BT>,BT> IntoTranspose for Concatenated<A,B> {
-    type Output = Concatenated<AT,BT>;
     fn into_transpose(self) -> Self::Output {
         let (a,b)=self.into_parts();
         Concatenated::new(
@@ -58,15 +53,12 @@ impl<A : IntoTranspose<Output=AT>,AT,
     }
 }
 
-impl<C:LinearContainerView+Clone> Transpose for VectorGeneric<C> {
+impl<C:LinearContainerView> Transpose for VectorGeneric<C> {
     type Output=Transposed<Self>;
-    fn transpose(&self) -> Self::Output {
+    fn transpose(&self) -> Self::Output where Self : Clone {
         Transposed::new(self.clone())
     }
-}
 
-impl<C:LinearContainerView+Clone> IntoTranspose for VectorGeneric<C> {
-    type Output=Transposed<Self>;
     fn into_transpose(self) -> Self::Output {
         Transposed::new(self)
     }
@@ -94,15 +86,12 @@ macro_rules! impl_row_col_view {
 
         impl<'a,T> $tr for $name<'a,T> {}
 
-        impl<'a,T:Clone> Transpose for $name<'a,T> {
+        impl<'a,T> Transpose for $name<'a,T> {
             type Output = $other<'a,T>;
-            fn transpose(&self) -> Self::Output {
-                $other(self.0.clone())
+            fn transpose(&self) -> Self::Output where Self : Clone {
+                $other(self.clone().0)
             }
-        }
 
-        impl<'a,T> IntoTranspose for $name<'a,T> {
-            type Output = $other<'a,T>;
             fn into_transpose(self) -> Self::Output {
                 $other(self.0)
             }
@@ -132,15 +121,12 @@ macro_rules! impl_row_col {
 
         impl<T> $tr for $name<T> {}
 
-        impl<T:Clone> Transpose for $name<T> {
+        impl<T> Transpose for $name<T> {
             type Output = $other<T>;
-            fn transpose(&self) -> Self::Output {
-                $other(self.0.clone())
+            fn transpose(&self) -> Self::Output where Self : Clone {
+                $other(self.clone().0)
             }
-        }
 
-        impl<T> IntoTranspose for $name<T> {
-            type Output = $other<T>;
             fn into_transpose(self) -> Self::Output {
                 $other(self.0)
             }

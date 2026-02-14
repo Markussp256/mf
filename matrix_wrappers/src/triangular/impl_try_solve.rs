@@ -63,7 +63,7 @@ impl<T   : Zero+Mul<Out::T,Output=Rhs::T>,
     fn try_solve(self, rhs:Rhs) -> Result<Out, MatrixSolveError> {
         let mut x=self.clone().try_solve_approx(rhs.clone())?;
         for _ in 0..5 {
-            let res:Rhs=self.clone().try_matrix_vector_product(x.clone()).unwrap()
+            let res:Rhs=self.try_matrix_vector_product(&x).unwrap()
                             .try_sub(rhs.clone()).ok().unwrap();
             x=x.try_sub(self.clone().try_solve_approx(res)?).ok().unwrap();
         }
@@ -122,7 +122,7 @@ impl<F : Zero+Mul<Output=F>,
 
     fn try_inv(self) -> Result<Self, MatrixNotRegularError> {
         let mut x=self.clone().try_solve_inverse_approx()?;
-        let mul=|a:&Self,b:&Self|a.clone().try_matrix_matrix_product(b.clone()).unwrap();
+        let mul=|a:&Self,b:&Self|a.try_matrix_matrix_product(b).unwrap();
         for _ in 0..5 {
             x=mul(&x,&mul(&self,&x).try_solve_inverse_approx()?);
         }

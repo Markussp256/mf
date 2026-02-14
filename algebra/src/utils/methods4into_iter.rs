@@ -11,7 +11,7 @@ pub fn try_max<T:Max>(a:impl IntoIter<T>) -> Option<T> {
 // empty array/vec has norm zero
 pub fn max_norm<T:Norm<NormT=SO>, SO:Zero+Max>(a:impl IntoIter<T>) -> Nonnegative<SO> {
         a.into_iterator()
-         .map(T::norm)
+         .map(T::into_norm)
          .fold(Nonnegative::zero(),|cmax, new| 
             Nonnegative::into_max(cmax, new))
 }

@@ -1,8 +1,8 @@
 use std::ops::Sub;
 use algebra_traits::{TryAdd, TrySub};
-use container_traits::{GetMut, Size, SizesNotEqualError, TryAccept};
+use container_traits::{GetMut, OtherDimensionMismatchError, Size, SizesNotEqualError, TryAccept};
 use num_traits::Zero;
-use matrix_traits::{matrix_shapes::{MatrixNotTall, MatrixNotWide}, MatrixSquareTryConstruct, AsBaseMatrix, AsBaseSquareMatrix, IntoBaseMatrix, IntoBaseSquareMatrix, Matrix, MatrixView, MatrixConstructError, MatrixDiagonal, MatrixMut, MatrixSquare, MatrixTryConstruct};
+use matrix_traits::{matrix_shapes::{MatrixViewNotTall, MatrixViewNotWide}, Matrix, MatrixSquareTryConstruct, AsBaseMatrix, AsBaseSquareMatrix, IntoBaseMatrix, IntoBaseSquareMatrix, MatrixView, MatrixConstructError, MatrixDiagonal, MatrixViewMut, MatrixViewSquare, MatrixTryConstruct};
 
 // we can not use matrix_derive::Inherit because we want to implement IntoMatrix, IntoSquareMatrix
 
@@ -15,6 +15,7 @@ type U2=(usize,usize);
          algebra_derive::TryDiv,
          algebra_derive::One,
          container_derive::Empty,
+         // container_derive::IsEmpty,
          container_derive::ChangeT,
          container_derive::TryIntoElement,
          container_derive::IntoIterator,
@@ -24,7 +25,6 @@ type U2=(usize,usize);
          derive_more::Index,
          derive_more::IndexMut,
          matrix_derive::Display,
-         matrix_derive::IsEmpty,
          matrix_derive::Identity,
          matrix_derive::MatrixView,
          matrix_derive::Matrix,
@@ -35,28 +35,28 @@ type U2=(usize,usize);
          matrix_derive::Transpose)]
 pub struct Square<M:MatrixView>(M);
 
-impl<M:MatrixView> AsBaseMatrix for Square<M> {
+impl<M:Matrix> AsBaseMatrix for Square<M> {
    type Output=M;
    fn base_matrix(&self) -> &M {
       &self.0
    }
 }
 
-impl<M:MatrixView> IntoBaseMatrix for Square<M> {
+impl<M:Matrix> IntoBaseMatrix for Square<M> {
    type Output=M;
    fn into_base_matrix(self) -> M {
       self.0
    }
 }
 
-impl<M:MatrixView> MatrixNotWide for Square<M> {}
-impl<M:MatrixView> MatrixNotTall for Square<M> {}
-impl<M:MatrixView> MatrixSquare  for Square<M> {} 
+impl<M:MatrixView> MatrixViewNotWide for Square<M> {}
+impl<M:MatrixView> MatrixViewNotTall for Square<M> {}
+impl<M:MatrixView> MatrixViewSquare  for Square<M> {} 
 
 impl<M:MatrixTryConstruct> MatrixSquareTryConstruct for Square<M> {}
 
 
-impl<M:MatrixView> AsBaseSquareMatrix for Square<M> {
+impl<M:Matrix> AsBaseSquareMatrix for Square<M> {
    type Output = Self;
    fn base_square_matrix(&self) -> &Self::Output {
        &self
@@ -75,12 +75,12 @@ impl<M:MatrixView> TryAccept<U2,M::T,MatrixConstructError> for Square<M> {
       if nrows == ncols {
           Ok(())
       } else {
-          Err(MatrixConstructError::DimensionMismatch)
+          Err(OtherDimensionMismatchError.into())
       }
    }
 }
 
-impl<F:Clone+Zero,M:MatrixMut<T=F>, D:MatrixDiagonal<T=F>> TryAdd<D> for Square<M> {
+impl<F:Clone+Zero,M:MatrixViewMut<T=F>, D:Matrix+MatrixDiagonal<T=F>> TryAdd<D> for Square<M> {
    type Output=Self;
    type Error=SizesNotEqualError<U2>;
    fn is_addable_by(&self,rhs:&D) -> Result<(),SizesNotEqualError<U2>> {
@@ -98,7 +98,7 @@ impl<F:Clone+Zero,M:MatrixMut<T=F>, D:MatrixDiagonal<T=F>> TryAdd<D> for Square<
    }
 }
 
-impl<F:Clone+Zero+Sub<Output=F>,M:MatrixMut<T=F>, D:MatrixDiagonal<T=F>> TrySub<D> for Square<M> {
+impl<F:Clone+Zero+Sub<Output=F>,M:MatrixViewMut<T=F>, D:Matrix+MatrixDiagonal<T=F>> TrySub<D> for Square<M> {
    type Output=Self;
    type Error=SizesNotEqualError<U2>;
    fn is_subable_by(&self,rhs:&D) -> Result<(),SizesNotEqualError<U2>> {
@@ -127,7 +127,7 @@ impl<F:Clone+Zero+Sub<Output=F>,M:MatrixMut<T=F>, D:MatrixDiagonal<T=F>> TrySub<
 //    }
 // }
 
-impl<D:MatrixSquare> From<D> for Square<D> {
+impl<D:MatrixViewSquare> From<D> for Square<D> {
    fn from(m:D) -> Self {
       Self(m)
    }

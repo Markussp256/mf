@@ -1,29 +1,28 @@
 use num_traits::{Zero,One};
 
-use matrix_traits::{row_col::ColVectorTryConstruct, AlgebraMatrix, IntoTranspose, MatrixConstructError, MatrixSquare, MatrixSquareTryConstruct, Transpose};
+use matrix_traits::{row_col::ColVectorTryConstruct, Matrix, AlgebraMatrix, MatrixConstructError, MatrixViewSquare, MatrixSquareTryConstruct, Transpose};
 use algebra_traits::{basic::Inv, TryInv, RealNumber};
-use utils::iter::IntoExactSizeIterator;
 use super::{Orthogonal, SpecialOrthogonal};
-use container_traits::{TryFromFn, Get, IntoInner, IntoIter, IntoSum, TryFromSuperContainer};
+use container_traits::{TryFromFn, Get, IntoInner, Iter, IntoSum, TryFromSuperContainer};
 
 type U2=(usize,usize);
 
 #[derive(Clone, Debug, PartialEq,
- algebra_derive::Conjugate,
- algebra_derive::Inv,
- container_derive::IntoInner,
- container_derive::JustContainer,
- container_derive::NewUnchecked,
- derive_more::AsRef,
- derive_more::Index,
- matrix_derive::Identity,
- matrix_derive::Inherit,
- matrix_derive::MatrixNormal,
- matrix_derive::ClosedMatrixMatrixProduct,
- matrix_derive::MatrixShape)]
-pub struct Homogeneous<M:MatrixSquare>(M) where M::T : RealNumber;
+    algebra_derive::Conjugate,
+    algebra_derive::Inv,
+    container_derive::IntoInner,
+    container_derive::JustContainer,
+    container_derive::NewUnchecked,
+    derive_more::AsRef,
+    derive_more::Index,
+    matrix_derive::Identity,
+    matrix_derive::Inherit,
+    matrix_derive::MatrixNormal,
+    matrix_derive::ClosedMatrixMatrixProduct,
+    matrix_derive::MatrixShape)]
+pub struct Homogeneous<M:MatrixViewSquare>(M) where M::T : RealNumber;
 
-impl<M:MatrixSquare> Homogeneous<M> where M::T : RealNumber {
+impl<M:Matrix+MatrixViewSquare> Homogeneous<M> where M::T : RealNumber {
 
     pub fn n(&self) -> usize { self.0.n() }
 
@@ -35,12 +34,16 @@ impl<M:MatrixSquare> Homogeneous<M> where M::T : RealNumber {
         Ok(so)
     }
 
-    pub fn translation_values(&self) -> impl ExactSizeIterator<Item=M::T> where M::T : Clone {
+    pub fn translation_values(& self) -> impl ExactSizeIterator<Item=M::T> {
         let n=self.n();
-        self.0
-            .col(n-1).unwrap()
-            .into_iterator()
-            .into_exact_size_iter(n-1)
+        let col:Vec<M::T>=
+            self.0
+                .try_col_view(n-1).unwrap()
+                .iter()
+                .cloned()
+                .take(n-1)
+                .collect();
+        col.into_iter()
     }
 
     pub fn into_parts<M2 : MatrixSquareTryConstruct<T=M::T>+AlgebraMatrix+TryFromSuperContainer<U2,Self>,
@@ -52,7 +55,7 @@ impl<M:MatrixSquare> Homogeneous<M> where M::T : RealNumber {
 }
 
 
-impl<M:MatrixSquare> TryFrom<SpecialOrthogonal<M>> for Homogeneous<M> where M::T : RealNumber {
+impl<M:MatrixViewSquare> TryFrom<SpecialOrthogonal<M>> for Homogeneous<M> where M::T : RealNumber {
     type Error=SpecialOrthogonal<M>;
     fn try_from(m:SpecialOrthogonal<M>) -> Result<Self,SpecialOrthogonal<M>> {
         let i=m.n()-1;
@@ -68,23 +71,16 @@ impl<M:MatrixSquare> TryFrom<SpecialOrthogonal<M>> for Homogeneous<M> where M::T
     }
 }
 
-impl<M:MatrixSquare+Transpose<Output=M>> Transpose for Homogeneous<M> where M::T : RealNumber {
+impl<M:MatrixViewSquare+Transpose<Output=M>> Transpose for Homogeneous<M> where M::T : RealNumber {
     type Output=SpecialOrthogonal<M>;
-    fn transpose(&self) -> Self::Output {
-        SpecialOrthogonal::<M>::from(self.0.clone())
-            .transpose()
-    }
-}
 
-impl<M:MatrixSquare+IntoTranspose<Output=M>> IntoTranspose for Homogeneous<M> where M::T : RealNumber {
-    type Output=SpecialOrthogonal<M>;
     fn into_transpose(self) -> Self::Output {
-        SpecialOrthogonal::<M>::from(self.0)
-            .transpose()
+        SpecialOrthogonal::<M>::from(self)
+            .into_transpose()
     }
 }
 
-impl<M:MatrixSquare+TryFromFn<U2,M::T>> Inv for Homogeneous<M> where M::T : Clone+RealNumber {
+impl<M:MatrixViewSquare+TryFromFn<U2,M::T>> Inv for Homogeneous<M> where M::T : Clone+RealNumber {
     type Output=Self;
     fn inv(self) -> Self {
         let n=self.n();
@@ -111,7 +107,7 @@ impl<M:MatrixSquare+TryFromFn<U2,M::T>> Inv for Homogeneous<M> where M::T : Clon
     }
 }
 
-impl<M:MatrixSquare> TryInv for Homogeneous<M> where Self : Inv<Output=Self>, M::T : RealNumber {
+impl<M:MatrixViewSquare> TryInv for Homogeneous<M> where Self : Inv<Output=Self>, M::T : RealNumber {
     type Output=Self;
     type Error=();
     fn is_invertible(&self) -> Result<(),()> { Ok(()) }

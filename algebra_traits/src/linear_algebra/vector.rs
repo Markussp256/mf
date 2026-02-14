@@ -1,5 +1,5 @@
 use container_traits::{ClosedMap, ContainerTryConstruct, LinearContainerConstructError, Map};
-use crate::{ClosedTryDiv, Distance, DivError, Norm, NormSquared, RealNumber, Scalar, TryDiv, TryNormalize};
+use crate::{ClosedTryDiv, DivError, IntoDistance, Norm, NormSquared, RealNumber, Scalar, TryDiv, TryNormalize};
 
 use super::{InnerProductSpace1d, Scalarproduct, TryInnerProductSpace};
 
@@ -37,7 +37,7 @@ pub trait Vector<E=LinearContainerConstructError>
       Self::F,
       NormT      = <Self::T as Norm>::NormT,
       Norm2T     = <Self::T as NormSquared>::Norm2T,
-      TryDistT   = <Self::T as Distance>::DistT,
+      TryDistT   = <Self::T as IntoDistance>::DistT,
       TryScProdT = <Self::T as Scalarproduct>::ScProdT>
     +TryDiv <Self::T,Output=Self::ScalarVector,Error=DivError>
     +TryDiv <Self::F,Output=Self,Error=DivError>

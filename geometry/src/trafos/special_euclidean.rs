@@ -273,7 +273,7 @@ fn test_new_rotation_wrt_point() {
 //     let dir=se3.try_rot_axis_direction().unwrap();
 //     let pt_on_rot_axis=se3.try_get_point_on_rot_axis::<Position>().unwrap();
 //     let diff=se3*pt_on_rot_axis-pt_on_rot_axis;
-//     assert!(diff.cross_product(&dir).norm() < Length::from_mm(1e-10));
+//     assert!(diff.cross_product(&dir).into_norm() < Length::from_mm(1e-10));
 // }
 
 

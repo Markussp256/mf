@@ -37,7 +37,7 @@ pub enum MatrixConstructError {
     #[error(transparent)]
     MatricesCanNotBeMultiplied(#[from] MatricesCanNotBeMultipliedError),
     #[error(transparent)]
-    MatrixSquare(#[from] MatrixSquareError),
+    MatrixViewSquare(#[from] MatrixSquareError),
     #[error("data does not satisfy required properties of matrix type")]
     DataDoesNotSatisfyRequiredPropertiesOfMatrixType
 }

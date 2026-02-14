@@ -65,7 +65,7 @@ where F::RealType:Debug,
       XV::ScProdT : Parameter<F> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f,"Contradicting data to estimate affine transformation: we have 
-        {:?}=f({:?})={:?}={:?} but {:?}.distance({:?})={:?}>tol={:?}",
+        {:?}=f({:?})={:?}={:?} but {:?}.into_distance(({:?})={:?}>tol={:?}",
         self.y, self.x, self.lin_combs(), self.yalt, self.y, self.yalt, self.d, self.tol)
     }
 }

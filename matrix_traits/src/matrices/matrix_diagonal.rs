@@ -1,7 +1,7 @@
 use container_traits::{TryFromVec, LinearContainerConstructError};
 use num_traits::{Zero,One};
 
-use super::{MatrixSquare, MatrixSquareTryConstruct};
+use super::{MatrixViewSquare, MatrixSquareTryConstruct};
 
 use crate::error::MatrixConstructError;
 
@@ -22,11 +22,15 @@ use crate::error::MatrixConstructError;
 //     true
 // }
 
-pub trait MatrixDiagonal : MatrixSquare where Self::T : Zero {}
+pub trait MatrixDiagonal : MatrixViewSquare where Self::T : Zero {}
 
 
 
-pub trait MatrixDiagonalTryConstruct : MatrixDiagonal + MatrixSquareTryConstruct + Sized + TryFromVec<Self::T,LinearContainerConstructError> where Self::T : Zero {
+pub trait MatrixDiagonalTryConstruct : MatrixDiagonal
+                                     + MatrixSquareTryConstruct
+                                     + Sized
+                                     + TryFromVec<Self::T,LinearContainerConstructError>
+    where Self::T : Zero {
 
     // provided
 

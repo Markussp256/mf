@@ -52,7 +52,7 @@ impl<Diag : ItemT<T=F>, F:Zero> DiagonalMatrixGeneric<Diag> {
           .into_iterator()
    }
 
-   pub fn map_diagonal<Diag2 : Zero+ItemT>(self, f:impl Fn(F) -> Diag2::T) -> DiagonalMatrixGeneric<Diag2>
+   pub fn map_diagonal<Diag2 : ItemT>(self, f:impl Fn(F) -> Diag2::T) -> DiagonalMatrixGeneric<Diag2>
    where Diag : Map<F,Diag2::T,Output=Diag2>, Diag2::T : Zero {
       DiagonalMatrixGeneric::new(self.diag.map(f))
    }
@@ -100,16 +100,12 @@ macro_rules! impl_try {
 impl_try!(Mul,mul);
 impl_try!(Div,div);
 
-impl<Diag:ItemT<T=F>+Clone,F:Clone+Zero> Transpose for DiagonalMatrixGeneric<Diag> {
+impl<Diag:ItemT<T=F>,F:Zero> Transpose for DiagonalMatrixGeneric<Diag> {
     type Output=Self;
 
-    fn transpose(&self) -> Self::Output {
+    fn transpose(&self) -> Self::Output where Self : Clone {
         self.clone()
     }
-}
-
-impl<Diag:ItemT<T=F>+Clone,F:Zero> IntoTranspose for DiagonalMatrixGeneric<Diag> {
-    type Output=Self;
 
     fn into_transpose(self) -> Self::Output {
         self
@@ -286,12 +282,12 @@ impl<Diag:ItemT> IntoBaseMatrix for DiagonalMatrixGeneric<Diag> where Self:Matri
     }
 }
 
-impl<Diag:ItemT<T=F>,F:Zero> MatrixNotTall for DiagonalMatrixGeneric<Diag> where Self : Matrix<T=F,Row=Diag> {}
-impl<Diag:ItemT<T=F>,F:Zero> MatrixNotWide for DiagonalMatrixGeneric<Diag> where Self : Matrix<T=F,Row=Diag> {}
-impl<Diag:ItemT<T=F>,F:Zero> MatrixSquare  for DiagonalMatrixGeneric<Diag> where Self : Matrix<T=F,Row=Diag> {}
+impl<Diag:ItemT<T=F>,F:Zero> MatrixViewNotTall for DiagonalMatrixGeneric<Diag> where Self : Matrix<T=F,Row=Diag> {}
+impl<Diag:ItemT<T=F>,F:Zero> MatrixViewNotWide for DiagonalMatrixGeneric<Diag> where Self : Matrix<T=F,Row=Diag> {}
+impl<Diag:ItemT<T=F>,F:Zero> MatrixViewSquare  for DiagonalMatrixGeneric<Diag> where Self : Matrix<T=F,Row=Diag> {}
 
-impl<T:Zero,const N:usize, Diag:ItemT<T=T>+LinearContainerStatic<N>> MatrixFixedNumberOfCols<N> for DiagonalMatrixGeneric<Diag> where Self : MatrixDiagonal<T=T> {}
-impl<T:Zero,const N:usize, Diag:ItemT<T=T>+LinearContainerStatic<N>> MatrixFixedNumberOfRows<N> for DiagonalMatrixGeneric<Diag> where Self : MatrixDiagonal<T=T> {}
+impl<T:Zero,const N:usize, Diag:ItemT<T=T>+LinearContainerStatic<N>> MatrixViewFixedNumberOfCols<N> for DiagonalMatrixGeneric<Diag> where Self : MatrixDiagonal<T=T> {}
+impl<T:Zero,const N:usize, Diag:ItemT<T=T>+LinearContainerStatic<N>> MatrixViewFixedNumberOfRows<N> for DiagonalMatrixGeneric<Diag> where Self : MatrixDiagonal<T=T> {}
 
 impl<Diag:ItemT<T=F>+TryPutAt<usize,F>,F:Zero> TryAccept<U2,F,MatrixConstructError> for DiagonalMatrixGeneric<Diag> {
     fn try_accept<'a>((nrows,ncols):U2,f:impl Fn(U2) -> &'a F) -> Result<(),MatrixConstructError> where F: 'a {
@@ -582,7 +578,7 @@ macro_rules! impl_op_diag_stat {
              const M:usize,
              const N:usize> $crate::TryIntoMatrixMatrixProduct<DiagonalMatrixGeneric<$Diag_t<F2,N>>> for $m_t<F,M,N> {
                   type Output=$m_t<F3,M,N>;
-                  fn try_into_matrix_matrix_product(self, rhs:&DiagonalMatrixGeneric<$Diag_t<F2,N>>) -> Result<$m_t<F3,M,N>,MatrixConstructError> {
+                  fn try_into_matrix_matrix_product(self, rhs:&DiagonalMatrixGeneric<$Diag_t<F2,N>>) -> Result<$m_t<F3,M,N>,$crate::MatrixConstructError> {
                      Self::Output::try_from_cols(
                         <$m_t<F,M,N> as $crate::Matrix>::into_cols(self)
                            .zip(rhs.diagonal().cloned())
@@ -598,7 +594,7 @@ macro_rules! impl_op_diag_stat {
              const M:usize,
              const N:usize> $crate::TryMatrixMatrixProduct<DiagonalMatrixGeneric<$Diag_t<F2,N>>> for $m_t<F,M,N> {
                   type Output=$m_t<F3,M,N>;
-                  fn try_matrix_matrix_product(&self, rhs:&DiagonalMatrixGeneric<$Diag_t<F2,N>>) -> Result<$m_t<F3,M,N>,MatrixConstructError> {
+                  fn try_matrix_matrix_product(&self, rhs:&DiagonalMatrixGeneric<$Diag_t<F2,N>>) -> Result<$m_t<F3,M,N>,$crate::MatrixConstructError> {
                      Self::Output::try_from_cols(
                         self.clone()
                             .into_cols()
@@ -612,7 +608,7 @@ macro_rules! impl_op_diag_stat {
              F2 : 'static+num_traits::Zero+Clone$(+$ns)?,
              F3 : 'static$(+$ns)?,
              const M:usize,
-             const N:usize> IntoMatrixMatrixProduct<DiagonalMatrixGeneric<$Diag_t<F2,N>>> for $m_t<F,M,N> where Self : $crate::Matrix<T=F> {
+             const N:usize> $crate::IntoMatrixMatrixProduct<DiagonalMatrixGeneric<$Diag_t<F2,N>>> for $m_t<F,M,N> where Self : $crate::Matrix<T=F> {
                   type Output=$m_t<F3,M,N>;
                   fn into_matrix_matrix_product(self, rhs:&DiagonalMatrixGeneric<$Diag_t<F2,N>>) -> $m_t<F3,M,N> {
                      <Self as $crate::TryIntoMatrixMatrixProduct<DiagonalMatrixGeneric<$Diag_t<F2,N>>>>::

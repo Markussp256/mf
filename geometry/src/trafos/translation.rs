@@ -24,7 +24,7 @@ pub struct ContradictingDataForTranslation<R, A> {
 
 impl<R:Debug, A:Debug> Display for ContradictingDataForTranslation<R, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f,"Contradicting data to estimate translation: ({:?}-{:?}).distance({:?}-{:?})={:?}>tol={:?}",self.y0,self.x0,self.y1,self.x1,self.d,self.tol)
+        write!(f,"Contradicting data to estimate translation: ({:?}-{:?}).into_distance(({:?}-{:?})={:?}>tol={:?}",self.y0,self.x0,self.y1,self.x1,self.d,self.tol)
     }
 }
 
@@ -163,7 +163,7 @@ impl<R: Clone+RealNumber,
         // let tol=<Self as Transformation<A,A>>::tol_y();
         // for i in 0..ds.len()-1 {
         //     for j in i+1..ds.len() {
-        //         let d=ds[i].clone().distance(ds[j].clone());
+        //         let d=ds[i].clone().into_distance(ds[j].clone());
         //         if  d > tol {
         //             let cd4trans=ContradictingDataForTranslation{
         //                 x0:orig_imag_pairs[i].clone().1,

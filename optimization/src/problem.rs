@@ -155,7 +155,7 @@ impl<F    : Scalar,
                 Some(update) => update,
                 None => { return Err(OptimizationError::MatrixNotFullRank(wjac, x)); }
             };
-            if &update.clone().norm() < opts.target_cost() { break; }
+            if &updatenorm() < opts.target_cost() { break; }
             let lhs=into_dvec(x);
             if lhs.is_addable_by(&update).is_ok() {
                 x=from_dvec(lhs.try_add(update).ok().unwrap());

@@ -51,7 +51,7 @@ pub fn jacobian<F : Scalar,
 //     Some(m.try_pseudo_inverse()?
 //           .into_rows()
 //           .into_iter()
-//           .map(|r|r.norm())
+//           .map(|r|r.into_norm())
 //           .collect())
 // }
 

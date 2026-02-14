@@ -1,7 +1,7 @@
 
 use algebra_traits::ComplexNumber;
-use container_traits::{TryAccept,  IntoIter, IntoParameters};
-use matrix_traits::{Matrix, MatrixConstructError, MatrixSquare, MatrixSquareTryConstruct};
+use container_traits::{LensNotEqualError, TryAccept,  IntoIter, IntoParameters};
+use matrix_traits::{Matrix, MatrixConstructError, MatrixViewSquare, MatrixSquareTryConstruct};
 use utils::iter::IntoExactSizeIterator;
 
 
@@ -23,12 +23,12 @@ type U2=(usize,usize);
          matrix_derive::MatrixShape,
          matrix_derive::MatrixNormal,
          derive_more::Index)]
-pub struct AntiHermitian<M:MatrixSquare>(M) where M::T:Clone+ComplexNumber;
+pub struct AntiHermitian<M:MatrixViewSquare>(M) where M::T:Clone+ComplexNumber;
 
 impl<F : Clone+ComplexNumber,
      M : MatrixSquareTryConstruct<T=F>> TryAccept<U2,F,MatrixConstructError> for AntiHermitian<M> {
     fn try_accept<'a>((nrows,ncols):U2,f:impl Fn(U2) -> &'a F) -> Result<(),MatrixConstructError> where F: 'a {
-        if nrows != ncols { return Err(MatrixConstructError::DimensionMismatch); }
+        LensNotEqualError::try_new(nrows, ncols)?;
         for i in 0..nrows {
             for j in 0..i {
                if f((i,j)) != &-f((j,i)).clone().conjugate() {
@@ -55,7 +55,7 @@ impl<F : Clone+ComplexNumber,
 
 
 
-impl<M : MatrixSquare<T=F>,
+impl<M : Matrix+MatrixViewSquare<T=F>,
      F : ComplexNumber> IntoParameters<F> for AntiHermitian<M> {
     fn into_parameters(self) -> impl ExactSizeIterator<Item=F> {
         let n=self.n();

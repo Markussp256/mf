@@ -1,4 +1,3 @@
-
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, parse_quote, punctuated::Punctuated, token::Comma, DeriveInput, Type, WherePredicate};
 use quote::quote;
@@ -183,35 +182,21 @@ pub fn into_dyn_matrix_proc_macro(input: TokenStream) -> TokenStream {
 pub fn transpose_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let tr = parse_quote!{matrix_traits::Transpose};
-    let fn_name=parse_quote!{ transpose };
-    let (generics, where_clause, [(ty, wt),(ty1, wt1)], implementation)=
-    DeriveHelper::new(&mut input, &tr, &fn_name).unary_ref::<2>(false);
+    let fn_name_into=parse_quote!{ into_transpose };
+    let (generics, where_clause, [(ty, wt),(ty1, wt1)], implementation_into)=
+    DeriveHelper::new(&mut input, &tr, &fn_name_into).extended1();
+
     quote! {
         impl #generics #tr for #ty where #(#wt : #tr<Output=#wt1>,)* #where_clause {
             type Output=#ty1;
-            fn transpose(&self) -> #ty1 {
-                #implementation
+
+            fn into_transpose(self) -> #ty1 {
+                #implementation_into
             }
         }
     }.into()
 }
 
-#[proc_macro_derive(IntoTranspose)]
-pub fn into_transpose_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr = parse_quote!{matrix_traits::IntoTranspose};
-    let fn_name=parse_quote!{ into_transpose };
-    let (generics, where_clause, [(ty, wt),(ty1, wt1)], implementation)=
-    DeriveHelper::new(&mut input, &tr, &fn_name).extended1();
-    quote! {
-        impl #generics #tr for #ty where #(#wt : #tr<Output=#wt1>,)* #where_clause {
-            type Output=#ty1;
-            fn into_transpose(self) -> #ty1 {
-                #implementation
-            }
-        }
-    }.into()
-}
 
 #[proc_macro_derive(ClosedTranspose)]
 pub fn closed_transpose_proc_macro(input: TokenStream) -> TokenStream {
@@ -221,22 +206,7 @@ pub fn closed_transpose_proc_macro(input: TokenStream) -> TokenStream {
     quote! {
         impl #generics #tr for #ty where #wt : #tr<Output=#wt>, #where_clause {
             type Output=Self;
-            fn transpose(&self) -> Self {
-                Self(self.0
-                         .transpose())
-            }
-        }
-    }.into()
-}
 
-#[proc_macro_derive(ClosedIntoTranspose)]
-pub fn closed_into_transpose_proc_macro(input: TokenStream) -> TokenStream {
-    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr = quote!{matrix_traits::IntoTranspose};
-    let (generics, where_clause, ty, wt) = preprocess4matrix(&mut input);
-    quote! {
-        impl #generics #tr for #ty where #wt : #tr<Output=#wt>, #where_clause {
-            type Output=Self;
             fn into_transpose(self) -> Self {
                 Self(self.0
                          .into_transpose())
@@ -244,6 +214,7 @@ pub fn closed_into_transpose_proc_macro(input: TokenStream) -> TokenStream {
         }
     }.into()
 }
+
 
 #[proc_macro_derive(IsEmpty)]
 pub fn is_empty_proc_macro(input: TokenStream) -> TokenStream {
@@ -264,7 +235,7 @@ pub fn is_empty_proc_macro(input: TokenStream) -> TokenStream {
 pub fn static_matrix_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let tr = quote!{matrix_traits::StaticMatrix};
-    let tr_sqr=quote!{matrix_traits::SquareStaticMatrix};
+    let tr_sqr=quote!{matrix_traits::SquareStaticMatrixView};
     let (generics, where_clause, ty, wt) =  preprocess4matrix(&mut input);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #where_clause {
@@ -272,7 +243,7 @@ pub fn static_matrix_proc_macro(input: TokenStream) -> TokenStream {
             const N:usize=<#wt as #tr>::N;
         }
 
-        impl #generics #tr_sqr for #ty where #wt : #tr_sqr, Self : matrix_traits::MatrixSquare, #where_clause {
+        impl #generics #tr_sqr for #ty where #wt : #tr_sqr, Self : matrix_traits::MatrixViewSquare, #where_clause {
             const M:usize=<#wt as #tr_sqr>::M;
         }
     }.into()
@@ -454,6 +425,8 @@ fn matrix_matrix_product_impl(
     rhs   : &str,
     omtr  : Option<proc_macro2::TokenStream>,
     ottr  : Option<proc_macro2::TokenStream>) -> TokenStream {
+    let rhs=proc_macro2::Ident::new(rhs,proc_macro2::Span::call_site());
+    let rhs = quote!(crate::#rhs);
     let tr =parse_quote!{matrix_traits::MatrixMatrixProduct};
     let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
     let tr_into=quote!{matrix_traits::IntoMatrixMatrixProduct};
@@ -465,12 +438,18 @@ fn matrix_matrix_product_impl(
     DeriveHelper::new(& mut input,&tr,&fn_name).add_gen_types(vec!["Rhs"]).binary_const_rhs(false,&parse_quote!{rhs});
     let mut where_clause=quote!{Rhs : matrix_traits::MatrixView};
     if let Some(mtr)=omtr {
-        where_clause=quote!{#where_clause + #mtr};
+        where_clause=quote!{#where_clause, #mtr};
     }
     if let Some(ttr)=ottr {
         where_clause=quote!(#where_clause, Rhs::T : #ttr);
     }
-    where_clause=quote!{#where_clause + #wc};
+    if !wc.is_empty() {
+        where_clause=if where_clause.is_empty() {
+          quote!{#wc}
+        } else {
+          quote!{#where_clause, #wc}
+        };
+    }
     let wt=types.remove(0);
     quote! {
         impl #generics #tr<#hom> for #ty where #wt : #tr<Rhs>, #where_clause {
@@ -481,7 +460,7 @@ fn matrix_matrix_product_impl(
         }
 
         impl #generics #tr_into<#hom> for #ty where #wt : #tr_into<Rhs>, #where_clause {
-            type Output=<#wt as #tr<Rhs>>::Output;
+            type Output=<#wt as #tr_into<Rhs>>::Output;
             fn into_matrix_matrix_product(self, rhs:&#hom) -> <#wt as #tr_into<Rhs>>::Output {
                 self.0
                     .into_matrix_matrix_product(<#hom as container_traits::Inner>::inner(rhs))
@@ -502,6 +481,12 @@ fn matrix_matrix_product_impl(
             }
         }
     }.into()
+    // {
+    //     use std::io::Write;
+    //     let mut file = std::fs::File::create("matrix_matrix_product_error_".to_string()+&input.ident.to_string()+".txt").unwrap();
+    //     writeln!(file, "{res}").unwrap();
+    // }
+    // res
 }
 
 
@@ -511,7 +496,7 @@ pub fn matrix_matrix_product_hom_proc_macro(input: TokenStream) -> TokenStream {
     matrix_matrix_product_impl(
         input,
         "Homogeneous",
-        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{matrix_traits::MatrixViewSquare}),
         Some(quote!{algebra_traits::RealNumber}))
 }
 
@@ -521,7 +506,7 @@ pub fn matrix_matrix_product_orth_proc_macro(input: TokenStream) -> TokenStream 
     matrix_matrix_product_impl(
         input,
         "Orthogonal",
-        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{matrix_traits::MatrixViewSquare}),
         Some(quote!{algebra_traits::RealNumber}))
 }
 
@@ -531,7 +516,7 @@ pub fn matrix_matrix_product_unitary_proc_macro(input: TokenStream) -> TokenStre
     matrix_matrix_product_impl(
         input,
         "Unitary",
-        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{matrix_traits::MatrixViewSquare}),
         Some(quote!{algebra_traits::ComplexNumber}))
 }
 
@@ -541,7 +526,7 @@ pub fn matrix_matrix_product_special_orth_proc_macro(input: TokenStream) -> Toke
     matrix_matrix_product_impl(
         input,
         "SpecialOrthogonal",
-        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{matrix_traits::MatrixViewSquare}),
         Some(quote!{algebra_traits::RealNumber}))
 }
 
@@ -551,7 +536,7 @@ pub fn matrix_matrix_product_special_unitary_proc_macro(input: TokenStream) -> T
     matrix_matrix_product_impl(
         input,
         "SpecialUnitary",
-        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{matrix_traits::MatrixViewSquare}),
         Some(quote!{algebra_traits::ComplexNumber}))
 }
 
@@ -622,7 +607,7 @@ pub fn matrix_matrix_product_anti_herm_proc_macro(input: TokenStream) -> TokenSt
     matrix_matrix_product_impl(
         input,
         "AntiHermitian",
-        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{matrix_traits::MatrixViewSquare}),
         Some(quote!(algebra_traits::ComplexNumber)))
 }
 
@@ -632,7 +617,7 @@ pub fn matrix_matrix_product_herm_proc_macro(input: TokenStream) -> TokenStream 
     matrix_matrix_product_impl(
         input,
         "Hermitian",
-        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{matrix_traits::MatrixViewSquare}),
         Some(quote!(algebra_traits::ComplexNumber)))
 }
 
@@ -642,7 +627,7 @@ pub fn matrix_matrix_product_symm_proc_macro(input: TokenStream) -> TokenStream 
     matrix_matrix_product_impl(
         input,
         "Symmetric",
-        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{matrix_traits::MatrixViewSquare}),
         Some(quote!(algebra_traits::RealNumber)))
 }
 
@@ -652,7 +637,7 @@ pub fn matrix_matrix_product_skew_symm_proc_macro(input: TokenStream) -> TokenSt
     matrix_matrix_product_impl(
         input,
         "SkewSymmetric",
-        Some(quote!{matrix_traits::MatrixSquare}),
+        Some(quote!{matrix_traits::MatrixViewSquare}),
         Some(quote!(algebra_traits::RealNumber)))
 }
 
@@ -757,50 +742,50 @@ pub fn as_base_square_matrix_proc_macro(input: TokenStream) -> TokenStream {
     }.into()
 }
 
-#[proc_macro_derive(MatrixNotWide)]
+#[proc_macro_derive(MatrixViewNotWide)]
 pub fn matrix_not_wide_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=quote!{matrix_traits::MatrixNotWide};
+    let tr=quote!{matrix_traits::MatrixViewNotWide};
     let (generics, where_clause, ty, wt)=preprocess4matrix(& mut input);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #where_clause {}
     }.into()
 }
 
-#[proc_macro_derive(MatrixNotTall)]
+#[proc_macro_derive(MatrixViewNotTall)]
 pub fn matrix_not_tall_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=quote!{matrix_traits::MatrixNotTall};
+    let tr=quote!{matrix_traits::MatrixViewNotTall};
     let (generics, where_clause, ty, wt)=preprocess4matrix(& mut input);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #where_clause {}
     }.into()
 }
 
-#[proc_macro_derive(MatrixSquare)]
+#[proc_macro_derive(MatrixViewSquare)]
 pub fn matrix_square_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=quote!{matrix_traits::MatrixSquare};
+    let tr=quote!{matrix_traits::MatrixViewSquare};
     let (generics, where_clause, ty, wt)=preprocess4matrix(& mut input);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #where_clause {}
     }.into()
 }
 
-#[proc_macro_derive(MatrixWide)]
+#[proc_macro_derive(MatrixViewWide)]
 pub fn matrix_wide_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=quote!{matrix_traits::MatrixWide};
+    let tr=quote!{matrix_traits::MatrixViewWide};
     let (generics, where_clause, ty, wt)=preprocess4matrix(& mut input);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #where_clause {}
     }.into()
 }
 
-#[proc_macro_derive(MatrixTall)]
+#[proc_macro_derive(MatrixViewTall)]
 pub fn matrix_tall_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let tr=quote!{matrix_traits::MatrixTall};
+    let tr=quote!{matrix_traits::MatrixViewTall};
     let (generics, where_clause, ty, wt)=preprocess4matrix(& mut input);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, #where_clause {}
@@ -836,7 +821,7 @@ pub fn matrix_square_try_construct_proc_macro(input: TokenStream) -> TokenStream
     preprocess4matrix(& mut input);
     quote! {
         impl #generics #tr for #ty
-        where Self : matrix_traits::MatrixSquare
+        where Self : matrix_traits::MatrixViewSquare
                     +matrix_traits::MatrixTryConstruct, #where_clause {}
     }.into()
 }
@@ -852,7 +837,7 @@ pub fn try_inv_from_try_inv_coarse(input: TokenStream) -> TokenStream {
         impl #generics #tr for #ty
         where Self : Clone
                     +algebra_traits::TryInv<Output=Self>
-                    +matrix_traits::MatrixSquare
+                    +matrix_traits::MatrixViewSquare
                     +matrix_traits::TryMatrixMatrixProduct<Output=Self>
                     +#tr_c<Output=Self>,
             #where_clause {

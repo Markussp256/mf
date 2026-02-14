@@ -5,7 +5,7 @@ pub trait IntoBaseMatrix {
 }
 
 pub trait IntoBaseSquareMatrix {
-    type Output:crate::MatrixSquare;
+    type Output:crate::MatrixViewSquare;
     fn into_base_square_matrix(self) -> Self::Output;
 }
 

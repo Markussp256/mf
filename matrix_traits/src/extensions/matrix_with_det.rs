@@ -3,8 +3,8 @@ use std::ops::Neg;
 use algebra_derive::{ClosedMul, ClosedTryDiv, ClosedTryMul, ClosedDiv};
 use container_traits::{Get, IndexOutOfBoundsError, IntoIter, IntoIterIndexed, IsEmpty, ItemT, Iter, IterIndexed, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
 
-use crate::matrix_shapes::{MatrixNotTall, MatrixNotWide};
-use crate::{Matrix, MatrixView, MatrixSquare, MatrixConstructError, MatrixSquareTryConstruct};
+use crate::matrix_shapes::{MatrixViewNotTall, MatrixViewNotWide};
+use crate::{Matrix, MatrixView, MatrixViewSquare, MatrixConstructError, MatrixSquareTryConstruct};
 use crate::matrices::from_into::{AsBaseMatrix, AsBaseSquareMatrix, IntoBaseMatrix, IntoBaseSquareMatrix};
 use crate::matrix_operations::Det;
 
@@ -56,62 +56,62 @@ impl<M:MatrixView> Get<U2,M::T> for MatrixWithDet<M> {
     }
 }
 
-impl<M:MatrixSquare> Iter<M::T> for MatrixWithDet<M> {
+impl<M:MatrixViewSquare> Iter<M::T> for MatrixWithDet<M> {
     fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a M::T> where M::T:'a {
         self.m.iter()
     }
 }
 
-impl<M:MatrixSquare> IterIndexed<U2,M::T> for MatrixWithDet<M> {
+impl<M:MatrixViewSquare> IterIndexed<U2,M::T> for MatrixWithDet<M> {
     fn iter_indexed<'a>(&'a self) -> impl ExactSizeIterator<Item=(U2,&'a M::T)> where M::T:'a {
         self.m.iter_indexed()
     }
 }
 
-impl<M:MatrixSquare> ItemT for MatrixWithDet<M> {
+impl<M:MatrixViewSquare> ItemT for MatrixWithDet<M> {
     type T=M::T;
 }
 
-impl<M:Matrix+MatrixSquare> TryIntoElement<U2,M::T> for MatrixWithDet<M> {
+impl<M:Matrix+MatrixViewSquare> TryIntoElement<U2,M::T> for MatrixWithDet<M> {
     fn try_into_element(self,index:U2) -> Result<M::T,IndexOutOfBoundsError<U2>> {
         self.m
             .try_into_element(index)
     }
 }
 
-impl<M:Matrix+MatrixSquare> IntoIter<M::T> for MatrixWithDet<M> {
+impl<M:Matrix+MatrixViewSquare> IntoIter<M::T> for MatrixWithDet<M> {
     fn into_iterator(self) -> impl ExactSizeIterator<Item=M::T> {
         self.m
             .into_iterator()
     }
 }
 
-impl<M:Matrix+MatrixSquare> IntoIterIndexed<U2,M::T> for MatrixWithDet<M> {
+impl<M:Matrix+MatrixViewSquare> IntoIterIndexed<U2,M::T> for MatrixWithDet<M> {
     fn into_iter_indexed(self) -> impl ExactSizeIterator<Item=(U2,M::T)> {
         self.m
             .into_iter_indexed()
     }
 }
 
-impl<M:MatrixSquare> Size<U2> for MatrixWithDet<M> {
+impl<M:MatrixViewSquare> Size<U2> for MatrixWithDet<M> {
     fn size(&self) -> U2 {
         self.m
             .size()
     }
 }
 
-impl<M:MatrixSquare+IsEmpty> IsEmpty for MatrixWithDet<M> {
+impl<M:MatrixViewSquare+IsEmpty> IsEmpty for MatrixWithDet<M> {
     fn is_empty(&self) -> bool {
         self.m
             .is_empty()
     }
 }
 
-impl<M:MatrixSquare+OCTSize<U2>> OCTSize<U2> for MatrixWithDet<M> {
+impl<M:MatrixViewSquare+OCTSize<U2>> OCTSize<U2> for MatrixWithDet<M> {
     const OCTSIZE:Option<U2> = M::OCTSIZE;
 }
 
-impl<M:MatrixSquare> NumberOfDegreesOfFreedom<M::T> for MatrixWithDet<M> {
+impl<M:MatrixViewSquare> NumberOfDegreesOfFreedom<M::T> for MatrixWithDet<M> {
     fn ndofs(&self) -> usize {
         self.m
             .ndofs()
@@ -119,7 +119,7 @@ impl<M:MatrixSquare> NumberOfDegreesOfFreedom<M::T> for MatrixWithDet<M> {
 }
 
 
-impl<M:MatrixSquare> MatrixView for MatrixWithDet<M> {
+impl<M:MatrixViewSquare> MatrixView for MatrixWithDet<M> {
     
     type RowView<'a>=M::RowView<'a> where M : 'a;
 
@@ -146,7 +146,7 @@ impl<M:MatrixSquare> MatrixView for MatrixWithDet<M> {
     }
 }
 
-impl<M:Matrix+MatrixSquare> Matrix for MatrixWithDet<M> {
+impl<M:Matrix+MatrixViewSquare> Matrix for MatrixWithDet<M> {
     
     type Row=M::Row;
 
@@ -163,21 +163,21 @@ impl<M:Matrix+MatrixSquare> Matrix for MatrixWithDet<M> {
     }
 }
 
-impl<M:MatrixSquare> IntoBaseSquareMatrix for MatrixWithDet<M> {
+impl<M:MatrixViewSquare> IntoBaseSquareMatrix for MatrixWithDet<M> {
     type Output = M;
     fn into_base_square_matrix(self) -> M {
         self.m
     }
 }
 
-impl<M:Matrix+MatrixSquare> AsBaseSquareMatrix for MatrixWithDet<M> {
+impl<M:Matrix+MatrixViewSquare> AsBaseSquareMatrix for MatrixWithDet<M> {
     type Output=M;
     fn base_square_matrix(&self) -> &M {
         &self.m
     }
 }
 
-impl<M:MatrixSquare+IntoBaseMatrix> IntoBaseMatrix for MatrixWithDet<M> {
+impl<M:MatrixViewSquare+IntoBaseMatrix> IntoBaseMatrix for MatrixWithDet<M> {
     type Output = <M as IntoBaseMatrix>::Output;
     fn into_base_matrix(self) -> <M as IntoBaseMatrix>::Output {
         self.m
@@ -185,7 +185,7 @@ impl<M:MatrixSquare+IntoBaseMatrix> IntoBaseMatrix for MatrixWithDet<M> {
     }
 }
 
-impl<M:MatrixSquare+AsBaseMatrix> AsBaseMatrix for MatrixWithDet<M> {
+impl<M:MatrixViewSquare+AsBaseMatrix> AsBaseMatrix for MatrixWithDet<M> {
     type Output=<M as AsBaseMatrix>::Output;
     fn base_matrix(&self) -> &<M as AsBaseMatrix>::Output {
         self.m
@@ -193,12 +193,12 @@ impl<M:MatrixSquare+AsBaseMatrix> AsBaseMatrix for MatrixWithDet<M> {
     }
 }
 
-impl<M:MatrixSquare> MatrixNotTall for MatrixWithDet<M> {}
-impl<M:MatrixSquare> MatrixNotWide for MatrixWithDet<M> {}
-impl<M:MatrixSquare> MatrixSquare  for MatrixWithDet<M> {}
+impl<M:MatrixViewSquare> MatrixViewNotTall for MatrixWithDet<M> {}
+impl<M:MatrixViewSquare> MatrixViewNotWide for MatrixWithDet<M> {}
+impl<M:MatrixViewSquare> MatrixViewSquare  for MatrixWithDet<M> {}
 
 impl<F : Neg<Output=F>,
-     M : MatrixSquare<T=F>> Neg for MatrixWithDet<M> where M : Neg<Output=M> {
+     M : MatrixViewSquare<T=F>> Neg for MatrixWithDet<M> where M : Neg<Output=M> {
     type Output = Self;
     fn neg(self) -> Self::Output {
         let (m, det)=self.into_parts();

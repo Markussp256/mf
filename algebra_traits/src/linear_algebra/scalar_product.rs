@@ -1,4 +1,4 @@
-use crate::{Distance, NormSquared, Nonnegative};
+use crate::{IntoDistance, NormSquared, Nonnegative};
 use num_traits::Zero;
 use container_traits::IntoSum;
 
@@ -82,15 +82,15 @@ impl<ScProdT:Zero, T:Scalarproduct<ScProdT = ScProdT>, const N:usize> Scalarprod
 pub fn test_consistency_scalar_product_squared_norm<
     T:Clone+Scalarproduct<ScProdT=SP>+NormSquared<Norm2T=NS>,
     NS:Into<SP>,
-    SP:Distance<DistT=D>,
+    SP:IntoDistance<DistT=D>,
     D:PartialOrd>(t:T, tol:Nonnegative<D>) {
     let res1=t.clone()
                   .scalar_product(t.clone());
     let res2:SP=t.clone()
-                 .norm_squared()
+                 .into_norm_squared()
                  .into_signed()
                  .into();
-    assert!(res1.distance(res2) < tol.into_signed())
+    assert!(res1.into_distance(res2) < tol.into_signed())
 }
 
 // for array

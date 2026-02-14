@@ -74,7 +74,7 @@ pub trait Sinc : Sized {
 
     fn sinc_from_den(den:Self::Output) -> Self::Output {
         let threshold=<Self::Output as Scalar>::RealType::from(10).try_pow(-3).ok().unwrap();
-        if den.clone().norm() < threshold {
+        if <Self::Output as Norm>::norm(&den) < threshold {
             sinc_taylor(den)
         } else {
             <Self::Output as TryDiv>::try_div(den.clone().sin(), den).ok().unwrap()

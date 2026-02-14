@@ -1,5 +1,5 @@
 use crate::{Matrix, MatrixView};
-use container_traits::{AnyFromIterator, ContainerIndex, Get, IndexOutOfBoundsError, IntoIter, IntoIterIndexed, IsEmpty, ItemT, Iter, IterIndexed, LinearContainerConstructError, NumberOfDegreesOfFreedom, OCTSize, Size, TryFromVec, TryIntoElement};
+use container_traits::{ContainerIndex, Get, IndexOutOfBoundsError, IntoIter, IntoIterIndexed, IsEmpty, ItemT, Iter, IterIndexed, NumberOfDegreesOfFreedom, OCTSize, Size, TryFromVec, TryIntoElement, Zeros};
 use num_traits::Zero;
 use utils::iter::{ChainExactSize, IntoExactSizeIterator};
 use container::Concatenated;
@@ -144,10 +144,11 @@ impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> NumberOfDegreesOfFreedom<F> 
 }
 
 impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> MatrixView for BlockDiagonal<TL,BR>
-    where for<'a> TL::RowView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
-          for<'a> TL::ColView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
-          for<'a> BR::RowView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
-          for<'a> BR::ColView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError> {
+    where for<'a> TL::RowView<'a> : Zeros<usize,F>, //ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
+          for<'a> TL::ColView<'a> : Zeros<usize,F>, //ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
+          for<'a> BR::RowView<'a> : Zeros<usize,F>, //ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
+          for<'a> BR::ColView<'a> : Zeros<usize,F>, //ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>
+    {
     type RowView<'a>=Concatenated<TL::RowView<'a>,BR::RowView<'a>> where TL : 'a, BR : 'a;
 
     type ColView<'a>=Concatenated<TL::ColView<'a>,BR::ColView<'a>> where TL : 'a, BR : 'a;
@@ -162,11 +163,10 @@ impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> MatrixView for BlockDiagonal
         let nbr=self.br.nrows();
         let (tl,br)=if i < ntl {
             (self.tl.try_row_view(i).unwrap(),
-            BR::RowView::<'a>::any_from_iter(None,std::iter::from_fn(||Some(F::zero())).take(nbr)).unwrap())
-            
+             BR::RowView::<'a>::zeros(nbr))
         } else {
-            (TL::RowView::<'a>::any_from_iter(None,std::iter::from_fn(||Some(F::zero())).take(ntl)).unwrap(),
-            self.br.try_row_view(i-ntl).unwrap())
+            (TL::RowView::<'a>::zeros(ntl),
+             self.br.try_row_view(i-ntl).unwrap())
         };
         Ok(Concatenated::new(tl,br))
     }
@@ -177,10 +177,9 @@ impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> MatrixView for BlockDiagonal
         let nbr=self.br.ncols();
         let (tl,br)=if j < ntl {
             (self.tl.try_col_view(j).unwrap(),
-            BR::ColView::<'a>::any_from_iter(None,std::iter::from_fn(||Some(F::zero())).take(nbr)).unwrap())
-            
+            BR::ColView::<'a>::zeros(nbr))    
         } else {
-            (TL::ColView::<'a>::any_from_iter(None,std::iter::from_fn(||Some(F::zero())).take(ntl)).unwrap(),
+            (TL::ColView::<'a>::zeros(ntl),
             self.br.try_col_view(j-ntl).unwrap())
         };
         Ok(Concatenated::new(tl,br))
@@ -189,10 +188,10 @@ impl<F:Zero, TL:MatrixView<T=F>,BR:MatrixView<T=F>> MatrixView for BlockDiagonal
 }
 
 impl<F:Zero, TL:Matrix<T=F>,BR:Matrix<T=F>> Matrix for BlockDiagonal<TL,BR>
-    where for<'a> TL::RowView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
-          for<'a> TL::ColView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
-          for<'a> BR::RowView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError>,
-          for<'a> BR::ColView<'a> : ItemT<T=F>+AnyFromIterator<F,LinearContainerConstructError> {
+    where for<'a> TL::RowView<'a> : Zeros<usize,F>,
+          for<'a> TL::ColView<'a> : Zeros<usize,F>,
+          for<'a> BR::RowView<'a> : Zeros<usize,F>,
+          for<'a> BR::ColView<'a> : Zeros<usize,F> {
     type Row=Concatenated<TL::Row,BR::Row>;
 
     type Col=Concatenated<TL::Col,BR::Col>;

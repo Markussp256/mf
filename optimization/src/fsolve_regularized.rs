@@ -45,6 +45,6 @@ fn test_inv_problem_reg() {
     let res = solve_inverse_problem_regularized(&f, [2.0, 5.0], 0.0, 1.0, None).unwrap();
     let expected=[3.0, 4.0];
     for i in 0..2 {
-        assert!(res[i].is_close_to(expected[i])); //  distance([3.0, 4.0]) < 1e-6
+        assert!(res[i].is_close_to(expected[i])); //  into_distance(([3.0, 4.0]) < 1e-6
     }
 }

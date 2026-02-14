@@ -73,7 +73,6 @@ impl< F : Scalar+Zero,
 }
 
 
-
 impl<T  : NormSquared<Norm2T = TR>+Scalar,
      TR : Zero+Max,
      R  : Dim,
@@ -81,17 +80,24 @@ impl<T  : NormSquared<Norm2T = TR>+Scalar,
      S  : RawStorage<T,R,C>> NormSquared for Matrix<T,R,C,S> {
     type Norm2T=TR;
 
-    fn norm_squared(self) -> Nonnegative<Self::Norm2T> {
+    fn norm_squared(&self) -> Nonnegative<Self::Norm2T> {
+        self.iter()
+            .map(NormSquared::norm_squared)
+            .fold(<crate::Nonnegative<TR> as num_traits::Zero>::zero(),
+                  |acc,new|acc+new)
+    }
+
+    fn into_norm_squared(self) -> Nonnegative<Self::Norm2T> {
         self.iter()
             .cloned()
-            .map(NormSquared::norm_squared)
+            .map(NormSquared::into_norm_squared)
             .fold(<crate::Nonnegative<TR> as num_traits::Zero>::zero(),
                   |acc,new|acc+new)
     }
 }
 
 crate::impl_norm_from_squared_norm_generic!(
-    impl Norm for Matrix<T,R,C,S>
+    for Matrix<T,R,C,S>
     where T : Scalar,
           R : Dim,
           C : Dim,
@@ -151,13 +157,13 @@ impl<T: Scalar, E,
      NormT,
      R: Dim,
      C: Dim,
-     S: RawStorage<T,R,C>> TryDistance for Matrix<T,R,C,S> where Self : TrySub<Output=D,Error=E> {
+     S: RawStorage<T,R,C>> TryIntoDistance for Matrix<T,R,C,S> where Self : TrySub<Output=D,Error=E> {
         type TryDistT=NormT;
         type Error=E;
-    fn try_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<Self::TryDistT>,E> {
+    fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<Self::TryDistT>,E> {
         let rhs:Self=rhs.into();
         rhs.try_sub(self)
-           .map( |d|d.norm())
+           .map( |d|d.into_norm())
     }
 }
 
@@ -165,13 +171,13 @@ impl<T: Scalar, E,
 //     ($name:ident) => {
 //         impl<T: Scalar,
 //              D: Norm<NormT=NormT>,
-//              NormT> TryDistance for $name<T> where Self : TrySub<Output=D> {
+//              NormT> TryIntoDistance for $name<T> where Self : TrySub<Output=D> {
 //             type TryDistT=NormT;
 //             type Error=<Self as TrySub>::Error;
-//             fn try_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<NormT>,<Self as TrySub>::Error> {
+//             fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<NormT>,<Self as TrySub>::Error> {
 //                 let rhs:Self=rhs.into();
 //                 rhs.try_sub(self)
-//                    .map( |d|d.norm())
+//                    .map( |d|d.into_norm())
 //             }
 //         }
 //     };
@@ -184,22 +190,19 @@ impl<T : Conjugate<Output=T2>+Scalar,
      T2: Scalar,
      R : Dim,
      C : Dim,
-     S : RawStorage<T,R,C>> Conjugate for Matrix<T,R,C,S> where Self : Clone, DefaultAllocator : Allocator<R,C> {
+     S : RawStorage<T,R,C>> Conjugate for Matrix<T,R,C,S> where DefaultAllocator : Allocator<R,C> {
     type Output = OMatrix<T2,R,C>;
-    fn conjugate(&self) -> Self::Output {
-        self.clone()
-            .map(|t|t.conjugate())
-    }
-}
 
-impl<T  : IntoConjugate<Output=T2>+Scalar,
-     T2 : Scalar,
-     R  : Dim,
-     C  : Dim,
-     S  : RawStorage<T,R,C>> IntoConjugate for Matrix<T,R,C,S> where DefaultAllocator : Allocator<R,C> {
-    type Output = OMatrix<T2,R,C>;
     fn into_conjugate(self) -> Self::Output {
-        self.map(IntoConjugate::into_conjugate)
+        self.map(Conjugate::into_conjugate)
+    }
+
+    fn are_conjugates(&self, rhs:&Self::Output) -> bool {
+        self.nrows() == rhs.nrows() &&
+        self.ncols() == rhs.ncols() &&
+        self.iter()
+            .zip(rhs.iter())
+            .all(|(l,r)|l.are_conjugates(r))
     }
 }
 

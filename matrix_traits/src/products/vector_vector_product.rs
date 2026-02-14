@@ -47,7 +47,7 @@ pub trait VectorVectorProduct<Rhs : ColVectorView> : RowVectorView {
     fn vector_vector_product(&self, rhs:&Rhs) -> <Self as VectorVectorProduct<Rhs>>::Output;
 }
 
-pub trait IntoVectorVectorProduct<Rhs : ColVector> : RowVector {
+pub trait IntoVectorVectorProduct<Rhs : ColVectorView> : RowVectorView {
     type Output;
     fn into_vector_vector_product(self, rhs:Rhs) -> <Self as IntoVectorVectorProduct<Rhs>>::Output;
 }
@@ -58,7 +58,7 @@ pub trait TryVectorVectorProduct<Rhs : ColVectorView> : RowVectorView {
 }
 
 
-pub trait TryIntoVectorVectorProduct<Rhs : ColVector> : RowVector {
+pub trait TryIntoVectorVectorProduct<Rhs : ColVectorView> : RowVectorView {
     type Output;
     fn try_into_vector_vector_product(self, rhs:Rhs) -> Option<<Self as TryIntoVectorVectorProduct<Rhs>>::Output>;
 }

@@ -3,45 +3,53 @@ use std::ops::Neg;
 use algebra::Unit;
 use algebra_traits::{Conjugate, Scalar};
 use container_traits::{TryAccept, Len, Get,  IntoInner};
-use matrix_traits::{matrix::AlgebraMatrix, ColVectorTryConstruct, Matrix, MatrixView, MatrixConstructError, MatrixNormal, MatrixNotTall, MatrixNotWide, MatrixSquare, MatrixTall, MatrixTryConstruct, Transpose};
+use matrix_traits::{AlgebraMatrix, ColVectorTryConstruct, Matrix, MatrixView, MatrixConstructError, MatrixNormal, MatrixViewNotTall, MatrixViewNotWide, MatrixViewSquare, MatrixViewTall, MatrixTryConstruct};
 
 use utils::kron_delta;
-use crate::RightTriangular;
 type U2=(usize,usize);
 
 #[derive(Clone, Debug, PartialEq,
-         algebra_derive::Conjugate,
-         algebra_derive::Neg,
-         container_derive::IntoInner,
-         container_derive::Inner,
-         container_derive::JustContainer,
-         container_derive::NewUnchecked,
-         derive_more::AsRef,
-         derive_more::Index,
-         matrix_derive::Identity,
-         matrix_derive::ClosedMatrixMatrixProduct,
-         matrix_derive::MatrixMatrixProductRightTriangular,
-         matrix_derive::Inherit,
-         matrix_derive::PopCol)]
+        algebra_derive::Conjugate,
+        algebra_derive::Neg,
+        container_derive::IntoInner,
+        container_derive::Inner,
+        container_derive::JustContainer,
+        container_derive::NewUnchecked,
+        derive_more::AsRef,
+        derive_more::Index,
+        matrix_derive::Identity,
+        matrix_derive::ClosedMatrixMatrixProduct,
+        matrix_derive::Transpose,
+        matrix_derive::MatrixMatrixProductRightTriangular,
+        matrix_derive::Inherit,
+        matrix_derive::PopCol)]
 pub struct Stiefel<M:MatrixView>(M);
 
 pub type SquareStiefel<M> = Stiefel<crate::Square<M>>;
 
 // Stiefel matrix can not be wide, otherwise inherit
-impl<M:MatrixView>    MatrixNotWide for Stiefel<M> {}
-impl<M:MatrixNotTall> MatrixNotTall for Stiefel<M> {}
-impl<M:MatrixSquare>  MatrixSquare  for Stiefel<M> {}
-impl<M:MatrixTall>    MatrixTall    for Stiefel<M> {}
+impl<M:MatrixView>    MatrixViewNotWide for Stiefel<M> {}
+impl<M:MatrixViewNotTall> MatrixViewNotTall for Stiefel<M> {}
+impl<M:MatrixViewSquare>  MatrixViewSquare  for Stiefel<M> {}
+impl<M:MatrixViewTall>    MatrixViewTall    for Stiefel<M> {}
 
-impl<M:MatrixSquare+Conjugate>  MatrixNormal  for Stiefel<M> {}
+impl<M:MatrixViewSquare+Conjugate<Output=M>>  MatrixNormal  for Stiefel<M> {}
 
-impl<M:Matrix+Transpose<Output=Mt>,Mt> Transpose for Stiefel<M> {
-    type Output=Mt;
-    fn transpose(self) -> Self::Output {
-        self.0
-            .transpose()
-    }
-}
+// impl<M:Matrix+Transpose<Output=Mt>,Mt> Transpose for Stiefel<M> {
+//     type Output=Mt;
+//     fn transpose(&self) -> Self::Output {
+//         self.0
+//             .transpose()
+//     }
+// }
+
+// impl<M:Matrix+IntoTranspose<Output=Mt>,Mt> IntoTranspose for Stiefel<M> {
+//     type Output=Mt;
+//     fn into_transpose(self) -> Self::Output {
+//         self.0
+//             .into_transpose()
+//     }
+// }
 
 impl<F:Scalar, M: AlgebraMatrix+MatrixTryConstruct<T=F>> TryAccept<U2,F,MatrixConstructError> for Stiefel<M> {
     fn try_accept<'a>((nrows,ncols):U2,f:impl Fn(U2) -> &'a F) -> Result<(),MatrixConstructError> where F: 'a {

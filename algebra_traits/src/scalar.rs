@@ -22,7 +22,7 @@ pub use zero::{IsAZero, NonZero, IntegralDomain};
 pub mod consts;
 pub use consts::{ConstZero, ConstNonZero, ConstOne, ConstPi, ConstRad2Deg, ConstDeg2Rad};
 
-use crate::{Conjugate, DivError, FiniteDimensionalInnerProductSpace, IntoConjugate, LogError, Nonnegative, Norm, NormSquared, Origin, Pow2, PowError, SqrtError, Tolerance, TryDiv, TryIntoReal, TryLog, TryNormalize};
+use crate::*;
 
 // marker trait
 use crate::{Exp, InnerProductSpace1d, Max, TryPow, TrySqrt};
@@ -40,7 +40,7 @@ pub trait CastFromf64 {
 pub trait Scalar : 'static
                   +Field
                   +Conjugate<Output=Self>
-                  +IntoConjugate<Output=Self>
+                  +Conjugate<Output=Self>
                   +Pow2<Output=Self>
                   +AddAssign+SubAssign
                   +Norm<NormT=Self::RealType>
@@ -125,6 +125,6 @@ pub trait NthRoots : Sized {
 
 // fn compare<F:Scalar>(f:F) -> bool {
 //     let r:F::RealType=F::RealType::from(1.0);
-//     let nr=<F::RealType as crate::Norm>::norm(r);
+//     let nr=<F::RealType as crate::Norm>::into_norm(r);
 //     &nr < &F::from(F::RealType::from(0.2))
 // }

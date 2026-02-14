@@ -83,7 +83,7 @@ fn test_multidim_optimization_problem() {
     let f = |x: Vector2<f64>| Vector3::from([x[0] - 42.0, x[1] - 45.0, x[0] - x[1]]);
     let x0 = Vector2::from([40.0, 50.0]);
     let xsol = fsolve(f, x0, None).unwrap();
-    assert!((f(xsol) - Vector3::from([1.0, -1.0, -1.0])).norm() < 1e-10);
+    assert!((f(xsol) - Vector3::from([1.0, -1.0, -1.0])).into_norm() < 1e-10);
 }
 
 #[test]
@@ -94,5 +94,5 @@ fn test_multidim_inverse_problem() {
     let x0 = Vector2::from([40.0, 50.0]);
     let y=Vector3::from([42.0,45.0,0.0]);
     let xsol = solve_inverse_problem(f, x0, y.clone(),None).unwrap();
-    assert!((f(xsol) - (y+Vector3::from([1.0, -1.0, -1.0]))).norm() < 1e-10);
+    assert!((f(xsol) - (y+Vector3::from([1.0, -1.0, -1.0]))).into_norm() < 1e-10);
 }

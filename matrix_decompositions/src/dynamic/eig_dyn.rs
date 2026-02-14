@@ -1,6 +1,6 @@
 use crate::{matrix::*, Complex, UnitVectorDyn};
 
-use algebra_traits::{ComplexNumber, ConjugateTranspose, Det, Norm, RealNumber, Tolerance, TryMul, TryNormalize, TrySub};
+use algebra_traits::{ComplexNumber, Transpose, Det, Norm, RealNumber, Tolerance, TryMul, TryNormalize, TrySub};
 
 use crate::matrix::matrix_decompositions_dyn::HouseholderDyn;
 
@@ -82,7 +82,7 @@ macro_rules! eig {
                              .try_normalize().unwrap();
                         if qr.into_matrix()
                              .try_mul(ev.vector().clone()).unwrap()
-                             .norm()
+                             .into_norm()
                              .is_small() {
                             return Some((ew,ev));
                         }
@@ -232,7 +232,7 @@ impl<F:ComplexNumber> From<SkewSymmetricMatrixDyn<F::RealType>> for EigDyn<F> {
 //     let sqrt_discrs:[F;2]=(trace.clone().pow2()-det.muli(4)).nth_roots(2).try_into().ok().unwrap();
 //     let lambdas=sqrt_discrs.map(|sqrt_discr|(trace.clone()+sqrt_discr).div2());
 //     let d=s[(1,1)].clone();
-//     let ds=lambdas.clone().map(|lda|lda.distance(d.clone()).into_signed());
+//     let ds=lambdas.clone().map(|lda|lda.into_distance(d.clone()).into_signed());
 //     if ds[0] < ds[1] {
 //         lambdas[0].clone()
 //     } else {

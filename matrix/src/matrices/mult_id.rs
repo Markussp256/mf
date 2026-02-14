@@ -1,10 +1,10 @@
-use container_traits::{AnyFromIterator, ClosedMap, Get, IndexOutOfBoundsError, IterIndexed, IntoIterIndexed, IntoIter, ItemT, Iter, LenTooSmallError, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryAccept, TryFromFn, TryIntoElement, TryMap};
+use container_traits::{AnyFromIterator, ClosedMap, Get, IndexOutOfBoundsError, IntoIter, IntoIterIndexed, IsEmpty, ItemT, Iter, IterIndexed, LenTooSmallError, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryAccept, TryFromFn, TryIntoElement, TryMap};
 use num_traits::Zero;
 use std::ops::Mul;
 
-use matrix_traits::{MatrixConstructError, Matrix, MatrixTryConstruct};
+use matrix_traits::{Matrix, MatrixConstructError, MatrixTryConstruct, MatrixView};
 
-use crate::{MatrixColDyn, MatrixRowDyn};
+use crate::{MatrixCol, MatrixRow, MatrixColView, MatrixRowView};
 
 type U2=(usize,usize);
 
@@ -85,17 +85,39 @@ impl<F:Zero> OCTSize<U2> for MultId<F> {
     const OCTSIZE:Option<U2> = Some((1,1));
 }
 
-impl<F:Zero> Matrix for MultId<F> {
-    type Row=MatrixRowDyn<F>;
+impl<F:Zero> IsEmpty for MultId<F> {
+    fn is_empty(&self) -> bool {
+        false
+    }
+}
 
-    type Col=MatrixColDyn<F>;
+
+impl<F:Zero> MatrixView for MultId<F> {
+    type RowView<'a>=MatrixRowView<'a,F,1> where Self : 'a;
+    type ColView<'a>=MatrixColView<'a,F,1> where Self : 'a;
+    
+    fn try_row_view<'a>(&'a self, i:usize) -> Result<Self::RowView<'a>,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&1,&i)?;
+        Ok(MatrixRowView::<'a,F,1>::from(self.factor.clone()))
+    }
+    
+    fn try_col_view<'a>(&'a self, j:usize) -> Result<Self::ColView<'a>,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&1,&j)?;
+        Ok(MatrixColView::<'a,F,1>::from(self.factor.clone()))
+    }
+}
+
+impl<F:Zero> Matrix for MultId<F> {
+    type Row=MatrixRow<F,1>;
+
+    type Col=MatrixCol<F,1>;
 
     fn into_rows(self) -> impl ExactSizeIterator<Item=Self::Row> {
-        std::iter::once(MatrixRowDyn::from([self.factor]))
+        std::iter::once(MatrixRow::<F,1>::from([self.factor]))
     }
 
     fn into_cols(self) -> impl ExactSizeIterator<Item=Self::Col> {
-        std::iter::once(MatrixColDyn::from([self.factor]))
+        std::iter::once(MatrixCol::<F,1>::from([self.factor]))
     }
 }
 

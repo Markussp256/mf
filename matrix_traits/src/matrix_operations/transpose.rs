@@ -1,25 +1,35 @@
-use algebra_traits::IntoConjugate;
+use algebra_traits::Conjugate;
+
 
 pub trait Transpose {
     type Output;
-    fn transpose(&self) -> Self::Output;
-}
 
-pub trait IntoTranspose {
-    type Output;
+    // required
+
     fn into_transpose(self) -> Self::Output;
-}
 
-// we can not bound trait with Conjugate because we can not implement for foreign type
+    // provided
 
-pub trait IntoConjugateTranspose : Sized+IntoConjugate+IntoTranspose {
-    fn into_conjugate_transpose(self) -> <<Self as IntoTranspose>::Output as IntoConjugate>::Output
-    where <Self as IntoTranspose>::Output : IntoConjugate {
+    fn transpose(&self) -> Self::Output where Self : Clone {
+        self.clone()
+            .into_transpose()
+    }
+
+    fn conjugate_transpose(&self) -> <Self::Output as Conjugate>::Output
+    where Self : Clone, <Self as Transpose>::Output : Conjugate {
+        self.transpose()
+            .into_conjugate()
+    }
+
+    fn into_conjugate_transpose(self) -> <Self::Output as Conjugate>::Output
+    where Self : Sized,
+          Self::Output : Conjugate {
         self.into_transpose()
             .into_conjugate()
     }
 }
-impl<X:IntoConjugate+IntoTranspose> IntoConjugateTranspose for X {}
+
+
 
 #[derive(Clone,Debug, PartialEq)]
 pub struct Transposed<C>(C);
@@ -37,18 +47,8 @@ impl<C:Clone> Transpose for Transposed<C> {
         self.0
             .clone()
     }
-}
 
-impl<C> IntoTranspose for Transposed<C> {
-    type Output = C;
     fn into_transpose(self) -> Self::Output {
         self.0
     }
 }
-
-// pub trait RowTranspose : RowVector + Transpose where <Self as Transpose>::Output : ColVector<F=Self::F> {}
-// pub trait ColTranspose : ColVector + Transpose where <Self as Transpose>::Output : RowVector<F=Self::F> {}
-
-// pub trait MatrixTranspose : Matrix + Transpose where <Self as Transpose>::Output : Matrix<F=Self::F,
-//                                                                                           Row=<Self::Col as Transpose>::Output,
-//                                                                                           Col=<Self::Row as Transpose>::Output> {}

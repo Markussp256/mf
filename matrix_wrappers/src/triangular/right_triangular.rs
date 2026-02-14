@@ -1,6 +1,6 @@
 use std::ops::Neg;
 use container_traits::{Iter, TryAccept};
-use matrix_traits::{Matrix, MatrixConstructError, MatrixTryConstruct, Transpose, TryFromMatrix, TryPushCol, TryPushRow};
+use matrix_traits::{Matrix, MatrixView, MatrixConstructError, MatrixTryConstruct, Transpose, TryFromMatrix, TryPushCol, TryPushRow};
 use num_traits::Zero;
 
 use crate::shaped::square::Square;
@@ -13,6 +13,7 @@ type U2=(usize,usize);
          container_derive::JustContainer,
          container_derive::NewUnchecked,
          container_derive::IntoInner,
+         container_derive::Inner,
          derive_more::AsRef,
          derive_more::Index,
          matrix_derive::Identity,
@@ -22,23 +23,22 @@ type U2=(usize,usize);
          matrix_derive::PopRow,
          matrix_derive::PopCol
 )]
-pub struct RightTriangular<M:Matrix>(M) where M::T : Zero;
+pub struct RightTriangular<M:MatrixView>(M) where M::T : Zero;
 
 // crate::macros::as_matrix_into_matrix!(RightTriangular);
 
 pub type SquareRightTriangular<M>=RightTriangular<Square<M>>;
 
 
-
-
 impl<F : Zero,
      M : MatrixTryConstruct<T=F>+Transpose<Output=Mt>,
      Mt: MatrixTryConstruct<T=F>> Transpose for RightTriangular<M> {
     type Output=super::LeftTriangular<Mt>;
-    fn transpose(self) -> Self::Output {
+
+    fn into_transpose(self) -> Self::Output {
         Self::Output::try_from_matrix(
             self.0
-                    .transpose()).ok().unwrap()
+                    .into_transpose()).ok().unwrap()
     }
 }
 
@@ -74,7 +74,7 @@ impl<F:Zero, M : Matrix<T=F>+TryPushRow> TryPushRow for RightTriangular<M> {
     type Output=RightTriangular<<M as TryPushRow>::Output>;
     fn try_push_row(self,row:M::Row) -> Result<RightTriangular<<M as TryPushRow>::Output>, M::Row> {
         if !row.iter()
-               .take(self.nrows())
+               .take(self.0.nrows())
                .all(|v|v.is_zero()) {
             return Err(row);
         }
@@ -88,7 +88,7 @@ impl<F:Zero, M : Matrix<T=F>+TryPushCol> TryPushCol for RightTriangular<M> {
     type Output=RightTriangular<<M as TryPushCol>::Output>;
     fn try_push_col(self,col:M::Col) -> Result<RightTriangular<<M as TryPushCol>::Output>, M::Col> {
         if !col.iter()
-               .skip(self.ncols()+1)
+               .skip(self.0.ncols()+1)
                .all(|v|v.is_zero()) {
             return Err(col);
         }

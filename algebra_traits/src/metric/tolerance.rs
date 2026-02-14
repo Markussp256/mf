@@ -1,20 +1,20 @@
-use crate::{Distance, Nonnegative};
+use crate::{IntoDistance, Nonnegative};
 
 use num_traits::{Zero, One};
 
 
-pub trait Tolerance : Distance
+pub trait Tolerance : IntoDistance
     where Self::DistT : PartialOrd {
     const THRESHOLD : Self::DistT;
 
     // provided method
 
     fn is_smaller_than(self, threshold:Self::DistT) -> bool where Self : Zero {
-        self.distance(Self::zero()) < threshold
+        self.into_distance(Self::zero()) < threshold
     }
 
     fn is_close_to(self, rhs:impl Into<Self>) -> bool {
-        self.distance(rhs) < Self::THRESHOLD
+        self.into_distance(rhs) < Self::THRESHOLD
     }
 
     fn is_small(self) -> bool where Self : Zero {
@@ -36,7 +36,7 @@ impl<T:Tolerance> Tolerance for Nonnegative<T> where T::DistT : PartialOrd {
     const THRESHOLD:T::DistT=T::THRESHOLD;
 }
 
-// pub trait Tolerance4Complex<R:PartialOrd+Tolerance<SignedType = R>> : Distance<SignedOutput = R> {
+// pub trait Tolerance4Complex<R:PartialOrd+Tolerance<SignedType = R>> : IntoDistance<SignedOutput = R> {
     
 //         // provided method
 //         fn threshold() -> Nonnegative<R> {
@@ -48,7 +48,7 @@ impl<T:Tolerance> Tolerance for Nonnegative<T> where T::DistT : PartialOrd {
 //         }
 
 //         fn is_close_to(self, rhs:impl Into<Self>) -> bool {
-//             self.distance(rhs) < Self::signed_threshold()
+//             self.into_distance(rhs) < Self::signed_threshold()
 //         }
 
 //         fn is_small(self) -> bool where Self:Zero {

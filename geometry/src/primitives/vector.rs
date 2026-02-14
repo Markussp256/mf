@@ -182,8 +182,8 @@ from_into!(MatrixColGeneric<C>);
         // norm for e.g. physical quantities
         // provided with trait scalar_product
         // impl<T: Clone+algebra_traits::ConstNonzero + std::ops::Div<Output=f64>, const N:usize> Vector<T,N> {
-        //     pub fn norm(&self) -> T {
-        //         T::NonZero * <Vector::<f64,N> as algebra_traits::Scalarproduct<f64>>::norm(&self.clone().map(|z|z/T::NonZero))
+        //     pub fn into_norm(&self) -> T {
+        //         T::NonZero * <Vector::<f64,N> as algebra_traits::Scalarproduct<f64>>::into_norm(&self.clone().map(|z|z/T::NonZero))
         //     }
         // }
 
@@ -217,12 +217,12 @@ from_into!(MatrixColGeneric<C>);
 
         impl<A:algebra_traits::Torsor, const N:usize> algebra_traits::Torsor for Point<A, N> {}
 
-        impl<A: std::ops::Sub<Output=V>, V, const N:usize> algebra_traits::Distance for Point<A, N>
+        impl<A: std::ops::Sub<Output=V>, V, const N:usize> algebra_traits::IntoDistance for Point<A, N>
         where Vector<V,N> : algebra_traits::Norm {
             type DistT=<Vector<V,N> as algebra_traits::Norm>::NormT;
-            fn distance(self, rhs:impl Into<Self>) -> algebra_traits::Nonnegative<Self::DistT> {
+            fn into_distance(self, rhs:impl Into<Self>) -> algebra_traits::Nonnegative<Self::DistT> {
                 let rhs:Self=rhs.into();
-                <Vector::<V,N> as algebra_traits::Norm>::norm(rhs-self)
+                <Vector::<V,N> as algebra_traits::Norm>::into_norm(rhs-self)
             }
         }
         
@@ -251,9 +251,9 @@ from_into!(MatrixColGeneric<C>);
         utils::from_via!(impl<T, const N:usize> From<algebra::Vector<T, N>> for Vector<T, N>, via [T;N]);
 
         impl<V:algebra_traits::Tolerance, const N:usize> algebra_traits::Tolerance for Vector<V, N>
-        where Self : algebra_traits::Distance<DistT=<V as algebra_traits::Distance>::DistT>,
+        where Self : algebra_traits::IntoDistance<DistT=<V as algebra_traits::IntoDistance>::DistT>,
               Self::DistT:PartialOrd {
-            const THRESHOLD:<V as algebra_traits::Distance>::DistT=<V as algebra_traits::Tolerance>::THRESHOLD;
+            const THRESHOLD:<V as algebra_traits::IntoDistance>::DistT=<V as algebra_traits::Tolerance>::THRESHOLD;
         }
 
 
@@ -287,7 +287,7 @@ fn test_scalar_product_with_lengths() {
 
     let v=Vector::<f64,3>::new(3.0,0.0,4.0).map(Length::from_m);
     
-    let n2=<Vector3<Length> as NormSquared>::norm_squared(v.clone());
+    let n2=<Vector3<Length> as NormSquared>::into_norm_squared(v.clone());
     let n=<Nonnegative<Area> as Sqrt>::sqrt(n2);
     assert_eq!(Length::from_m(5.0), n);
 }

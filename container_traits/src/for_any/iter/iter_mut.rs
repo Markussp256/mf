@@ -16,6 +16,14 @@ impl<T> IterMut<T> for Vec<T> {
     impl_iter_mut!();
 }
 
+impl<T> IterMut<T> for & mut Vec<T> {
+    impl_iter_mut!();
+}
+
 impl<T, const N:usize> IterMut<T> for  [T;N] {
+    impl_iter_mut!();
+}
+
+impl<T, const N:usize> IterMut<T> for  & mut [T;N] {
     impl_iter_mut!();
 }

@@ -38,4 +38,4 @@ pub mod matrix;
 pub use matrix::Matrix;
 
 pub mod static_matrix;
-pub use static_matrix::{StaticMatrix,SquareStaticMatrix};
+pub use static_matrix::{StaticMatrix,SquareStaticMatrixView};

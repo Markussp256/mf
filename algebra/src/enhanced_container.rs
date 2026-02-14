@@ -11,7 +11,7 @@ use algebra_derive::*;
     Clone, Debug, PartialEq,
     AsRef, ConstElement, From, Index, IndexMut,
     container_derive::Container,
-    Basis, Conjugate, Crossproduct, Distance, IsAZero, Norm, NormSquared,
+    Basis, Conjugate, Crossproduct, IntoDistance, IsAZero, Norm, NormSquared,
     ScalarDiv, TryScalarDiv, ScalarMul, Scalarproduct,
     TryAdd, TryDiv, TryNormalize, TrySub
 )]
@@ -24,7 +24,7 @@ impl<C> EnhancedContainer<C> {
 }
 pub trait IntoEnhancedContainer {
     type OutputC;
-    fn into_enh_cont(self) -> EnhancedContainer<Self::OutputC>;
+    fn into_enhanced_container(self) -> EnhancedContainer<Self::OutputC>;
 }
 
 impl<C : algebra_traits::operators::basic::Neg<Output=COut>,COut> Neg for EnhancedContainer<C> {

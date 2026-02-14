@@ -1,5 +1,5 @@
 use algebra_traits::Pow2;
-use matrix_traits::{try_matrix_matrix_product_impl, try_matrix_vector_product_impl, AsBaseSquareMatrix, DiagonalMatrixGeneric, IntoBaseSquareMatrix, MatrixMatrixProduct, MatrixSquareTryConstruct, MatrixTryConstruct, MatrixVectorProduct, SquareStaticMatrix, StaticMatrix};
+use matrix_traits::{try_matrix_matrix_product_impl, try_matrix_vector_product_impl, AsBaseSquareMatrix, DiagonalMatrixGeneric, IntoBaseSquareMatrix, MatrixMatrixProduct, MatrixSquareTryConstruct, MatrixTryConstruct, MatrixVectorProduct, SquareStaticMatrixView, StaticMatrix};
 use num_traits::Zero;
 use std::ops::Mul;
 use super::MatrixGeneric;
@@ -12,13 +12,13 @@ pub type Matrix<F, const M:usize, const N:usize>=MatrixGeneric<MatrixRow<F,N>,Ma
 
 type U2=(usize,usize);
 
-impl<F:'static, const M:usize, const N:usize> matrix_traits::MatrixFixedNumberOfCols<N> for Matrix<F,M,N> {
+impl<F:'static, const M:usize, const N:usize> matrix_traits::MatrixViewFixedNumberOfCols<N> for Matrix<F,M,N> {
 }
 
-impl<F:'static, const M:usize, const N:usize> matrix_traits::MatrixFixedNumberOfRows<M> for Matrix<F,M,N> {
+impl<F:'static, const M:usize, const N:usize> matrix_traits::MatrixViewFixedNumberOfRows<M> for Matrix<F,M,N> {
 }
 
-impl<F:'static, const M:usize> SquareStaticMatrix for Matrix<F,M,M> {
+impl<F:'static, const M:usize> SquareStaticMatrixView for Matrix<F,M,M> {
     const M:usize = M;
 }
 
@@ -130,7 +130,7 @@ macro_rules! impl_matrix_vector_product {
             const N:usize>  $tr0<$rhs<F2,N>> for Matrix<F,M,N> {
             $(type Output = $rhs<F3,M>;
             fn $fn(self, rhs:$rhs<F2,N> ) -> $rhs<F3,M> {
-                try_matrix_vector_product_impl(self, rhs).unwrap()
+                try_into_matrix_vector_product_impl(self, &rhs).unwrap()
             })?
         }
     }
@@ -150,7 +150,7 @@ macro_rules! impl_product {
             const N:usize> $tr1<Matrix<F2,M,N>> for Matrix<F,L,M> {
             $(type Output = Matrix<F3,L,N>;
             fn $fn1(self, rhs:Matrix<F2,M,N>) -> Matrix<F3,L,N> {
-                try_matrix_matrix_product_impl(self, rhs).unwrap()
+                try_into_matrix_matrix_product_impl(self,&rhs).unwrap()
             })?
         }
     };
@@ -165,7 +165,7 @@ impl<F,
      where Self : MatrixVectorProduct<MatrixCol<F2,N>,Output=MatrixCol<F3,M>> {
         type Output=MatrixCol<F3,M>;
         fn mul(self, rhs:MatrixCol<F2,N>) -> Self::Output {
-            self.matrix_vector_product(rhs)
+            self.matrix_vector_product(&rhs)
         }
 }
 
@@ -177,7 +177,7 @@ impl<F : 'static+Clone+Mul<F2,Output=F3>,
      const N:usize> Mul<Matrix<F2,M,N>> for Matrix<F,L,M> {
         type Output=Matrix<F3,L,N>;
         fn mul(self, rhs:Matrix<F2,M,N>) -> Self::Output {
-            self.matrix_matrix_product(rhs)
+            self.matrix_matrix_product(&rhs)
         }
 }
 
@@ -185,7 +185,7 @@ impl<F:'static+Clone+Zero+Mul<Output=F>, const N:usize> Pow2 for Matrix<F,N,N> {
     type Output=<Self as MatrixMatrixProduct>::Output;
     fn pow2(self) -> <Self as Pow2>::Output {
         self.clone()
-            .matrix_matrix_product(self)
+            .matrix_matrix_product(&self)
     }
 }
 

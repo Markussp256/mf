@@ -54,7 +54,7 @@ impl<const DIMX:usize,
      where F::RealType : Debug {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f,"Contradicting data to estimate Linear transformation: we have 
-        {:?}=f({:?})={:?}={:?} but {:?}.distance({:?})={:?}>tol={:?}",
+        {:?}=f({:?})={:?}={:?} but {:?}.into_distance(({:?})={:?}>tol={:?}",
         self.y, self.x, self.lin_combs(), self.yalt, self.y, self.yalt, self.d, self.tol)
     }
 }
@@ -123,7 +123,7 @@ impl<const DIMX:usize,
         //             let (_,x,y)=orig_imag_pairs[i].clone();
         //             let c=basis.find_coordinates(&x);
         //             let yalt=Y::linear_combination(c.iter().zip(images.iter()).map(|(ci,ii)|(ci.clone(),ii.clone())).collect());
-        //             let d=yalt.distance(&y);
+        //             let d=yalt.into_distance((&y);
         //             if d > tol {
         //                 let cdat=ContradictingDataForLinearTransformation{
         //                     ws:c, basis, images, x, y, yalt, d, tol

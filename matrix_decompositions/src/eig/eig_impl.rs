@@ -1,6 +1,6 @@
 
 use algebra::Unit;
-use algebra_traits::{ConstNonZero, NormSquared, Scalar, ScalarVector, Tolerance, TrySolve, TrySolveHomogeneous, TrySub};
+use algebra_traits::{Conjugate, ConstNonZero, NormSquared, Scalar, ScalarVector, Tolerance, TrySolve, TrySolveHomogeneous, TrySub};
 use num_traits::Zero;
 use container_traits::{AnyFromIterator, ChangeDim, FromElement, Inner, IntoInner, Iter, StandardBasis, TryFromFn};
 
@@ -15,14 +15,14 @@ use crate::{qr::HouseholderTrafoGeneric, QRStruct, QRTrait};
 // pub fn rayleight_quotient<
 //     R   : RealNumber,
 //     F   : ComplexNumber<RealType=R>+Clone,
-//     M   : AlgebraMatrix<T=F,Row=Row,Col=Col>+MatrixSquare+TryMatrixVectorProduct<Col,Output=Col>,
+//     M   : AlgebraMatrix<T=F,Row=Row,Col=Col>+MatrixViewSquare+TryMatrixVectorProduct<Col,Output=Col>,
 //     Row : RowVector<T=F>+TryVectorVectorProduct<Col,Output=F>,
-//     Col : Clone+Zero+NormSquared<Norm2T=R>+ColVector<T=F>+ConjugateTranspose<Output=Row>>(m:M,col:Col) -> Option<F> {
+//     Col : Clone+Zero+NormSquared<Norm2T=R>+ColVector<T=F>+Transpose<Output=Row>>(m:M,col:Col) -> Option<F> {
 //     if col.is_zero() {
 //         return None;
 //     }
 //     let row=col.clone().conjugate_transpose();
-//     let coln2=col.clone().norm_squared().into_signed();
+//     let coln2=col.clone().into_norm_squared().into_signed();
 //     let mcol=m.try_matrix_vector_product(col)?;
 //     row.try_vector_vector_product(mcol).unwrap()
 //        .try_div(coln2).ok()
@@ -31,11 +31,11 @@ use crate::{qr::HouseholderTrafoGeneric, QRStruct, QRTrait};
 pub fn rayleight_quotient_unit_vector<
     F   : Scalar+Clone,
     M   : MatrixSquare<T=F,Row=Row,Col=Col>+TryMatrixVectorProduct<Col,Output=Col>,
-    Row : RowVector<T=F>+TryVectorVectorProduct<Col,Output=F>,
-    Col : Clone+Zero+NormSquared<Norm2T=F::RealType>+ColVector<T=F>+ConjugateTranspose<Output=Row>>(m:M,col:Unit<Col>) -> Option<F> {
-    let row=col.inner().clone().conjugate_transpose();
-    let mcol=m.try_matrix_vector_product(col.into_inner())?;
-    row.try_vector_vector_product(mcol)
+    Row : RowVector<T=F>+TryVectorVectorProduct<Col,Output=F>+Conjugate<Output=Row>,
+    Col : Clone+Zero+NormSquared<Norm2T=F::RealType>+ColVector<T=F>+Transpose<Output=Row>>(m:M,col:Unit<Col>) -> Option<F> {
+    let row=col.inner().conjugate_transpose();
+    let mcol=m.try_matrix_vector_product(col.inner())?;
+    row.try_vector_vector_product(&mcol)
 }
 
 
@@ -49,11 +49,13 @@ impl<F   : Clone+Scalar+ConstNonZero,
      Row : RowVectorTryConstruct<T=F>
           +FromElement<usize,F>
           +TryVectorVectorProduct<Col,Output=F>
-          +ConjugateTranspose<Output=Col>,
+          +Conjugate<Output=Row>
+          +Transpose<Output=Col>,
      Col : ColVectorTryConstruct<T=F>
           +ScalarVector<T=F>
           +Zero
-          +ConjugateTranspose<Output=Row>
+          +Conjugate<Output=Col>
+          +Transpose<Output=Row>
           +Clone
           +StandardBasis,
      M   : MatrixSquareTryConstruct<T=F,Row=Row,Col=Col>
@@ -67,7 +69,8 @@ impl<F   : Clone+Scalar+ConstNonZero,
           +TryPopCol<Output=MP>,
       MP  : Clone
            +Matrix<T=F,Col=Col>
-           +ConjugateTranspose<Output=MPT>
+           +Conjugate<Output=MP>
+           +Transpose<Output=MPT>
            +TryMatrixMatrixProduct<MSub,Output=MP>
            +TryPopRow<Output=MSub>,
       MPT : Matrix<T=F,Row=Row>
@@ -103,8 +106,8 @@ impl<F   : Clone+Scalar+ConstNonZero,
             let dbn:Col=x.try_divide_by_norm().unwrap().1;
             ev=Unit::<Col>::try_new(dbn).ok().unwrap();
             if m_shift
-                 .try_matrix_vector_product(ev.inner().clone()).unwrap()
-                 .norm()
+                 .try_matrix_vector_product(ev.inner()).unwrap()
+                 .into_norm()
                  .is_small() {
                 return (ew,ev);
             }
@@ -129,7 +132,7 @@ fn eig(self,init_ew:F) -> (Stiefel<M>,DiagonalMatrixGeneric<Row>) {
                 .try_into_unitary_matrix::<M>().unwrap()
                 .try_pop_col().unwrap().0;
             let msub=h.inner().clone().conjugate_transpose().try_matrix_matrix_product(self.clone()
-                    .try_matrix_matrix_product(h.inner().clone()).unwrap()).unwrap();
+                    .try_matrix_matrix_product(h.inner()).unwrap()).unwrap();
             let (qsub,d)=msub.eig(init_ew).into_parts();
             let qsubh=h.into_inner().try_matrix_matrix_product(qsub.into_inner()).unwrap();
             (Stiefel::<M>::try_from_cols(
@@ -160,7 +163,7 @@ use algebra_traits::ComplexNumber;
 
 #[cfg(test)]
 pub fn check_eig
-    <M : Clone+EigImpl+ConjugateTranspose<Output=M>+TryMatrixMatrixProduct<Output=M>>(m:M) -> bool
+    <M : Clone+EigImpl+Transpose<Output=M>+TryMatrixMatrixProduct<Output=M>>(m:M) -> bool
     where M::T : ComplexNumber,
     DiagonalMatrixGeneric<M::Row> : TryMatrixMatrixProduct<M,Output=M> {
         let eig=m.clone().eig(M::T::one());

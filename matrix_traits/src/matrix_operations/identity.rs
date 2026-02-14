@@ -3,15 +3,15 @@ pub trait Identity {
 }
 
 pub mod for_static {
-    use crate::SquareStaticMatrix;
+    use crate::SquareStaticMatrixView;
 
     pub trait Identity {
         fn identity() -> Self;
     }
 
-    impl<M:SquareStaticMatrix+super::Identity> Identity for M {
+    impl<M:SquareStaticMatrixView+super::Identity> Identity for M {
         fn identity() -> Self {
-            <Self as super::Identity>::identity(<Self as SquareStaticMatrix>::M)
+            <Self as super::Identity>::identity(<Self as SquareStaticMatrixView>::M)
         }
     }
 

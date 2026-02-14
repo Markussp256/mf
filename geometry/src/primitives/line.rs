@@ -47,11 +47,11 @@
 //     }
 
 //     pub fn proj(&self, p:A) -> A where A:Copy, A::V:Copy+Scalarproduct<f64> {
-//         self.p+ (p-self.p).scalar_product(self.v)*self.v/self.v.norm_squared()
+//         self.p+ (p-self.p).scalar_product(self.v)*self.v/self.v.into_norm_squared()
 //     }
 
-//     pub fn distance(&self, p:A) -> f64 where A:Copy, A::V:Copy+Scalarproduct<f64> {
-//         (p-self.proj(p)).norm()
+//     pub fn into_distance((&self, p:A) -> f64 where A:Copy, A::V:Copy+Scalarproduct<f64> {
+//         (p-self.proj(p)).into_norm()
 //     }
 // }
 // use core::fmt::Debug;

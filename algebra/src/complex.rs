@@ -13,7 +13,7 @@ use crate::EnhancedArray;
         Debug,
         PartialEq,
         algebra_derive::AdditiveGroup,
-        algebra_derive::Distance,
+        algebra_derive::IntoDistance,
         algebra_derive::Norm,
         algebra_derive::NormSquared,
         algebra_derive::AddAssignFromAdd,
@@ -83,19 +83,17 @@ impl<R:RealNumber> NthRoots for Complex<R> {
     }
 }
 
-impl<T:Clone+Neg<Output=T>> Conjugate for Complex<T> {
+impl<T:Clone+Neg<Output=T>+PartialEq> Conjugate for Complex<T> {
     type Output = Self;
-    fn conjugate(&self) -> Self {
-        let [real, imag]=self.clone().into_real_imag();
-        Self::new(real, -imag)
-    }
-}
 
-impl<T:Neg<Output=T>> IntoConjugate for Complex<T> {
-    type Output = Self;
     fn into_conjugate(self) -> Self {
         let [real, imag]=self.into_real_imag();
         Self::new(real, -imag)
+    }
+
+    fn are_conjugates(&self, rhs:&Self) -> bool {
+        self.real() ==  rhs.real() &&
+        self.imag() == &-rhs.imag().clone()
     }
 }
 
@@ -142,7 +140,7 @@ impl<T:Clone+RealNumber> TryLog for Complex<T> {
     fn try_log(self) -> Result<Self,LogError> {
         self.is_logable()?;
         let real=self.clone()
-                        .norm()
+                        .into_norm()
                         .try_log()
                         .ok()
                         .unwrap();
@@ -183,7 +181,7 @@ impl<R:Clone+RealNumber> Complex<R> {
     // A power, but not the only one
     pub fn try_a_pow(self, rhs: R) -> Result<Self,PowError> {
             self.clone()
-                .norm()
+                .into_norm()
                 .into_signed()
                 .try_pow(rhs.clone())
                 .map(|r|Nonnegative::try_new(r).unwrap())// result is nonnegative because norm is nonnegative
@@ -264,7 +262,7 @@ impl<T:Clone+RealNumber> TryInv for Complex<T> {
     fn try_inv(self) -> Result<Self,InvError> {
         self.is_invertible()?;
         let n2=self.clone()
-                      .norm_squared()
+                      .into_norm_squared()
                       .into_signed();
         Ok(Self(
             self.conjugate()

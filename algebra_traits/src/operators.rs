@@ -5,7 +5,7 @@ pub mod basic;
 // we dont want to reexport from basic to avoid name clashes
 
 pub mod conjugate;
-pub use conjugate::{Conjugate,IntoConjugate};
+pub use conjugate::Conjugate;
 
 pub mod closed;
 pub use closed::*;

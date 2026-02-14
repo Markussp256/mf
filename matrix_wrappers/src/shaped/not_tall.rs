@@ -1,7 +1,7 @@
 use std::fmt::Debug;
-use container_traits::TryAccept;
+use container_traits::{OtherDimensionMismatchError, TryAccept};
 
-use matrix_traits::{IntoTranspose, Matrix, MatrixConstructError, MatrixNotTall, MatrixTryConstruct, MatrixView, Transpose, TryFromMatrix};
+use matrix_traits::{Matrix, MatrixConstructError, MatrixViewNotTall, MatrixTryConstruct, MatrixView, Transpose, TryFromMatrix};
 
 use super::not_wide::NotWide;
 
@@ -24,24 +24,16 @@ type U2=(usize,usize);
          matrix_derive::Identity,
          matrix_derive::Inherit,
          matrix_derive::ClosedMatrixMatrixProduct,
-         matrix_derive::MatrixNotWide,
-         matrix_derive::MatrixSquare,
-         matrix_derive::MatrixWide,
+         matrix_derive::MatrixViewNotWide,
+         matrix_derive::MatrixViewSquare,
+         matrix_derive::MatrixViewWide,
          matrix_derive::PopRow,
 )]
 pub struct NotTall<M:MatrixView>(M);
 
-impl<M:MatrixView> MatrixNotTall for NotTall<M> {}
+impl<M:MatrixView> MatrixViewNotTall for NotTall<M> {}
 
 impl<M:MatrixView+Transpose<Output=MT>,MT:MatrixTryConstruct> Transpose for NotTall<M> {
-    type Output=NotWide<MT>;
-
-    fn transpose(&self) -> Self::Output {
-        NotWide::try_from_matrix(self.0.transpose()).ok().unwrap()
-    }
-}
-
-impl<M:MatrixView+IntoTranspose<Output=MT>,MT:MatrixTryConstruct> IntoTranspose for NotTall<M> {
     type Output=NotWide<MT>;
 
     fn into_transpose(self) -> Self::Output {
@@ -54,7 +46,7 @@ impl<M:MatrixTryConstruct> TryAccept<U2,M::T,MatrixConstructError> for NotTall<M
         if nrows <= ncols {
             Ok(())
         } else {
-            Err(MatrixConstructError::DimensionMismatch)
+            Err(OtherDimensionMismatchError.into())
         }
     }
 }

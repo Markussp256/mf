@@ -1,7 +1,7 @@
 use std::ops::Neg;
 
 use container_traits::TryAccept;
-use matrix_traits::{Matrix, MatrixConstructError, MatrixTryConstruct, Transpose, TryFromMatrix};
+use matrix_traits::{Matrix, MatrixView, MatrixConstructError, MatrixTryConstruct, Transpose, TryFromMatrix};
 use num_traits::Zero;
 use crate::shaped::square::Square;
 
@@ -13,6 +13,7 @@ type U2=(usize,usize);
          container_derive::JustContainer,
          container_derive::NewUnchecked,
          container_derive::IntoInner,
+         container_derive::Inner,
          derive_more::AsRef,
          derive_more::Index,
          matrix_derive::Identity,
@@ -21,7 +22,7 @@ type U2=(usize,usize);
          matrix_derive::MatrixShape,
          matrix_derive::PopRow,
          matrix_derive::PopCol)]
-pub struct LeftTriangular<M:Matrix>(M) where M::T : Zero;
+pub struct LeftTriangular<M:MatrixView>(M) where M::T : Zero;
 
 pub type SquareLeftTriangular<M>=LeftTriangular<Square<M>>;
 
@@ -29,8 +30,13 @@ impl<F : Zero,
      M : MatrixTryConstruct<T=F>+Transpose<Output=Mt>,
      Mt: MatrixTryConstruct<T=F>> Transpose for LeftTriangular<M> {
     type Output=super::RightTriangular<Mt>;
-    fn transpose(self) -> Self::Output {
-        Self::Output::try_from_matrix(self.0.transpose()).ok().unwrap()
+    fn transpose(&self) -> Self::Output where Self : Clone{
+        self.clone()
+            .into_transpose()
+    }
+
+    fn into_transpose(self) -> Self::Output {
+        Self::Output::try_from_matrix(self.0.into_transpose()).ok().unwrap()
     }
 }
 

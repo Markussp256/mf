@@ -64,12 +64,13 @@ macro_rules! impl_int_and_float {
             fn conjugate(&self) -> Self {
                  self.clone()
             }
-        }
 
-        impl IntoConjugate for $f {
-            type Output=$f;
             fn into_conjugate(self) -> Self {
                  self
+            }
+
+            fn are_conjugates(&self,rhs:&Self) -> bool {
+                self == rhs
             }
         }
 
@@ -230,7 +231,11 @@ macro_rules! impl_only_float {
 
         impl NormSquared for $f {
             type Norm2T=$f;
-            fn norm_squared(self) -> Nonnegative<Self::Norm2T> {
+            fn norm_squared(&self) -> Nonnegative<Self::Norm2T> {
+                Nonnegative::try_new(self.pow2()).unwrap()
+            }
+
+            fn into_norm_squared(self) -> Nonnegative<Self::Norm2T> {
                 Nonnegative::try_new(self.pow2()).unwrap()
             }
         }
@@ -360,25 +365,29 @@ macro_rules! impl_only_float {
         impl Norm for $f {
             type NormT=$f;
 
-            fn norm(self) -> Nonnegative<Self::NormT> {
+            fn norm(&self) -> Nonnegative<Self::NormT> {
+                Nonnegative::try_new(self.abs()).unwrap()
+            }
+
+            fn into_norm(self) -> Nonnegative<Self::NormT> {
                 Nonnegative::try_new(self.abs()).unwrap()
             }
         }
 
-        impl TryDistance for $f  {
+        impl TryIntoDistance for $f  {
             type TryDistT=$f;
             type Error=SubError;
-            fn try_distance(self, rhs:impl Into<$f>) -> Result<Nonnegative<$f>, SubError> {
+            fn try_into_distance(self, rhs:impl Into<$f>) -> Result<Nonnegative<$f>, SubError> {
                 let rhs:$f=rhs.into();
-                Ok((rhs-self).norm())
+                Ok((rhs-self).into_norm())
             }
         }
 
-        impl Distance for $f {
+        impl IntoDistance for $f {
             type DistT=$f;
-            fn distance(self, rhs:impl Into<$f>) -> Nonnegative<$f> {
+            fn into_distance(self, rhs:impl Into<$f>) -> Nonnegative<$f> {
                 let rhs:$f=rhs.into();
-                (rhs-self).norm()
+                (rhs-self).into_norm()
             }
         }
 

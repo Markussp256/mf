@@ -222,8 +222,8 @@ fn test_from_se3() {
     let screw_m: ScrewMotion<f64, f64>=se3.into();
 
     assert!((screw_m.rotation().abs_angle().clone().rad() - std::f64::consts::PI).is_small());
-    assert!((screw_m.rotation().get_point_on_axis().clone() - Point3::<f64>::new(1.0,0.0,0.0)).norm().is_small());
-    assert!((screw_m.parallel_translation().into_vector().norm().is_small()))
+    assert!((screw_m.rotation().get_point_on_axis().clone() - Point3::<f64>::new(1.0,0.0,0.0)).into_norm().is_small());
+    assert!((screw_m.parallel_translation().into_vector().into_norm().is_small()))
 }
 
 
@@ -244,6 +244,6 @@ fn test_from_se3() {
         //         }
 
         //         let axis=Ray::new(orig,value.get_t());
-        //         let trans=value.get_t().norm();
+        //         let trans=value.get_t().into_norm();
         //         return Self{axis, angle:phys_units::Angle::zero(), trans}}
         // }

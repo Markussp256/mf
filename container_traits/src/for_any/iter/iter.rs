@@ -15,11 +15,19 @@ macro_rules! iter_impl {
     };
 }
 
-impl<T:> Iter<T> for Vec<T> {
+impl<T> Iter<T> for Vec<T> {
+    iter_impl!();
+}
+
+impl<T> Iter<T> for &Vec<T> {
     iter_impl!();
 }
 
 impl<T, const N:usize> Iter<T> for [T;N] {
+    iter_impl!();
+}
+
+impl<T, const N:usize> Iter<T> for &[T;N] {
     iter_impl!();
 }
 

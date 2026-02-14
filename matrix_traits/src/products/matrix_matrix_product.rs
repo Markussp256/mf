@@ -1,4 +1,4 @@
-use crate::{error::MatricesCanNotBeMultipliedError, Matrix, MatrixConstructError, MatrixTryConstruct, MatrixView, RowVector, RowVectorTryConstruct, RowVectorView, TryVectorMatrixProduct};
+use crate::{error::MatricesCanNotBeMultipliedError, Matrix, MatrixConstructError, MatrixTryConstruct, MatrixView, RowVector, RowVectorTryConstruct, RowVectorView, ColVectorView, TryVectorMatrixProduct, TryMatrixVectorProduct};
 
 
 pub trait MatrixMatrixProduct<Rhs : MatrixView=Self> : MatrixView {
@@ -29,6 +29,26 @@ pub fn try_matrix_matrix_product_impl
         let out=Out::try_from_rows(
                 lhs.row_views()
                    .map(|row|row.try_vector_matrix_product(rhs).unwrap()))?;
+        let out_dims=out.matrix_dimensions();
+        assert_eq!(out_dims.0, lhs_dims.0);
+        assert_eq!(out_dims.1, rhs_dims.1);
+        Ok(out)
+}
+
+
+// from cols
+pub fn try_matrix_matrix_product_impl_from_cols
+    <'a,
+     Lhs    : MatrixView+TryMatrixVectorProduct<RhsCol,Output=Out::Col>,
+     Rhs    : MatrixView<ColView<'a>=RhsCol>,
+     RhsCol : ColVectorView,
+     Out    : MatrixTryConstruct>(lhs:&'a Lhs, rhs:&'a Rhs) -> Result<Out,MatrixConstructError> {
+        let lhs_dims=lhs.matrix_dimensions();
+        let rhs_dims=rhs.matrix_dimensions();
+        MatricesCanNotBeMultipliedError::try_new(&lhs_dims,&rhs_dims)?;
+        let out=Out::try_from_cols(
+                rhs.col_views()
+                   .map(|col|lhs.try_matrix_vector_product(&col).unwrap()))?;
         let out_dims=out.matrix_dimensions();
         assert_eq!(out_dims.0, lhs_dims.0);
         assert_eq!(out_dims.1, rhs_dims.1);

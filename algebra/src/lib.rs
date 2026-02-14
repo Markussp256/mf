@@ -27,6 +27,10 @@ pub mod vector_nalgebra_conv;
 pub mod vector;
 pub use vector::{VectorDyn, VectorGeneric, Vector, Vector2, Vector3, Vector4};
 
+pub mod vector_view;
+pub use vector_view::{VectorViewDyn, VectorViewGeneric, VectorView, VectorView2, VectorView3, VectorView4};
+
+
 pub mod polynomial;
 pub use polynomial::MultivariatePoly;
 

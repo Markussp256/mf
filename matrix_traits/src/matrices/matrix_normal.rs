@@ -7,6 +7,6 @@
 // decomposition
 
 use algebra_traits::Conjugate;
-use super::MatrixSquare;
+use super::MatrixViewSquare;
 
-pub trait MatrixNormal : MatrixSquare + Conjugate {}
+pub trait MatrixNormal : MatrixViewSquare + Conjugate {}
