@@ -475,7 +475,7 @@ macro_rules! quantity {
                 }
             }
 
-            impl<F:algebra_traits::RealNumber> algebra_traits::IntoDistance for $dname<F> {
+            impl<F:algebra_traits::RealNumber> algebra_traits::Distance for $dname<F> {
                 type DistT=Self;
                 fn into_distance(self, rhs:impl Into<Self>) -> algebra_traits::Nonnegative<Self> {
                     let rhs:Self=rhs.into();
@@ -483,15 +483,15 @@ macro_rules! quantity {
                 }
             }
 
-            impl<F:algebra_traits::RealNumber> algebra_traits::TryIntoDistance for $dname<F> {
+            impl<F:algebra_traits::RealNumber> algebra_traits::TryDistance for $dname<F> {
                 type TryDistT=Self;
                 type Error=std::convert::Infallible;
                 fn try_into_distance(self, rhs:impl Into<Self>) -> Result<algebra_traits::Nonnegative<Self>, Self::Error> {
-                    Ok(<Self as algebra_traits::IntoDistance>::into_distance(self,rhs))
+                    Ok(<Self as algebra_traits::Distance>::into_distance(self,rhs))
                 }
             }
 
-            impl<F:algebra_traits::RealNumber> algebra_traits::IntoDistance for $pname<F> {
+            impl<F:algebra_traits::RealNumber> algebra_traits::Distance for $pname<F> {
                 type DistT=$dname<F>;
                 fn into_distance(self, rhs:impl Into<Self>) -> algebra_traits::Nonnegative<$dname<F>> {
                     let rhs:Self=rhs.into();
@@ -499,11 +499,11 @@ macro_rules! quantity {
                 }
             }
 
-            impl<F:algebra_traits::RealNumber> algebra_traits::TryIntoDistance for $pname<F> {
+            impl<F:algebra_traits::RealNumber> algebra_traits::TryDistance for $pname<F> {
                 type TryDistT=$dname<F>;
                 type Error=std::convert::Infallible;
                 fn try_into_distance(self, rhs:impl Into<Self>) -> Result<algebra_traits::Nonnegative<$dname<F>>, Self::Error> {
-                    Ok(<Self as algebra_traits::IntoDistance>::into_distance(self,rhs))
+                    Ok(<Self as algebra_traits::Distance>::into_distance(self,rhs))
                 }
             }
 

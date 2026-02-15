@@ -8,8 +8,8 @@ edition = "2024"
 [dependencies]
 cachingmap = "0.2.1"
 itertools = "0.14.0"
-# algebra_derive   = { path="../algebra_derive" }
-# algebra_traits   = { path="../algebra_traits" }
+algebra_derive   = { path="../algebra_derive" }
+algebra_traits   = { path="../algebra_traits" }
 # algebra          = { path="../algebra" }
 # container_derive = { path="../container_derive" }
 # container_traits = { path="../container_traits" }

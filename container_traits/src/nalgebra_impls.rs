@@ -59,6 +59,7 @@ pub fn get_dims_from_len<R:Dim,C:Dim>(len:usize) -> Result<U2,OtherDimensionMism
 mod for_any;
 mod for_dvector;
 mod for_dmatrix;
+mod for_omatrix;
 mod for_svector;
 mod for_smatrix;
 

@@ -144,10 +144,10 @@ impl<T:Clone+Field+Scalarproduct<ScProdT=T>+ScalarMul<T>> std::ops::Mul for Quat
     fn mul(self, rhs:Self) -> Self {
         let (real, imag)=self.into_real_imag();
         let (rhs_real, rhs_imag)=rhs.into_real_imag();
-        Self::new(real.clone() * rhs_real.clone()-Scalarproduct::scalar_product(imag.clone(), rhs_imag.clone()),
+        Self::new(real.clone() * rhs_real.clone()-Scalarproduct::scalar_product(&imag, &rhs_imag),
                       imag.clone().scalar_mul(&rhs_real)
                   .add(rhs_imag.clone().scalar_mul(&real))
-                  .add(imag.cross_product(rhs_imag)))
+                  .add(imag.into_cross_product(rhs_imag)))
     }
 }
 

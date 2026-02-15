@@ -3,7 +3,7 @@ use container_traits::{ContainerView, IndexOutOfBoundsError};
 use num_traits::{Zero,One};
 use crate::row_col::{RowVectorView,ColVectorView};
 use utils::kronecker_delta::kron_delta;
-use algebra_traits::{Conjugate, IntoDistance, Tolerance};
+use algebra_traits::{Conjugate, Distance, Tolerance};
 type U2=(usize,usize);
 
 // can be dynamic or static sized
@@ -35,8 +35,8 @@ pub trait MatrixView : ContainerView<U2> {
     }
 
     fn is_close_to(&self, rhs:&impl MatrixView<T=Self::T>) -> bool
-    where Self::T : Clone+IntoDistance+Tolerance, 
-         <Self::T as IntoDistance>::DistT : PartialOrd {
+    where Self::T : Clone+Distance+Tolerance, 
+         <Self::T as Distance>::DistT : PartialOrd {
         assert_eq!(self.matrix_dimensions(),rhs.matrix_dimensions());
         self.iter().cloned()
             .zip(rhs.iter().cloned())
@@ -90,7 +90,7 @@ macro_rules! algebra_matrix_impl {
     () => {
         fn try_col_sc_prod<'a>(&'a self, j0:usize, j1:usize) -> Result<<Self as container_traits::ItemT>::T,container_traits::IndexOutOfBoundsError<usize>> where Self::T : Clone
         {
-            Ok(<Self::ColView<'a> as algebra_traits::TryScalarproduct>::try_scalar_product(
+            Ok(<Self::ColView<'a> as algebra_traits::TryScalarproduct>::try_into_scalar_product(
                 self.try_col_view(j0)?,
                 self.try_col_view(j1)?).unwrap())
         }

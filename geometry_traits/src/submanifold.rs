@@ -30,6 +30,6 @@ pub trait Submanifold<F:Scalar> : Sized+NumberOfDegreesOfFreedom<F> {
         // ortsvector
         let ov:Self::V=self.embedding()-Self::AmbientSpace::origin();
 
-        grad(&ov).scalar_product(ov)
+        grad(&ov).into_scalar_product(ov)
     }
 }

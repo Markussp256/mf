@@ -217,7 +217,7 @@ from_into!(MatrixColGeneric<C>);
 
         impl<A:algebra_traits::Torsor, const N:usize> algebra_traits::Torsor for Point<A, N> {}
 
-        impl<A: std::ops::Sub<Output=V>, V, const N:usize> algebra_traits::IntoDistance for Point<A, N>
+        impl<A: std::ops::Sub<Output=V>, V, const N:usize> algebra_traits::Distance for Point<A, N>
         where Vector<V,N> : algebra_traits::Norm {
             type DistT=<Vector<V,N> as algebra_traits::Norm>::NormT;
             fn into_distance(self, rhs:impl Into<Self>) -> algebra_traits::Nonnegative<Self::DistT> {
@@ -251,9 +251,9 @@ from_into!(MatrixColGeneric<C>);
         utils::from_via!(impl<T, const N:usize> From<algebra::Vector<T, N>> for Vector<T, N>, via [T;N]);
 
         impl<V:algebra_traits::Tolerance, const N:usize> algebra_traits::Tolerance for Vector<V, N>
-        where Self : algebra_traits::IntoDistance<DistT=<V as algebra_traits::IntoDistance>::DistT>,
+        where Self : algebra_traits::Distance<DistT=<V as algebra_traits::Distance>::DistT>,
               Self::DistT:PartialOrd {
-            const THRESHOLD:<V as algebra_traits::IntoDistance>::DistT=<V as algebra_traits::Tolerance>::THRESHOLD;
+            const THRESHOLD:<V as algebra_traits::Distance>::DistT=<V as algebra_traits::Tolerance>::THRESHOLD;
         }
 
 

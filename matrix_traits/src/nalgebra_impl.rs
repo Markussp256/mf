@@ -1,6 +1,13 @@
 use algebra_traits::Scalarproduct;
-use container_traits::{nalgebra_impls::DimExtension, OCTSize};
-use container_traits::{CommonLengthError, Get, IndexOutOfBoundsError, IntoSum, TryCommonLength};
+use container_traits::{
+    nalgebra_impls::DimExtension,
+    OCTSize,
+    CommonLengthError,
+    Get,
+    IndexOutOfBoundsError,
+    IntoSum,
+    IntoIter,
+    TryCommonLength};
 
 use num_traits::Zero;
 use utils::iter::ChainExactSize;
@@ -18,33 +25,10 @@ use nalgebra::{
 
 type U2=(usize,usize);
 
-
 type ORowVector<T,C>=nalgebra::OMatrix<T,nalgebra::U1,C>;
-
-// type RowDVectorView   <'a,F>=nalgebra::Matrix<F,Const<1>,Dyn,ViewStorage<'a, F, Const<1>, Dyn, Const<1>, Dyn>>;
-// type RowDVectorViewMut<'a,F>=nalgebra::Matrix<F,Const<1>,Dyn,ViewStorageMut<'a, F, Const<1>, Dyn, Const<1>, Dyn>>;
-
-// type RowSVectorView   <'a,F, const M:usize, const N:usize>=nalgebra::MatrixView   <'a,F,Const<1>,Const<N>,Const<1>,Const<M>>;
-// type RowSVectorViewMut<'a,F, const M:usize, const N:usize>=nalgebra::MatrixViewMut<'a,F,Const<1>,Const<N>,Const<1>,Const<M>>;
 
 impl<F:Scalar,R:DimExtension,S:RawStorage<F,R,Const<1>>> ColVectorView for nalgebra::Matrix<F,R,Const<1>,S> {}
 impl<F:Scalar,C:DimExtension,S:RawStorage<F,Const<1>,C>> RowVectorView for nalgebra::Matrix<F,Const<1>,C,S> {}
-
-
-// impl<   F:Scalar>                ColVectorView for    DVector       <   F>   {}
-// impl<   F:Scalar>                RowVectorView for RowDVector       <   F>   {}
-// impl<   F:Scalar, const N:usize> ColVectorView for    SVector       <   F,N> {} 
-// impl<   F:Scalar, const N:usize> RowVectorView for RowSVector       <   F,N> {}
-
-// impl<'a,F:Scalar>                               ColVectorView for    DVectorView   <'a,F>     {}
-// impl<'a,F:Scalar>                               RowVectorView for RowDVectorView   <'a,F>     {}
-// impl<'a,F:Scalar,                const N:usize> ColVectorView for    SVectorView   <'a,F,  N> {}
-// impl<'a,F:Scalar, const M:usize, const N:usize> RowVectorView for RowSVectorView   <'a,F,M,N> {}
-
-// impl<'a,F:Scalar>                               ColVectorView for    DVectorViewMut<'a,F>     {}
-// impl<'a,F:Scalar>                               RowVectorView for RowDVectorViewMut<'a,F>     {}
-// impl<'a,F:Scalar,                const N:usize> ColVectorView for    SVectorViewMut<'a,F,  N> {}
-// impl<'a,F:Scalar, const M:usize, const N:usize> RowVectorView for RowSVectorViewMut<'a,F,M,N> {}
 
 
 impl<T:Scalar,
@@ -65,17 +49,17 @@ impl<T:Scalar,
 impl<F0  : Scalar+Mul<F1,Output=F2>,
      F1  : Scalar,
      F2  : Zero+Scalar,
-     D   : DimExtension,
-     RS0 : RawStorage<F0,Const<1>,D>,
-     RS1 : RawStorage<F1,D,Const<1>>> TryVectorVectorProduct<nalgebra::Matrix<F1,D,Const<1>,RS1>> for nalgebra::Matrix<F0,Const<1>,D,RS0> {
+     A   : DimExtension,
+     B   : DimExtension,
+     RS0 : RawStorage<F0,Const<1>,A>,
+     RS1 : RawStorage<F1,B,Const<1>>> TryVectorVectorProduct<nalgebra::Matrix<F1,B,Const<1>,RS1>> for nalgebra::Matrix<F0,Const<1>,A,RS0> {
     type Output=F2;
-    fn try_vector_vector_product(&self, rhs:&nalgebra::Matrix<F1,D,Const<1>,RS1>) -> Option<F2> {
+    fn try_into_vector_vector_product(self, rhs:nalgebra::Matrix<F1,B,Const<1>,RS1>) -> Option<F2> {
         (self.len() == rhs.len()).then(||
-            self.iter()
-                .zip(rhs.iter())
-                .map(|(l,r)|l.clone()*r.clone())
-                .into_sum()
-        )
+            self.into_iterator()
+                .zip(rhs.into_iterator())
+                .map(|(l,r)|l*r)
+                .into_sum())
     }
 }
 
@@ -87,47 +71,14 @@ impl<F0  : Scalar+Mul<F1,Output=F2>,
      RS0 : RawStorage<F0,Const<1>,Const<N>>,
      RS1 : RawStorage<F1,Const<N>,Const<1>>> VectorVectorProduct<nalgebra::Matrix<F1,Const<N>,Const<1>,RS1>> for nalgebra::Matrix<F0,Const<1>,Const<N>,RS0> {
     type Output=F2;
-    fn vector_vector_product(&self, rhs:&nalgebra::Matrix<F1,Const<N>,Const<1>,RS1>) -> F2 {
-        self.iter()
-            .zip(rhs.iter())
-            .map(|(l,r)|l.clone()*r.clone())
+    fn into_vector_vector_product(self, rhs:nalgebra::Matrix<F1,Const<N>,Const<1>,RS1>) -> F2 {
+        self.into_iterator()
+            .zip(rhs.into_iterator())
+            .map(|(l,r)|l*r)
             .into_sum()
     }
 }
 
-impl<F:Scalar+Mul<F2,Output=F3>,
-     F2:Scalar,
-     F3:Scalar+Zero,
-     const N:usize> IntoVectorVectorProduct<SVector<F2,N>> for RowSVector<F,N> {
-        type Output=F3;
-     
-        fn into_vector_vector_product(self, rhs:SVector<F2,N>) -> F3 {
-            try_into_vector_vector_product_impl(self,rhs).unwrap()
-        }
-}
-
-
-impl<F:Scalar+Mul<F2,Output=F3>,
-     F2:Scalar,
-     F3:Scalar+Zero,
-     const N:usize> TryIntoVectorVectorProduct<SVector<F2,N>> for RowSVector<F,N> {
-        type Output=F3;
-     
-        fn try_into_vector_vector_product(self, rhs:SVector<F2,N>) -> Option<F3> {
-            try_into_vector_vector_product_impl(self,rhs)
-        }
-}
-
-
-
-impl<F:Scalar+Mul<F2,Output=F3>,
-     F2:Scalar,
-     F3:Scalar+Zero> TryIntoVectorVectorProduct<DVector<F2>> for RowDVector<F> {
-        type Output=F3;
-        fn try_into_vector_vector_product(self, rhs:DVector<F2>) -> Option<F3> {
-            try_into_vector_vector_product_impl(self,rhs)
-        }
-}
 
 
 impl<F:Scalar, 
@@ -168,93 +119,62 @@ impl<F:Scalar+algebra_traits::Scalar,
     algebra_matrix_impl!();
 }
 
-impl<F :'static+Scalar+Mul<F1,Output=F2>,
-     F1:'static+Scalar,
-     F2:'static+Scalar+Zero,
-     const M:usize,
+
+impl<F  : Scalar+Mul<F1,Output=F2>,
+     F1 : Scalar+Clone,
+     F2 : Scalar+Zero,
+     D  : DimExtension,
      const N:usize,
-     S    : RawStorage<F, Const<M>, Const<N>>,
-     S1   : RawStorage<F1,Const<N>, Const<1>>> MatrixVectorProduct<nalgebra::Matrix<F1,Const<N>,Const<1>,S1>> for nalgebra::Matrix<F,Const<M>,Const<N>,S> {
-        type Output=SVector<F2,M>;
+     S  : RawStorage<F, D, Const<N>>+Clone,
+     S1 : RawStorage<F1,Const<N>, Const<1>>+Clone> MatrixVectorProduct<nalgebra::Matrix<F1,Const<N>,Const<1>,S1>> for nalgebra::Matrix<F,D,Const<N>,S>
+    where DefaultAllocator : Allocator<D,Const<N>>+Allocator<D>+Allocator<Const<1>,D> {
+        type Output=nalgebra::OMatrix<F2,D,Const<1>>;
 
-        fn matrix_vector_product(& self, rhs:& nalgebra::Matrix<F1,Const<N>,Const<1>,S1>) -> Self::Output {
+        fn matrix_vector_product<'a>(&'a self, rhs:&'a nalgebra::Matrix<F1,Const<N>,Const<1>,S1>) -> Self::Output {
             try_matrix_vector_product_impl(self,rhs).unwrap()
-        }
-}
+        }// ::<'a,Self, Self::RowView<'a>,nalgebra::Matrix<F1,Const<N>,Const<1>,S1>,nalgebra::OMatrix<F2,D,Const<1>>>
 
-
-impl<F :Scalar+Mul<F2,Output=F3>,
-     F2:Scalar,
-     F3:Scalar+Zero,
-     const M:usize,
-     const N:usize> IntoMatrixVectorProduct<SVector<F2,N>> for SMatrix<F,M,N> {
-        type Output=SVector<F3,M>;
-        fn into_matrix_vector_product(self, rhs:&SVector<F2,N>) -> Self::Output {
-            try_into_matrix_vector_product_impl(self,rhs).unwrap()
+        fn into_matrix_vector_product(self, rhs:&nalgebra::Matrix<F1,Const<N>,Const<1>,S1>) -> Self::Output where Self : Clone {
+            try_matrix_vector_product_impl(&self,rhs).unwrap()
         }
 }
 
 
 impl<F :Scalar+Mul<F1,Output=F2>,
-     F1:Scalar,
+     F1:Scalar+Clone,
      F2:Scalar+Zero,
-     const M:usize,
-     const N:usize,
-     S : RawStorage<F, Const<M>,Const<N>>,
-     S1: RawStorage<F1,Const<N>,Const<1>>> TryMatrixVectorProduct<nalgebra::Matrix<F1,Const<N>,Const<1>,S1>> for nalgebra::Matrix<F,Const<M>,Const<N>,S> {
-        type Output=SVector<F2,M>;
+     A  : DimExtension,
+     B  : DimExtension,
+     C  : DimExtension,
+     S : RawStorage<F, A,B>+Clone,
+     S1: RawStorage<F1,C,Const<1>>+Clone> TryMatrixVectorProduct<nalgebra::Matrix<F1,C,Const<1>,S1>> for nalgebra::Matrix<F,A,B,S>
+    where DefaultAllocator : Allocator<A>+Allocator<Const<1>,A> {
+        type Output=nalgebra::OMatrix<F2,A,Const<1>>;
      
-        fn try_matrix_vector_product(&self, rhs:&nalgebra::Matrix<F1,Const<N>,Const<1>,S1>) -> Result<Self::Output,VectorConstructError> {
+        fn try_matrix_vector_product(&self, rhs:&nalgebra::Matrix<F1,C,Const<1>,S1>) -> Result<Self::Output,VectorConstructError> {
             try_matrix_vector_product_impl(self,rhs)
         }
-}
 
-
-impl<F :Scalar+Mul<F2,Output=F3>,
-     F2:Scalar,
-     F3:Scalar+Zero,
-     const M:usize,
-     const N:usize> TryIntoMatrixVectorProduct<SVector<F2,N>> for SMatrix<F,M,N> {
-        type Output=SVector<F3,M>;
-     
-        fn try_into_matrix_vector_product(self, rhs:&SVector<F2,N>) -> Result<Self::Output,VectorConstructError> {
-            try_into_matrix_vector_product_impl(self,rhs)
+        fn try_into_matrix_vector_product(self, rhs:&nalgebra::Matrix<F1,C,Const<1>,S1>) -> Result<Self::Output,VectorConstructError> {
+            try_matrix_vector_product_impl(&self,rhs)
         }
 }
 
-impl<F :Scalar+Mul<F2,Output=F3>,
-     F2:Scalar,
-     F3:Scalar+Zero> TryMatrixVectorProduct<DVector<F2>> for DMatrix<F> {
-        type Output=DVector<F3>;
-     
-        fn try_matrix_vector_product(&self, rhs:&DVector<F2>) -> Result<Self::Output,VectorConstructError> {
-            try_matrix_vector_product_impl(self,rhs)
-        }
-}
-
-
-impl<F :Scalar+Mul<F2,Output=F3>,
-     F2:Scalar,
-     F3:Scalar+Zero> TryIntoMatrixVectorProduct<DVector<F2>> for DMatrix<F> {
-        type Output=DVector<F3>;
-     
-        fn try_into_matrix_vector_product(self, rhs:&DVector<F2>) -> Result<Self::Output,VectorConstructError> {
-            try_into_matrix_vector_product_impl(self,rhs)
-        }
-}
 
 impl<F  : Scalar+Mul<F1,Output=F2>,
      F1 : Scalar,
      F2 : Scalar+Zero,
-     R  : DimExtension,
+     A  : DimExtension,
+     B  : DimExtension,
      C  : DimExtension,
-     S  : RawStorage<F, Const<1>,R>,
-     S1 : RawStorage<F1,R,C>> TryVectorMatrixProduct<nalgebra::Matrix<F1,R,C,S1>> for nalgebra::Matrix<F,Const<1>,R,S>
-     where DefaultAllocator                    : Allocator<Const<1>,C>
-                                                +Allocator<R>,
-           nalgebra::OMatrix<F2,Const<1>,C> : RowVector<T=F2> {
+     S  : RawStorage<F, Const<1>,A>+Clone,
+     S1 : RawStorage<F1,B,C>> TryVectorMatrixProduct<nalgebra::Matrix<F1,B,C,S1>> for nalgebra::Matrix<F,Const<1>,A,S>
+     where DefaultAllocator                    : Allocator<Const<1>,A>
+                                                +Allocator<Const<1>,C>
+                                                +Allocator<B>
+                                                +Allocator<C> {
         type Output = nalgebra::OMatrix<F2,Const<1>,C>;
-        fn try_vector_matrix_product(&self, rhs:&nalgebra::Matrix<F1,R,C,S1>) -> Result<<Self as TryVectorMatrixProduct<nalgebra::Matrix<F1,R,C,S1>>>::Output,VectorConstructError> {
+        fn try_vector_matrix_product(&self, rhs:&nalgebra::Matrix<F1,B,C,S1>) -> Result<nalgebra::OMatrix<F2,Const<1>,C>,VectorConstructError> {
             try_vector_matrix_product_impl(self,rhs)   
         }
 }
@@ -274,54 +194,25 @@ impl<F:Scalar+Mul<F1,Output=F2>,
 }
 
 
-impl<F:Scalar+Mul<F2,Output=F3>,
-     F2:Scalar,
-     F3:Scalar+Zero,
-     const L:usize,
-     const M:usize,
-     const N:usize> IntoMatrixMatrixProduct<SMatrix<F2,M,N>> for SMatrix<F,L,M> {
-        type Output=SMatrix<F3,L,N>;
-     
-        fn into_matrix_matrix_product(self, rhs:&SMatrix<F2,M,N>) -> Self::Output {
-            try_into_matrix_matrix_product_impl(self,rhs).unwrap()
-        }
-}
-
 impl<F  : Scalar+Mul<F1,Output=F2>,
      F1 : Scalar,
      F2 : Scalar+Zero,
      L  : DimExtension,
-     M  : DimExtension,
+     M1 : DimExtension,
+     M2 : DimExtension,
      N  : DimExtension,
-     S  : RawStorage<F, L,M>,
-     S1 : RawStorage<F1,M,N>> TryMatrixMatrixProduct<nalgebra::Matrix<F1,M,N,S1>> for nalgebra::Matrix<F,L,M,S>
-     where DefaultAllocator                    : AllAllocator<L,M>
-                                                +AllAllocator<M,N>
+     S  : RawStorage<F, L,M1>,
+     S1 : RawStorage<F1,M2,N>> TryMatrixMatrixProduct<nalgebra::Matrix<F1,M2,N,S1>> for nalgebra::Matrix<F,L,M1,S>
+     where DefaultAllocator                    : AllAllocator<L,M1>
+                                                +AllAllocator<M2,N>
                                                 +AllAllocator<L,N> {
         type Output = nalgebra::OMatrix<F2,L,N>;
-        fn try_matrix_matrix_product(&self, rhs:&nalgebra::Matrix<F1,M,N,S1>) -> Result<nalgebra::OMatrix<F2,L,N>,MatrixConstructError> {
+        fn try_matrix_matrix_product(&self, rhs:&nalgebra::Matrix<F1,M2,N,S1>) -> Result<nalgebra::OMatrix<F2,L,N>,MatrixConstructError> {
             try_matrix_matrix_product_impl(self,rhs)   
         }
 }
 
 
-
-
-impl<F:Scalar+Mul<F1,Output=F2>,
-     F1:Scalar,
-     F2:Scalar+Zero,
-     L:DimExtension,
-     M:DimExtension,
-     N:DimExtension,
-     S1 : RawStorage<F1,M,N>> TryIntoMatrixMatrixProduct<nalgebra::Matrix<F1,M,N,S1>> for OMatrix<F,L,M>
-     where  DefaultAllocator : AllAllocator<L,M>
-                              +AllAllocator<L,N>
-                              +AllAllocator<M,N> {
-        type Output=OMatrix<F2,L,N>;
-        fn try_into_matrix_matrix_product(self, rhs:&nalgebra::Matrix<F1,M,N,S1>) -> Result<Self::Output,MatrixConstructError> {
-            try_into_matrix_matrix_product_impl(self,rhs)
-        }
-}
 
 
 crate::impl_op_diag_dyn! (RowDVector,DMatrix,Scalar);
@@ -373,8 +264,7 @@ crate::impl_op_diag_stat!(RowSVector,SMatrix,Scalar);
 impl<F : Scalar,
      R : DimExtension,
      C : DimExtension,
-     S : RawStorage<F, R, C>> MatrixView for nalgebra::Matrix<F, R, C, S>
-     where Self : OCTSize<U2> {
+     S : RawStorage<F, R, C>> MatrixView for nalgebra::Matrix<F, R, C, S> where Self : OCTSize<U2> {
     type RowView<'a> = nalgebra::MatrixView<'a, F, Const<1>, C, S::RStride, S::CStride> where S : 'a;
     type ColView<'a> = nalgebra::MatrixView<'a, F, R, Const<1>, S::RStride, S::CStride> where S : 'a;
 
@@ -503,27 +393,6 @@ impl<F:Scalar, const M:usize, const N:usize> MatrixViewFixedNumberOfCols<N> for 
 
 impl<F:Scalar, const M:usize, const N:usize> MatrixViewFixedNumberOfRows<M> for SMatrix<F,M,N> {}
 
-
-// // cam not implement this for general N:usize therefore macro
-// macro_rules! impl_det {
-//     ($n:literal) => {
-//         impl<F:ComplexField> Det for SMatrix<F,$n,$n>{
-//             type DetF=F;
-//             fn det(self) -> Self::DetF {
-//                 self.determinant()
-//             }
-//         }
-//     };
-// }
-// impl_det!(1);
-// impl_det!(2);
-// impl_det!(3);
-// impl_det!(4);
-// impl_det!(5);
-// impl_det!(6);
-// impl_det!(7);
-// impl_det!(8);
-// impl_det!(9);
 
 crate::impl_tall_square_and_wide_matrix_marker!(SMatrix, Scalar);
 
@@ -791,21 +660,3 @@ fn test_iter() {
     let m1=m0.clone();
     assert!(m1.is_close_to(&m0));
 }
-
-// pub trait GramMatrix : Matrix where
-//     Self::F : Clone+Zero+Scalarproduct<ScProdT = Self::F>,
-//     Self::Row : Transpose {
-//     type Output:MatrixSquareTryConstruct<F=Self::F,Row=Self::Row,Col=<Self::Row as Transpose>::Output>;
-//     fn gram_matrix(&self) -> Self::Output {
-//         Self::Output::try_from_dim_and_fn(
-//             self.ncols(),
-//             self.ncols(),
-//             |i,j|self.try_col_sc_prod(i, j)).unwrap()
-//     }
-// }
-
-// impl<F:Scalar,const M:usize,const N:usize> BuildMatrix<SVector<F,M>> for RowSVector<F,N> {
-//     type Matrix=SMatrix<F,M,N>;
-// }
-
-

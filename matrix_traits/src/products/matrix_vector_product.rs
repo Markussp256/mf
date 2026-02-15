@@ -6,13 +6,12 @@ use super::vector_vector_product::TryVectorVectorProduct;
 
 pub trait MatrixVectorProduct<Rhs : ColVectorView> : MatrixView {
     type Output : ColVector;
-    fn matrix_vector_product(&self, rhs:&Rhs) -> Self::Output;
-}
-
-
-pub trait IntoMatrixVectorProduct<Rhs : ColVectorView> : Matrix {
-    type Output : ColVector;
+    
     fn into_matrix_vector_product(self, rhs:&Rhs) -> Self::Output;
+    fn matrix_vector_product(&self, rhs:&Rhs) -> Self::Output where Self : Clone {
+        self.clone()
+            .into_matrix_vector_product(rhs)
+    }
 }
 
 // impl code using only method from Matrix/Rowvector/Colvector traits
@@ -23,13 +22,13 @@ pub fn try_matrix_vector_product_impl
     <'a,
      Lhs    : MatrixView<RowView<'a>=LhsRow>,
      LhsRow : TryVectorVectorProduct<Rhs,Output=Out::T> ,
-     Rhs    : ColVectorView,
+     Rhs    : ColVectorView+Clone,
      Out    : ColVectorTryConstruct>(lhs:&'a Lhs,rhs:&'a Rhs) -> Result<Out,VectorConstructError> {
     MatrixCanNotBeMultipliedWithVectorError::try_new(lhs.ncols(),rhs.len())?;
     Out::any_from_iter(
         None,
         lhs.row_views()
-                 .map(|r|r.try_vector_vector_product(rhs).unwrap()))
+                 .map(|r|r.try_into_vector_vector_product(rhs.clone()).unwrap()))
         .map_err(|e|e.into())
 }
 
@@ -37,12 +36,13 @@ pub fn try_matrix_vector_product_impl
 pub fn try_into_matrix_vector_product_impl
     <Lhs    : Matrix<Row=LhsRow>,
      LhsRow : TryVectorVectorProduct<Rhs,Output=Out::T> ,
-     Rhs    : ColVectorView,
+     Rhs    : ColVectorView+Clone,
      Out    : ColVectorTryConstruct>(lhs:Lhs,rhs:&Rhs) -> Result<Out,VectorConstructError> {
     MatrixCanNotBeMultipliedWithVectorError::try_new(lhs.ncols(),rhs.len())?;
-    Out::any_from_iter(None,
+    Out::any_from_iter(
+        None,
         lhs.into_rows()
-           .map(|r|r.try_vector_vector_product(rhs).unwrap())
+           .map(|r|r.try_into_vector_vector_product(rhs.clone()).unwrap())
            )
         .map_err(|e|e.into())
 }
@@ -51,12 +51,14 @@ pub fn try_into_matrix_vector_product_impl
 
 pub trait TryMatrixVectorProduct<Rhs : ColVectorView> : MatrixView {
     type Output : ColVector;
-    fn try_matrix_vector_product(&self, rhs:&Rhs) -> Result<Self::Output,VectorConstructError>;
-}
-
-pub trait TryIntoMatrixVectorProduct<Rhs : ColVectorView> : Matrix {
-    type Output : ColVector;
+    
     fn try_into_matrix_vector_product(self, rhs:&Rhs) -> Result<Self::Output,VectorConstructError>;
+
+    fn try_matrix_vector_product(&self, rhs:&Rhs) -> Result<Self::Output,VectorConstructError> where Self : Clone {
+        self.clone()
+            .try_into_matrix_vector_product(rhs)
+    }
+
 }
 
 

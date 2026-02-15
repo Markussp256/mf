@@ -374,7 +374,7 @@ macro_rules! impl_only_float {
             }
         }
 
-        impl TryIntoDistance for $f  {
+        impl TryDistance for $f  {
             type TryDistT=$f;
             type Error=SubError;
             fn try_into_distance(self, rhs:impl Into<$f>) -> Result<Nonnegative<$f>, SubError> {
@@ -383,7 +383,7 @@ macro_rules! impl_only_float {
             }
         }
 
-        impl IntoDistance for $f {
+        impl Distance for $f {
             type DistT=$f;
             fn into_distance(self, rhs:impl Into<$f>) -> Nonnegative<$f> {
                 let rhs:$f=rhs.into();
@@ -393,14 +393,20 @@ macro_rules! impl_only_float {
 
         impl TryScalarproduct for $f {
             type TryScProdT = $f;
-            fn try_scalar_product(self, rhs: Self) -> Option<$f> {
+            fn try_scalar_product(&self, rhs: &Self) -> Option<$f> {
                 Some(self.scalar_product(rhs))
+            }
+            fn try_into_scalar_product(self, rhs: Self) -> Option<$f> {
+                Some(self.into_scalar_product(rhs))
             }
         }
 
         impl Scalarproduct for $f {
             type ScProdT=$f;
-            fn scalar_product(self,rhs:Self) -> Self::ScProdT {
+            fn scalar_product(&self,rhs:&Self) -> Self::ScProdT {
+                self*rhs
+            }
+            fn into_scalar_product(self,rhs:Self) -> Self::ScProdT {
                 self*rhs
             }
         }

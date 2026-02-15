@@ -42,6 +42,7 @@ pub enum MatrixConstructError {
     DataDoesNotSatisfyRequiredPropertiesOfMatrixType
 }
 
+
 macro_rules! impl_from_cce {
     ($index:ty, $enum_item:ident) => {
         impl From<ContainerConstructError<$index>> for MatrixConstructError {

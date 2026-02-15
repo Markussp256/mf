@@ -1,0 +1,24 @@
+[package]
+name = "vector_and_affine_spaces"
+keywords = ["affine space", "SubSpace", "dimension", "basis", "affine coordinates"]
+version = "0.1.0"
+edition = "2021"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+derive_more = { version = "1.0.0", features = ["full"]}
+num-traits= "0.2.15"
+thiserror = "2.0.8"
+
+container_traits = { path = "../container_traits" }
+container_derive = { path = "../container_derive" }
+algebra_traits =   { path = "../algebra_traits" }
+algebra =          { path = "../algebra" }
+phys_units =       { path = "../phys_units" } # for angle/tests
+utils =            { path = "../utils" }
+optimization =     { path = "../optimization" }

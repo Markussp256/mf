@@ -224,7 +224,7 @@ fn test_from_scaled_axis2pi() {
 
 #[test]
 fn test_rot_that_trafos_a2b() {
-    use algebra_traits::IntoDistance;
+    use algebra_traits::Distance;
     // let a=Vector3::new(1.0,0.0,0.0);
     // let b=Vector3::new(1.0,0.1,0.0);
     let a=Vector3::new(2.3,-2.0,0.2);

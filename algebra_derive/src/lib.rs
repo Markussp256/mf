@@ -552,15 +552,15 @@ pub fn sub_proc_macro(input: TokenStream) -> TokenStream {
     }.into()
 }
 
-/// Implements [`algebra_traits::IntoDistance`] whenever the wrapped type satisfies it
+/// Implements [`algebra_traits::Distance`] whenever the wrapped type satisfies it
 /// 
 /// # Example
 /// 
 /// ```rust
-/// use algebra_derive::IntoDistance;
-/// use algebra_traits::{IntoDistance, Nonnegative};
+/// use algebra_derive::Distance;
+/// use algebra_traits::{Distance, Nonnegative};
 ///
-/// #[derive(IntoDistance, PartialEq, Debug)]
+/// #[derive(Distance, PartialEq, Debug)]
 /// struct MyWrapper<T>(T);
 /// 
 /// let w0=MyWrapper(3.0);
@@ -568,11 +568,11 @@ pub fn sub_proc_macro(input: TokenStream) -> TokenStream {
 /// let wd=w0.into_distance(w1);
 /// assert_eq!(wd.into_signed(), 1.0);
 /// ```
-#[proc_macro_derive(IntoDistance)]
+#[proc_macro_derive(Distance)]
 pub fn distance_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let try_tr=quote!{algebra_traits::TryIntoDistance};
-    let tr=    quote!{algebra_traits::IntoDistance};
+    let try_tr=quote!{algebra_traits::TryDistance};
+    let tr=    quote!{algebra_traits::Distance};
     let (generics, wc, [(ty, wt)])=
     preprocess_no_impl(&mut input);
     assert_eq!(wt.len(),1);
@@ -782,19 +782,19 @@ pub fn scalar_mul_proc_macro(input: TokenStream) -> TokenStream {
 /// 
 /// let a=MyWrapper([0.0, 1.0, 2.0]);
 /// let b=MyWrapper([1.0, 2.0, 3.0]);
-/// assert_eq!(a.scalar_product(b),8.0);
+/// assert_eq!(a.into_scalar_product(b),8.0);
 /// 
 /// let a=MyWrapper([0.0, 1.0, 2.0]);
 /// let b=MyWrapper([1.0, 2.0, 3.0]);
-/// assert_eq!(a.try_scalar_product(b),Some(8.0));
+/// assert_eq!(a.try_into_scalar_product(b),Some(8.0));
 /// 
 /// let a=MyWrapper(vec![0.0, 1.0, 2.0]);
 /// let b=MyWrapper(vec![1.0, 2.0, 3.0]);
-/// assert_eq!(a.try_scalar_product(b),Some(8.0));
+/// assert_eq!(a.try_into_scalar_product(b),Some(8.0));
 /// 
 /// let a=MyWrapper(vec![0.0, 1.0]);
 /// let b=MyWrapper(vec![1.0, 2.0, 3.0]);
-/// assert!(a.try_scalar_product(b).is_none());
+/// assert!(a.try_into_scalar_product(b).is_none());
 /// ```
 #[proc_macro_derive(Scalarproduct)]
 pub fn scalar_product_proc_macro(input: TokenStream) -> TokenStream {
@@ -808,25 +808,26 @@ pub fn scalar_product_proc_macro(input: TokenStream) -> TokenStream {
     let impl0:syn::Expr=
         ssf.iter()
            .zip(rsf.iter())
-           .map(|(l,r)|parse_quote!{#l.scalar_product(#r)})
+           .map(|(l,r)|parse_quote!{#l.into_scalar_product(#r)})
            .reduce(|a,b|parse_quote!{#a + #b})
            .unwrap_or(parse_quote!{<ScProdT as num_traits::Zero>::zero()});
     let impl_try:syn::Expr=
         ssf.iter()
         .zip(rsf.iter())
-        .map(|(l,r)|parse_quote!{#l.try_scalar_product(#r)?})
+        .map(|(l,r)|parse_quote!{#l.try_into_scalar_product(#r)?})
         .reduce(|a,b|parse_quote!{#a + #b})
         .unwrap_or(parse_quote!{<ScProdT as num_traits::Zero>::zero()});
     quote! {
         impl #generics #tr for #ty where ScProdT : num_traits::Zero, #(#types : #tr<ScProdT=ScProdT>,)* #wc {
             type ScProdT=ScProdT;
-            fn scalar_product(self, rhs:Self) -> ScProdT {
+
+            fn into_scalar_product(self, rhs:Self) -> ScProdT {
                 #impl0
             }
         }
         impl #generics #tr_try for #ty where ScProdT : num_traits::Zero, #(#types : #tr_try<TryScProdT=ScProdT>,)* #wc {
             type TryScProdT=ScProdT;
-            fn try_scalar_product(self, rhs:Self) -> Option<ScProdT> {
+            fn try_into_scalar_product(self, rhs:Self) -> Option<ScProdT> {
                 Some(#impl_try)
             }
         }
@@ -1783,14 +1784,14 @@ pub fn scalar_container_proc_macro(input: TokenStream) -> TokenStream {
 /// 
 /// let a:MyWrapper<[f64;3]>=MyWrapper([1.0,2.0,3.0]);
 /// let b:MyWrapper<[f64;3]>=MyWrapper([4.0,5.0,6.0]);
-/// assert_eq!(a.cross_product(b), MyWrapper([-3.0,6.0,-3.0]));
+/// assert_eq!(a.into_cross_product(b), MyWrapper([-3.0,6.0,-3.0]));
 /// ```
 #[proc_macro_derive(Crossproduct)]
 pub fn cross_product_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let tr=parse_quote!{algebra_traits::Crossproduct};
     let fn_name=parse_quote!{cross_product};
-    let (generics, wc, [(ty, types),(ty1,types1), (ty2,types2)],implementation)=
+    let (generics, wc, [(ty, types),(ty1,types1), (ty2,types2)],_)=
     DeriveHelper::new(& mut input,&tr,&fn_name).extended2();
     if types.len() !=1 {
         panic!("derive macro CrossProduct only allowed for wrapper, i.e. struct with one field");
@@ -1798,8 +1799,9 @@ pub fn cross_product_proc_macro(input: TokenStream) -> TokenStream {
     quote! {
         impl #generics #tr<#ty1> for #ty where #(#types : #tr<#types1,Output=#types2>,)* #wc {
             type Output=#ty2;
-            fn cross_product(self, rhs : #ty1) -> #ty2 {
-                #implementation
+            fn cross_product(&self, rhs : &#ty1) -> #ty2 {
+                #ty2(self.0
+                         .cross_product(&rhs.0))
             }
         }
     }.into()

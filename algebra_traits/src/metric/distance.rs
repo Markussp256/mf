@@ -39,29 +39,19 @@ use crate::{TrySub, Nonnegative, Norm};
 
 pub trait Distance : Sized {
     type DistT;
-    fn distance<'a>(&'a self, rhs:impl Into<&'a Self>) -> Nonnegative<Self::DistT>;
+    fn into_distance(self, rhs:impl Into<Self>) -> Nonnegative<Self::DistT>;
+    // provided
+    fn distance<'a>(&'a self, rhs:impl Into<&'a Self>) -> Nonnegative<Self::DistT> where Self : Clone {
+        let rhs:&'a Self=rhs.into();
+        self.clone()
+            .into_distance(rhs.clone())
+    }
 }
 
 // we can not use std::ops::Sub on array
 impl<T : Clone, const N:usize, S, NormT> Distance for [T;N] where Self : Sub<Output=S>, S: Norm<NormT=NormT> {
     type DistT=NormT;
-    fn distance<'a>(&'a self, rhs:impl Into<&'a Self>) -> Nonnegative<Self::DistT> {
-        let rhs:&'a Self=rhs.into();
-        let rhs:Self=rhs.clone();
-        rhs.sub(self.clone())
-           .into_norm()
-    }
-}
 
-
-// IntoDistance
-pub trait IntoDistance : Sized {
-    type DistT;
-    fn into_distance(self, rhs:impl Into<Self>) -> Nonnegative<Self::DistT>;
-}
-// we can not use std::ops::Sub on array
-impl<T, const N:usize, S, NormT> IntoDistance for [T;N] where Self : Sub<Output=S>, S: Norm<NormT=NormT> {
-    type DistT=NormT;
     fn into_distance(self, rhs:impl Into<Self>) -> Nonnegative<Self::DistT> {
         let rhs:Self=rhs.into();
         rhs.sub(self)
@@ -73,7 +63,7 @@ impl<T, const N:usize, S, NormT> IntoDistance for [T;N] where Self : Sub<Output=
 // #[macro_export]
 // macro_rules! impl_distance_from_sub_norm {
 //     ($name:ident $(<$t:ident  $(,$n:ident)* >)? ) => {
-//         impl<SD, SO : num_traits::Zero+$crate::Max  $(,$t $(,const $n:usize)*)?> $crate::IntoDistance for $name $(<$t $(,$n)*>)?
+//         impl<SD, SO : num_traits::Zero+$crate::Max  $(,$t $(,const $n:usize)*)?> $crate::Distance for $name $(<$t $(,$n)*>)?
 //         where Self : std::ops::Sub<Output=SD>,
 //               SD : $crate::Norm<NormT=SO> {
 //             type DistT = SO;
@@ -87,59 +77,36 @@ impl<T, const N:usize, S, NormT> IntoDistance for [T;N] where Self : Sub<Output=
 
 
 
-// TryIntoDistance
-pub trait TryIntoDistance : Sized {
-    type TryDistT;
-    type Error;
-    fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<Self::TryDistT>,Self::Error>;
-}
-
-impl<T:TrySub<Output=TD,Error=E>, E, TD, NormT, const N:usize> TryIntoDistance for [T;N] where [TD;N] : Norm<NormT=NormT> {
-    type TryDistT=NormT;
-    type Error=E;
-    fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<NormT>,E> {
-        let rhs:Self=rhs.into();
-        rhs.try_sub(self)
-           .map(Norm::into_norm)
-    }
-}
-
-impl<T, S, E, NormT> TryIntoDistance for Vec<T> where Self : TrySub<Output=S,Error=E>, S : Norm<NormT=NormT> {
-    type TryDistT=NormT;
-    type Error=E;
-    fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<NormT>,E> {
-        let rhs:Self=rhs.into();
-        rhs.try_sub(self)
-           .map(|d|d.into_norm())
-    }
-}
-
 // TryDistance
-
 pub trait TryDistance : Sized {
     type TryDistT;
     type Error;
-    fn try_distance<'a>(&'a self, rhs:impl Into<&'a Self>) -> Result<Nonnegative<Self::TryDistT>,Self::Error>;
+    fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<Self::TryDistT>,Self::Error>;
+
+    // provided
+    fn try_distance<'a>(&'a self, rhs:impl Into<&'a Self>) -> Result<Nonnegative<Self::TryDistT>,Self::Error> where Self : Clone {
+        let rhs:&'a Self=rhs.into();
+        self.clone()
+            .try_into_distance(rhs.clone())
+    }
 }
 
-impl<T:Clone+TrySub<Output=TD,Error=E>, E, TD, NormT, const N:usize> TryDistance for [T;N] where [TD;N] : Norm<NormT=NormT> {
+impl<T:TrySub<Output=TD,Error=E>, E, TD, NormT, const N:usize> TryDistance for [T;N] where [TD;N] : Norm<NormT=NormT> {
     type TryDistT=NormT;
     type Error=E;
-    fn try_distance<'a>(&'a self, rhs:impl Into<&'a Self>) -> Result<Nonnegative<NormT>,E> {
-        let rhs:&'a Self=rhs.into();
-        let rhs:Self=rhs.clone();
-        rhs.try_sub(self.clone())
+    fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<NormT>,E> {
+        let rhs:Self=rhs.into();
+        rhs.try_sub(self)
            .map(Norm::into_norm)
     }
 }
 
-impl<T : Clone, S, E, NormT> TryDistance for Vec<T> where Self : TrySub<Output=S,Error=E>, S : Norm<NormT=NormT> {
+impl<T, S, E, NormT> TryDistance for Vec<T> where Self : TrySub<Output=S,Error=E>, S : Norm<NormT=NormT> {
     type TryDistT=NormT;
     type Error=E;
-    fn try_distance<'a>(&'a self, rhs:impl Into<&'a Self>) -> Result<Nonnegative<NormT>,E> {
-        let rhs:&'a Self=rhs.into();
-        let rhs:Self=rhs.clone();
-        rhs.try_sub(self.clone())
+    fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<NormT>,E> {
+        let rhs:Self=rhs.into();
+        rhs.try_sub(self)
            .map(|d|d.into_norm())
     }
 }

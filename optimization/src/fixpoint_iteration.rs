@@ -1,7 +1,7 @@
 // assuming we have a function we try to find the fixpoint and its a contraction
 
 use super::OptimizationError;
-use algebra_traits::{Nonnegative, IntoDistance, TryIntoDistance};
+use algebra_traits::{Nonnegative, Distance, TryDistance};
 
 
 // fixed number of iterations
@@ -41,7 +41,7 @@ pub fn fix_point_iteration_with_termination_condition<X:Clone>(
 }
 
 
-pub fn fix_point_iteration_try_distance<X:Clone+TryIntoDistance<TryDistT=D>, D : Clone+PartialOrd>(
+pub fn fix_point_iteration_try_distance<X:Clone+TryDistance<TryDistT=D>, D : Clone+PartialOrd>(
     xstart:X,
     f:impl Fn(X) -> X,
     tol:Nonnegative<D>,
@@ -56,7 +56,7 @@ pub fn fix_point_iteration_try_distance<X:Clone+TryIntoDistance<TryDistT=D>, D :
 }
 
 
-pub fn fix_point_iteration_distance<X:Clone+IntoDistance<DistT=D>, D : Clone+PartialOrd>(
+pub fn fix_point_iteration_distance<X:Clone+Distance<DistT=D>, D : Clone+PartialOrd>(
     xstart:X,
     f:impl Fn(X) -> X,
     tol:Nonnegative<D>,

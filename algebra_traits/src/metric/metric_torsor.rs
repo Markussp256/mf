@@ -1,6 +1,6 @@
-use crate::{Torsor,IntoDistance,AdditiveGroup};
+use crate::{Torsor,Distance,AdditiveGroup};
 
 pub trait MetricTorsor : Torsor
-                        +IntoDistance {}
+                        +Distance {}
 
-impl<V:AdditiveGroup+IntoDistance> MetricTorsor for V {}
+impl<V:AdditiveGroup+Distance> MetricTorsor for V {}

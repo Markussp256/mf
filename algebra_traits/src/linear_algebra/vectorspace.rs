@@ -1,7 +1,7 @@
 use container_traits::for_static::TryPutAt;
 use container_traits::{IntoIter, IntoSum, Parameter};
 use utils::iter::IntoExactSizeIterator;
-use crate::metric::distance::TryIntoDistance;
+use crate::metric::distance::TryDistance;
 use crate::*;
 
 pub trait Vectorspace<F> :
@@ -97,7 +97,7 @@ pub trait TryInnerProductSpaceWithoutNeg<F>
          +TryScalarDiv<F,Error=DivError>
          +Norm
          +NormSquared
-         +TryIntoDistance<TryDistT=<Self as Norm>::NormT>
+         +TryDistance<TryDistT=<Self as Norm>::NormT>
          +TryScalarproduct {}
 
 impl<F,
@@ -112,7 +112,7 @@ impl<F,
         +NormSquared<Norm2T=N2T>
         +Norm<NormT=NT>
         +NormSquared<Norm2T=N2T>
-        +TryIntoDistance<TryDistT=NT>
+        +TryDistance<TryDistT=NT>
         +TryScalarproduct> TryInnerProductSpaceWithoutNeg<F> for V {}
 
 pub trait TryInnerProductSpace<F>
@@ -128,26 +128,26 @@ impl<F,
 //         : TryInnerProductSpace<F>
 //          +TryAdd<Output=Self>
 //          +TrySub<Output=Self>
-//          +TryIntoDistance<DistT=Self::NormT>
+//          +TryDistance<DistT=Self::NormT>
 //          +TryScalarproduct {}
 
 // impl<F,
 //      V : TryInnerProductSpace<F>
 //          +TryAdd<Output=V>
 //          +TrySub<Output=V>
-//          +TryIntoDistance<DistT=V::NormT>
+//          +TryDistance<DistT=V::NormT>
 //          +TryScalarproduct> TryInnerProductSpace<F> for V {}
 
 pub trait InnerProductSpace<F>
         : Vectorspace<F>
          +TryInnerProductSpace<F>
-         +IntoDistance<DistT=<Self as Norm>::NormT>
+         +Distance<DistT=<Self as Norm>::NormT>
          +Scalarproduct {}
 
 impl<F,
      V : Vectorspace<F>
         +TryInnerProductSpace<F>
-        +IntoDistance<DistT=V::NormT>
+        +Distance<DistT=V::NormT>
         +Scalarproduct> InnerProductSpace<F> for V {}
 
 pub trait InnerProductSpace1d

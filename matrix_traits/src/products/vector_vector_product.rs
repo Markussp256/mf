@@ -44,21 +44,22 @@ pub fn try_vector_vector_product_impl
 
 pub trait VectorVectorProduct<Rhs : ColVectorView> : RowVectorView {
     type Output;
-    fn vector_vector_product(&self, rhs:&Rhs) -> <Self as VectorVectorProduct<Rhs>>::Output;
-}
-
-pub trait IntoVectorVectorProduct<Rhs : ColVectorView> : RowVectorView {
-    type Output;
-    fn into_vector_vector_product(self, rhs:Rhs) -> <Self as IntoVectorVectorProduct<Rhs>>::Output;
+    
+    fn into_vector_vector_product(self, rhs:Rhs) -> <Self as VectorVectorProduct<Rhs>>::Output;
+    fn vector_vector_product(&self, rhs:&Rhs) -> <Self as VectorVectorProduct<Rhs>>::Output where Self : Clone, Rhs : Clone {
+        self.clone()
+            .into_vector_vector_product(rhs.clone())
+    }
 }
 
 pub trait TryVectorVectorProduct<Rhs : ColVectorView> : RowVectorView {
     type Output;
-    fn try_vector_vector_product(&self, rhs:&Rhs) -> Option<<Self as TryVectorVectorProduct<Rhs>>::Output>;
-}
+    
+    fn try_into_vector_vector_product(self, rhs:Rhs) -> Option<<Self as TryVectorVectorProduct<Rhs>>::Output>;
 
+    fn try_vector_vector_product(&self, rhs:&Rhs) -> Option<<Self as TryVectorVectorProduct<Rhs>>::Output> where Self : Clone, Rhs : Clone {
+        self.clone()
+            .try_into_vector_vector_product(rhs.clone())
+    }
 
-pub trait TryIntoVectorVectorProduct<Rhs : ColVectorView> : RowVectorView {
-    type Output;
-    fn try_into_vector_vector_product(self, rhs:Rhs) -> Option<<Self as TryIntoVectorVectorProduct<Rhs>>::Output>;
 }

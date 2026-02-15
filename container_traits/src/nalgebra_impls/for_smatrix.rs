@@ -5,6 +5,7 @@ type U2=(usize,usize);
 
 use num_traits::{Zero,One};
 
+
 impl<T : Scalar,
      const M:usize,
      const N:usize> FromElement<usize,T> for SMatrix<T,M,N> {

@@ -8,7 +8,7 @@ members = [
     "algebra",
     "container_traits", 
     "container_derive",
-    "derive_helper", 
+    "derive_helper",
 	"geometry_traits",
     "geometry",
     "matrix_wrappers",
@@ -20,5 +20,5 @@ members = [
     "phys_units",
     "playground",
     "utils",
-    "vector_and_affine_spaces"
-, "container"]
+    "vector_and_affine_spaces",
+    "container"]

@@ -1,4 +1,4 @@
-use container_traits::{Map, Size, SizesNotEqualError};
+use container_traits::{IntoIter, Map, Size, SizesNotEqualError};
 use num_traits::Zero;
 use std::ops::Mul;
 use crate::*;
@@ -21,7 +21,7 @@ impl<T  : Scalar+Mul<T2,Output=T3>,
      T3 : Sub<Output=TR>,
      TR : Scalar> Crossproduct<Vector3<T2>> for Vector3<T> {
     type Output = Vector3<TR>;
-    fn cross_product(self, rhs:Vector3<T2>) -> Self::Output {
+    fn cross_product(&self, rhs:&Vector3<T2>) -> Self::Output {
             Vector3::from_fn(|i,_|{
                 let i1=(i+1) % 3;
                 let i2=(i+2) % 3;
@@ -36,12 +36,21 @@ impl<ScProdT : Zero,
     C:Dim,
     S:RawStorage<F,R,C>> TryScalarproduct for Matrix<F,R,C,S> {
     type TryScProdT=ScProdT;
-    fn try_scalar_product(self, rhs:Self) -> Option<ScProdT> {
+    fn try_scalar_product(&self, rhs:&Self) -> Option<ScProdT> {
         (self.nrows() == rhs.nrows() &&
          self.ncols() == rhs.ncols()).then(||
         self.iter().cloned()
             .zip(rhs.iter().cloned())
-            .map(|(l,r)|l.scalar_product(r))
+            .map(|(l,r)|l.into_scalar_product(r))
+            .fold(ScProdT::zero(),|acc,new|acc+new))
+    }
+
+    fn try_into_scalar_product(self, rhs:Self) -> Option<ScProdT> {
+        (self.nrows() == rhs.nrows() &&
+         self.ncols() == rhs.ncols()).then(||
+        self.into_iterator()
+            .zip(rhs.into_iterator())
+            .map(|(l,r)|l.into_scalar_product(r))
             .fold(ScProdT::zero(),|acc,new|acc+new))
     }
 }
@@ -53,10 +62,16 @@ impl<ScProdT : Zero,
     const N:usize,
     S : RawStorage<F,Const<M>,Const<N>>> Scalarproduct for Matrix<F,Const<M>,Const<N>,S> {
     type ScProdT=ScProdT;
-    fn scalar_product(self, rhs:Self) -> Self::ScProdT {
-        self.iter().cloned()
-            .zip(rhs.iter().cloned())
+    fn scalar_product(&self, rhs:&Self) -> ScProdT {
+        self.iter()
+            .zip(rhs.iter())
             .map(|(l,r)|l.scalar_product(r))
+            .fold(ScProdT::zero(),|acc,new|acc+new)
+    }
+    fn into_scalar_product(self, rhs:Self) -> ScProdT {
+        self.into_iterator()
+            .zip(rhs.into_iterator())
+            .map(|(l,r)|l.into_scalar_product(r))
             .fold(ScProdT::zero(),|acc,new|acc+new)
     }
 }
@@ -157,7 +172,7 @@ impl<T: Scalar, E,
      NormT,
      R: Dim,
      C: Dim,
-     S: RawStorage<T,R,C>> TryIntoDistance for Matrix<T,R,C,S> where Self : TrySub<Output=D,Error=E> {
+     S: RawStorage<T,R,C>> TryDistance for Matrix<T,R,C,S> where Self : TrySub<Output=D,Error=E> {
         type TryDistT=NormT;
         type Error=E;
     fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<Self::TryDistT>,E> {
@@ -171,7 +186,7 @@ impl<T: Scalar, E,
 //     ($name:ident) => {
 //         impl<T: Scalar,
 //              D: Norm<NormT=NormT>,
-//              NormT> TryIntoDistance for $name<T> where Self : TrySub<Output=D> {
+//              NormT> TryDistance for $name<T> where Self : TrySub<Output=D> {
 //             type TryDistT=NormT;
 //             type Error=<Self as TrySub>::Error;
 //             fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<NormT>,<Self as TrySub>::Error> {

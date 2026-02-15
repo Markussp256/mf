@@ -1,4 +1,4 @@
-use crate::{IntoDistance, NormSquared, Nonnegative};
+use crate::{Distance, NormSquared, Nonnegative};
 use num_traits::Zero;
 use container_traits::IntoSum;
 
@@ -10,18 +10,26 @@ use container_traits::IntoSum;
 
 pub trait TryScalarproduct {
     type TryScProdT : Zero;
-    fn try_scalar_product(self, rhs:Self) -> Option<Self::TryScProdT>;
+    fn try_into_scalar_product(self, rhs:Self) -> Option<Self::TryScProdT>;
+
+    // provided
+    fn try_scalar_product(&self, rhs:&Self) -> Option<Self::TryScProdT> where Self : Clone {
+        self.clone()
+            .try_into_scalar_product(rhs.clone())
+    }
+    
 }
 
 macro_rules! impl_try_sc_prod {
     ($t:ty $(, const $n:ident : usize)?) => {
         impl<ScProdT:Zero,T:Scalarproduct<ScProdT = ScProdT> $(, const $n : usize)?> TryScalarproduct for $t {
             type TryScProdT = ScProdT;
-            fn try_scalar_product(self, rhs:Self) -> Option<ScProdT> {
+
+            fn try_into_scalar_product(self, rhs:Self) -> Option<ScProdT> {
                 (self.len() == rhs.len()).then(||
                     self.into_iter()
                         .zip(rhs.into_iter())
-                        .map(|(a,b)|a.scalar_product(b))
+                        .map(|(a,b)|a.into_scalar_product(b))
                         .into_sum()
                 )
             }
@@ -34,12 +42,21 @@ impl_try_sc_prod!([T;N],const N:usize);
 
 pub trait Scalarproduct {
     type ScProdT;
-    fn scalar_product(self, rhs:Self) -> Self::ScProdT;
+    fn into_scalar_product(self, rhs:Self) -> Self::ScProdT;
+
+    fn scalar_product(&self, rhs:&Self) -> Self::ScProdT where Self : Clone {
+        self.clone()
+            .into_scalar_product(rhs.clone())
+    }
 }
+
 impl<ScProdT:Zero, T:Scalarproduct<ScProdT = ScProdT>, const N:usize> Scalarproduct for [T;N] {
     type ScProdT = ScProdT;
-    fn scalar_product(self, rhs:Self) -> Self::ScProdT {
+    fn scalar_product(&self, rhs:&Self) -> Self::ScProdT where Self : Clone {
         self.try_scalar_product(rhs).unwrap()
+    }
+    fn into_scalar_product(self, rhs:Self) -> Self::ScProdT {
+        self.try_into_scalar_product(rhs).unwrap()
     }
 }
 
@@ -82,12 +99,10 @@ impl<ScProdT:Zero, T:Scalarproduct<ScProdT = ScProdT>, const N:usize> Scalarprod
 pub fn test_consistency_scalar_product_squared_norm<
     T:Clone+Scalarproduct<ScProdT=SP>+NormSquared<Norm2T=NS>,
     NS:Into<SP>,
-    SP:IntoDistance<DistT=D>,
+    SP:Distance<DistT=D>,
     D:PartialOrd>(t:T, tol:Nonnegative<D>) {
-    let res1=t.clone()
-                  .scalar_product(t.clone());
-    let res2:SP=t.clone()
-                 .into_norm_squared()
+    let res1=t.scalar_product(&t);
+    let res2:SP=t.norm_squared()
                  .into_signed()
                  .into();
     assert!(res1.into_distance(res2) < tol.into_signed())

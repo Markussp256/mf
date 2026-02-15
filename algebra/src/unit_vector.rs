@@ -58,7 +58,7 @@ impl<C:algebra_traits::ScalarMul<F>, F:'static> std::ops::Mul<F> for Unit<C> {
 }
 
 // impl<C     : Clone,
-//      NormT : num_traits::One+algebra_traits::Tolerance+algebra_traits::IntoDistance<DistT=DistT>,
+//      NormT : num_traits::One+algebra_traits::Tolerance+algebra_traits::Distance<DistT=DistT>,
 //      DistT : PartialOrd> TryFrom<C> for Unit<C>
 //     where C : algebra_traits::Norm<NormT=NormT> {
 //     type Error=C;
@@ -163,7 +163,7 @@ impl<C:'static> Unit<C> {
 //             }
 
 //             impl<C     : Clone,
-//                  NormT : num_traits::One+algebra_traits::Tolerance+algebra_traits::IntoDistance<DistT=DistT>,
+//                  NormT : num_traits::One+algebra_traits::Tolerance+algebra_traits::Distance<DistT=DistT>,
 //                  DistT : PartialOrd> TryFrom<C> for Unit<C>
 //                 where C : algebra_traits::Norm<NormT=NormT> {
 //                 type Error=C;

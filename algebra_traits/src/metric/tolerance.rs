@@ -1,9 +1,9 @@
-use crate::{IntoDistance, Nonnegative};
+use crate::{Distance, Nonnegative};
 
 use num_traits::{Zero, One};
 
 
-pub trait Tolerance : IntoDistance
+pub trait Tolerance : Distance
     where Self::DistT : PartialOrd {
     const THRESHOLD : Self::DistT;
 
@@ -36,7 +36,7 @@ impl<T:Tolerance> Tolerance for Nonnegative<T> where T::DistT : PartialOrd {
     const THRESHOLD:T::DistT=T::THRESHOLD;
 }
 
-// pub trait Tolerance4Complex<R:PartialOrd+Tolerance<SignedType = R>> : IntoDistance<SignedOutput = R> {
+// pub trait Tolerance4Complex<R:PartialOrd+Tolerance<SignedType = R>> : Distance<SignedOutput = R> {
     
 //         // provided method
 //         fn threshold() -> Nonnegative<R> {

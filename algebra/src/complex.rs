@@ -13,7 +13,7 @@ use crate::EnhancedArray;
         Debug,
         PartialEq,
         algebra_derive::AdditiveGroup,
-        algebra_derive::IntoDistance,
+        algebra_derive::Distance,
         algebra_derive::Norm,
         algebra_derive::NormSquared,
         algebra_derive::AddAssignFromAdd,
@@ -382,14 +382,14 @@ impl<R:RealNumber> FiniteDimensionalVectorspace<Self,1> for Complex<R> {
 
 impl<R:RealNumber> Scalarproduct for Complex<R> {
     type ScProdT = Self;
-    fn scalar_product(self, rhs:Self) -> Self::ScProdT {
+    fn into_scalar_product(self, rhs:Self) -> Self::ScProdT {
         self.conjugate() * rhs
     }
 }
 
 impl<R:RealNumber> TryScalarproduct for Complex<R> {
     type TryScProdT = Self;
-    fn try_scalar_product(self, rhs:Self) -> Option<Self> {
+    fn try_into_scalar_product(self, rhs:Self) -> Option<Self> {
         Some(self.conjugate() * rhs)
     }
 }

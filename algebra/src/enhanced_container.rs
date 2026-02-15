@@ -11,7 +11,7 @@ use algebra_derive::*;
     Clone, Debug, PartialEq,
     AsRef, ConstElement, From, Index, IndexMut,
     container_derive::Container,
-    Basis, Conjugate, Crossproduct, IntoDistance, IsAZero, Norm, NormSquared,
+    Basis, Conjugate, Crossproduct, Distance, IsAZero, Norm, NormSquared,
     ScalarDiv, TryScalarDiv, ScalarMul, Scalarproduct,
     TryAdd, TryDiv, TryNormalize, TrySub
 )]
