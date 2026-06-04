@@ -3,6 +3,8 @@ use std::ops::Mul;
 use crate::{Vector, VectorDyn};
 use algebra_traits::{ConstNonZero, Norm, Scalar,  Tolerance, TryDiv, TryNormalize};
 
+use generic_array::{ArrayLength};
+
 #[derive(Clone, Debug, PartialEq,
          algebra_derive::Conjugate,
          algebra_derive::Neg,
@@ -19,7 +21,7 @@ use algebra_traits::{ConstNonZero, Norm, Scalar,  Tolerance, TryDiv, TryNormaliz
          derive_more::Index)]
 pub struct Unit<C>(C);
 
-pub type UnitVector<T,const N:usize>=Unit<Vector<T,N>>;
+pub type UnitVector<T,N:ArrayLength>=Unit<Vector<T,N>>;
 pub type UnitVectorDyn<T>=Unit<VectorDyn<T>>;
 
 impl<C:Norm> Unit<C> where C::NormT : Scalar {

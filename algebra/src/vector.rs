@@ -23,7 +23,7 @@ macro_rules! gen_vector {
         pub struct $gen<C>(C);
 
         pub type $dyn<T>=$gen<$crate::EnhancedVec<T>>;
-        pub type $stat<T,const N:usize>=$gen<$crate::EnhancedArray<T,N>>;
+        pub type $stat<T,N:generic_array::ArrayLength>=$gen<$crate::EnhancedArray<T,N>>;
 
         impl<C:container_traits::ItemT<T=T>+container_traits::Iter<T>,T> $gen<C> {
 
@@ -101,11 +101,23 @@ macro_rules! gen_vector {
             }
         }
 
-        utils::    into_via!(impl<T>               Into<Vec<T>>      for $dyn<T>, via $crate::EnhancedVec<T>);
-        utils::    from_via!(impl<T>               From<Vec<T>>      for $dyn<T>, via $crate::EnhancedVec<T>);
-        utils::    from_via!(impl<T,const N:usize> From<[T;N]>       for $dyn<T>, via Vec<T>);
-        utils::    from_via!(impl<T,const N:usize> From<$stat<T,N>>  for $dyn<T>, via Vec<T>);
-        
+        utils::    into_via!(impl<T>               Into<Vec<T>>            for $dyn<T>, via $crate::EnhancedVec<T>);
+        utils::    from_via!(impl<T>               From<Vec<T>>            for $dyn<T>, via $crate::EnhancedVec<T>);
+
+        impl<T,N:generic_array::ArrayLength> From<generic_array::GenericArray<T,N>> for $dyn<T> {
+            fn from(value:generic_array::GenericArray<T,N>) -> Self {
+                let v:Vec<T>=value.into_iter().collect();
+                v.into()
+            }
+        }
+
+        impl<T,N:generic_array::ArrayLength> From<$stat<T,N>> for $dyn<T> {
+            fn from(value:$stat<T,N>) -> Self {
+                let v:Vec<T>=value.into();
+                v.into()
+            }
+        }
+
         impl<T,const N:usize> TryInto<[T;N]> for $dyn<T> {
             type Error=Self;
             fn try_into(self) -> Result<[T;N],Self> {
@@ -115,18 +127,18 @@ macro_rules! gen_vector {
             }
         }
 
-        impl<T> $stat<T,2> {
+        impl<T> $stat<T,typenum::U2> {
             pub const fn new(x:T,y:T) -> Self {
-                Self($crate::EnhancedArray::new([x,y]))
+                Self($crate::EnhancedArray::from_array([x,y]))
             }
 
             pub fn x(&self) -> &T { &self[0] }
             pub fn y(&self) -> &T { &self[1] }
         }
 
-        impl<T> $stat<T,3> {
+        impl<T> $stat<T,typenum::U3> {
             pub const fn new(x:T,y:T,z:T) -> Self {
-                Self($crate::EnhancedArray::new([x,y,z]))
+                Self($crate::EnhancedArray::from_array([x,y,z]))
             }
 
             pub fn x(&self) -> &T { &self[0] }
@@ -134,31 +146,107 @@ macro_rules! gen_vector {
             pub fn z(&self) -> &T { &self[2] }
         }
 
-        impl<T : algebra_traits::ConstNonZero> algebra_traits::ConstNonZero for $stat<T,2> {
-            const NONZERO:Self=Self($crate::EnhancedArray::new([T::NONZERO,T::NONZERO]));
+        impl<T : algebra_traits::ConstNonZero> algebra_traits::ConstNonZero for $stat<T,typenum::U2> {
+            const NONZERO:Self=Self($crate::EnhancedArray::from_array([T::NONZERO,T::NONZERO]));
         }
 
-        impl<T : algebra_traits::ConstNonZero> algebra_traits::ConstNonZero for $stat<T,3> {
-            const NONZERO:Self=Self($crate::EnhancedArray::new([T::NONZERO,T::NONZERO,T::NONZERO]));
+        impl<T : algebra_traits::ConstNonZero> algebra_traits::ConstNonZero for $stat<T,typenum::U3> {
+            const NONZERO:Self=Self($crate::EnhancedArray::from_array([T::NONZERO,T::NONZERO,T::NONZERO]));
         }
 
         paste::paste!(
-            pub type [<$stat 2>]<T>=$stat<T,2>;
-            pub type [<$stat 3>]<T>=$stat<T,3>;
-            pub type [<$stat 4>]<T>=$stat<T,4>;
+            pub type [<$stat 2>]<T>=$stat<T,typenum::U2>;
+            pub type [<$stat 3>]<T>=$stat<T,typenum::U3>;
+            pub type [<$stat 4>]<T>=$stat<T,typenum::U4>;
         );
 
-        impl<T,const N:usize> Into<$crate::EnhancedArray<T,N>> for $stat<T,N> {
+        impl<T,N:generic_array::ArrayLength> Into<$crate::EnhancedArray<T,N>> for $stat<T,N> {
             fn into(self) -> $crate::EnhancedArray<T,N> {
                 self.0
             }
         }
 
-        utils::    into_via!(impl<T, const N:usize> Into<[T;N]>      for $stat<T,N>, via $crate::EnhancedArray<T,N>);
-        utils::    from_via!(impl<T, const N:usize> From<[T;N]>      for $stat<T,N>, via $crate::EnhancedArray<T,N>);
-        utils::    into_via!(impl<T, const N:usize> Into<Vec<T>>     for $stat<T,N>, via [T;N]);
-        utils::try_from_via!(impl<T, const N:usize> TryFrom<Vec<T>>  for $stat<T,N>, via [T;N]);
-        utils::try_from_via!(impl<T, const N:usize> TryFrom<$dyn<T>> for $stat<T,N>, via [T;N]);
+        impl<T, N : generic_array::ArrayLength> Into<generic_array::GenericArray<T,N>> for $stat<T,N> {
+            fn into(self) -> generic_array::GenericArray<T,N> {
+                <Self as container_traits::IntoInner>::into_inner(self).into()
+            }
+        }
+        impl<T, N : generic_array::ArrayLength> From<generic_array::GenericArray<T,N>> for $stat<T,N> {
+            fn from(value:generic_array::GenericArray<T,N>) -> Self {
+                $crate::EnhancedArray::<T,N>::from(value).into()
+            }
+        }
+        impl<T, N : generic_array::ArrayLength> Into<Vec<T>>                           for $stat<T,N> {
+            fn into(self) -> Vec<T> {
+                <Self as container_traits::IntoInner>::into_inner(self).into()
+            }
+        }
+        impl<T, N : generic_array::ArrayLength> TryFrom<Vec<T>>                        for $stat<T,N> {
+            type Error=container_traits::LenNotEqualToRequiredLenError;
+            fn try_from(value:Vec<T>) -> Result<Self,container_traits::LenNotEqualToRequiredLenError> {
+                container_traits::LenNotEqualToRequiredLenError::try_new(N::to_usize(),value.len())?;
+                Ok(generic_array::GenericArray::<T,N>::try_from_iter(value.into_iter()).unwrap().into())
+            }
+        }
+        impl<T, N : generic_array::ArrayLength> TryFrom<$dyn<T>>                       for $stat<T,N> {
+            type Error=container_traits::LenNotEqualToRequiredLenError;
+            fn try_from(value:$dyn<T>) -> Result<Self,container_traits::LenNotEqualToRequiredLenError> {
+                let len=<$dyn<T> as container_traits::Len>::len(&value);
+                container_traits::LenNotEqualToRequiredLenError::try_new(N::to_usize(),len)?;
+                Ok(generic_array::GenericArray::<T,N>::try_from_iter(value.into_iter()).unwrap().into())
+            }
+        }
     };
 }
-gen_vector!(VectorGeneric, VectorDyn, Vector);
+
+#[macro_export]
+macro_rules! gen_vector_and_view {
+    ($name:ident) => {
+        paste::paste!(
+            $crate::gen_vector!([<$name Generic>],[<$name Dyn>],$name);
+            $crate::gen_vector_view!([<$name ViewGeneric>],[<$name ViewDyn>],[<$name View>]);
+            $crate::gen_vector_view_mut!([<$name ViewMutGeneric>],[<$name ViewMutDyn>],[<$name ViewMut>]);
+
+            impl<T,CS:container_traits::ItemT<T=T>> container_traits::ContainerViewable<usize> for [<$name Generic>]<CS>
+                where Self : container_traits::LinearContainer<T=T>
+                            +container_traits::Rebind<container_traits::LinearContainerConstructError> {
+                type Viewer<'a>=[<$name ViewGeneric>]<<CS as container_traits::Rebind<container_traits::LinearContainerConstructError>>::With<&'a T>>;
+                fn as_view<'a>(&'a self) -> Self::Viewer<'a> {
+                    <Self as container_traits::Rebind<container_traits::LinearContainerConstructError>>::any_from_iter(
+                        None,
+                        <Self as container_traits::Iter<T>>::iter(self)
+                    ).unwrap()
+                }
+            }
+
+            impl<T  : 'static,
+                 CS : 'static
+                      +container_traits::LinearContainer<T=T>
+                      +container_traits::LinearContainerViewMut<T=T> 
+                      +container_traits::Rebind<container_traits::LinearContainerConstructError>>
+                    container_traits::ContainerViewMutable<usize> for [<$name Generic>]<CS> {
+                type ViewMuter<'a>=[<$name ViewGeneric>]<<CS as container_traits::Rebind<container_traits::LinearContainerConstructError>>::With<&'a mut T>>;
+                fn as_view_mut<'a>(&'a mut self) -> Self::ViewMuter<'a> {
+                    <Self as container_traits::Rebind<container_traits::LinearContainerConstructError>>::any_from_iter(
+                        None,
+                        <Self as container_traits::IterMut<T>>::iter_mut(self)
+                    ).unwrap()
+                }
+            }
+
+        );
+    }
+}
+
+gen_vector_and_view!(Vector);
+
+// #[cfg(test)]
+// use container_traits::ContainerViewable;
+
+fn test_is_viewer<'a,N:generic_array::ArrayLength>(v:&'a Vector<f64,N>) -> VectorView<'a,f64,N> {
+    <Vector<f64,N> as container_traits::ContainerViewable<usize>>::as_view(& v)
+}
+
+fn test<'a>(a:Vector3<f64>) -> impl Sized+container_traits::ContainerViewable<usize,Viewer<'a>=VectorView3<'a,f64>> {
+    a
+}

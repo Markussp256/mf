@@ -1690,6 +1690,50 @@ pub fn try_from_iter_proc_macro(input: TokenStream) -> TokenStream {
     }.into()
 }
 
+
+/// Implements  [`container_traits::Rebind`]
+///
+/// # Example
+/// 
+/// ```rust
+/// use container_derive::{IntoIterator,Rebind};
+///
+/// #[derive(IntoIterator, Rebind, Debug, PartialEq)]
+/// struct MyWrapper<C>(C);
+/// 
+/// let res=<MyWrapper::<[f64;3]> as Rebind<_>>::any_from_iter(None,vec![0, 1, 2]);
+/// assert_eq!(res, Ok(MyWrapper::<[i32;3]>([0, 1, 2])));
+/// 
+/// let mut iter=vec![0, 1, 2, 3].into_iter();
+/// let res0=MyWrapper::<[f64;3]>::any_take_away(None,& mut iter);
+/// assert!(res0.is_ok());
+/// 
+/// let res1=MyWrapper::<[f64;3]>::any_from_iter(None,vec![0, 1, 2, 3]);
+/// assert!(res1.is_err());
+/// ```
+#[proc_macro_derive(Rebind)]
+pub fn rebind_proc_macro(input: TokenStream) -> TokenStream {
+    let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let struct_name=input.ident.clone();
+    let tr=quote!{ container_traits::Rebind<ErrorRebind> };
+    let (generics, wc, [(ty, mut wt)])=
+    preprocess_no_impl_add_gen_types(& mut input,vec!["ErrorRebind"]);
+    let wt=wt.remove(0);
+    quote! {
+        impl #generics #tr for #ty where #wt : #tr, container_traits::LenNotEqualToRequiredLenError : Into<ErrorRebind>, #wc {
+            type With<TRebind>=#struct_name<<#wt as #tr>::With<TRebind>>;
+
+            fn any_take_away<TRebind, I:Iterator<Item=TRebind>>(oref:Option<&Self>,iter:& mut I) -> Result<<Self as #tr>::With<TRebind>,ErrorRebind> {
+                <#wt as #tr>::any_take_away(oref.map(|r|&r.0),iter)
+                    .map(|s|#struct_name(s))
+            }
+
+            container_traits::rebind_any_from_iter_impl!(TRebind, ErrorRebind);
+        }
+    }.into()
+}
+
+
 /// Implements  [`container_traits::TryFromLocalParameters`]
 ///
 /// # Example
@@ -2318,6 +2362,7 @@ pub fn container_dynamic_proc_macro(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Container)]
 pub fn container_proc_macro(input: TokenStream) -> TokenStream {
     let fs=[
+        rebind_proc_macro,
         try_from_iter_proc_macro,
         try_from_parameters_proc_macro,
         from_iter_proc_macro,
@@ -2379,7 +2424,7 @@ pub fn container_proc_macro(input: TokenStream) -> TokenStream {
 /// #[derive(ChangeT)]
 /// struct MyWrapper<C>(C);
 /// 
-/// assert_eq!(std::any::TypeId::of::<<MyWrapper<Vec<f64>> as ChangeT<i32>>::Output>(),
+/// assert_eq!(std::any::TypeId::of::<<MyWrapper<Vec<f64>> as ChangeT<i32>>::Output<'static>>(),
 ///            std::any::TypeId::of::<MyWrapper<Vec<i32>>>());
 /// ```
 #[proc_macro_derive(ChangeT)]
@@ -2392,8 +2437,8 @@ pub fn change_t_proc_macro(input: TokenStream) -> TokenStream {
     let wt1=wt1.remove(0);
     quote! {
         impl #generics container_traits::ChangeT<T2ChangeT> for #ty
-        where #wt : container_traits::ChangeT<T2ChangeT,Output=#wt1>, #wc {
-            type Output=#ty1;
+        where for<'a> #wt : container_traits::ChangeT<T2ChangeT,Output<'a>=#wt1>, #wc {
+            type Output<'a>=#ty1;
         }
     }.into()
 }

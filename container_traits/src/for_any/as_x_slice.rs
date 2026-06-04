@@ -1,3 +1,5 @@
+use generic_array::{ArrayLength,GenericArray};
+
 macro_rules! as_x_slice {
     ($tr:ident,$fn:ident $(,$m:ident)?) => {
         pub trait $tr<T> {
@@ -10,6 +12,12 @@ macro_rules! as_x_slice {
             }
         }
         
+        impl<T,N:ArrayLength> $tr<T> for GenericArray<T,N> {
+            fn $fn(& $($m)? self) -> & $($m)? [T] {
+                self.$fn()
+            }
+        }
+
         impl<T,const N:usize> $tr<T> for [T;N] {
             fn $fn(& $($m)? self) -> & $($m)? [T] {
                 self.$fn()

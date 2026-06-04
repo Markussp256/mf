@@ -1,3 +1,7 @@
+use generic_array::{ArrayLength,GenericArray};
+
+use typenum::Unsigned;
+
 pub trait NumberOfDegreesOfFreedom<F> {
     const NDOFS: usize;
 }
@@ -6,6 +10,9 @@ impl<T, const N: usize> NumberOfDegreesOfFreedom<T> for [T; N] {
     const NDOFS: usize = N;
 }
 
+impl<T, N : ArrayLength+Unsigned> NumberOfDegreesOfFreedom<T> for GenericArray<T,N> {
+    const NDOFS: usize = N::USIZE;
+}
 
 // use core::fmt;
 

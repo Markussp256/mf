@@ -5,6 +5,7 @@
 // which is typically implemented
 
 use utils::iter::{IntoExactSizeIterator, WithExactSize};
+use generic_array::{ArrayLength, GenericArray};
 
 pub trait IntoIter<T> {
     fn into_iterator(self) -> impl ExactSizeIterator<Item=T>;
@@ -29,6 +30,10 @@ impl<T> IntoIter<T> for Vec<T> {
 }
 
 impl<T, const N:usize> IntoIter<T> for [T;N] {
+    iter_impl!();
+}
+
+impl<T, N:ArrayLength> IntoIter<T> for GenericArray<T,N>  {
     iter_impl!();
 }
 

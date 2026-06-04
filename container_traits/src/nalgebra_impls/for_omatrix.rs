@@ -6,7 +6,7 @@ use crate::LinearContainerConstructError as LCCE;
 type U2=(usize,usize);
 type CCE=ContainerConstructError<U2>;
 
-use num_traits::Zero;
+use num_traits::{Zero,One};
 
 use super::*;
 use crate::*;
@@ -180,8 +180,21 @@ impl<T : Scalar+Zero,
         let r=R::new(Some(size.0));
         let c=C::new(Some(size.1));
         let mut res=Self::zeros_generic(r, c);
-        res[size]=t;
+        res[index]=t;
         Ok(res)
     }
 }
 
+impl<T : Scalar+Zero+One,
+     R : DimExtension,
+     C : DimExtension> crate::for_dyn_and_stat::StandardBasis for OMatrix<T,R,C>
+     where DefaultAllocator : Allocator<R, C> {
+    
+    fn try_standard_basis_element(len:usize, index:usize) -> Result<Self,IndexOutOfBoundsError<usize>> {
+        IndexOutOfBoundsError::try_new(&len, &index)?;
+        let (nrows,ncols)=get_dims_from_len::<R,C>(len).unwrap();
+        let i=index % nrows;
+        let j=index / nrows;
+        Ok(Self::try_put_at((nrows,ncols),(i,j),T::one()).unwrap())
+    }
+}

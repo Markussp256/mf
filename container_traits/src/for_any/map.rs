@@ -1,3 +1,6 @@
+use generic_array::{ArrayLength, GenericArray};
+
+
 pub trait Map<TIn,TOut> {
     type Output;
     fn map(self, f:impl Fn(TIn) -> TOut) -> Self::Output;
@@ -12,6 +15,13 @@ impl<F,FOut> Map<F,FOut> for Vec<F> {
         self.into_iter()
             .map(f)
             .collect()
+    }
+}
+
+impl<F, FOut, N:ArrayLength> Map<F,FOut> for GenericArray<F,N> {
+    type Output=GenericArray<FOut,N>;
+    fn map(self,f:impl Fn(F) -> FOut) -> GenericArray<FOut,N> {
+        GenericArray::try_from_iter(self.into_iter().map(f)).unwrap()
     }
 }
 

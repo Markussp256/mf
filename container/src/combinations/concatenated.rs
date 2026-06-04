@@ -38,9 +38,12 @@ impl<A:Len,B> Concatenated<A,B> {
 }
 
 
-impl<T, A : ChangeT<T,Output=A2>, A2,
-        B : ChangeT<T,Output=B2>, B2> ChangeT<T> for Concatenated<A,B> {
-    type Output=Concatenated<A2,B2>;
+impl<T,
+     A : ChangeT<T>,
+     B : ChangeT<T>> ChangeT<T> for Concatenated<A,B> {
+    type Output<'a>=Concatenated<
+        <A as ChangeT<T>>::Output<'a>,
+        <B as ChangeT<T>>::Output<'a>>;
 }
 
 

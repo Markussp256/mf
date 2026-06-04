@@ -1,3 +1,5 @@
+use generic_array::{ArrayLength, GenericArray};
+
 use crate::operators::basic::Sub;
 use crate::{TrySub, Nonnegative, Norm};
 
@@ -59,6 +61,17 @@ impl<T : Clone, const N:usize, S, NormT> Distance for [T;N] where Self : Sub<Out
     }
 }
 
+impl<T : Clone, N:ArrayLength, S, NormT> Distance for GenericArray<T,N> where Self : Sub<Output=S>, S: Norm<NormT=NormT> {
+    type DistT=NormT;
+
+    fn into_distance(self, rhs:impl Into<Self>) -> Nonnegative<Self::DistT> {
+        let rhs:Self=rhs.into();
+        rhs.sub(self)
+           .into_norm()
+    }
+}
+
+
 
 // #[macro_export]
 // macro_rules! impl_distance_from_sub_norm {
@@ -91,22 +104,30 @@ pub trait TryDistance : Sized {
     }
 }
 
+macro_rules! impl_try_distance {
+    () => {
+        fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<NormT>,E> {
+            let rhs:Self=rhs.into();
+            rhs.try_sub(self)
+               .map(Norm::into_norm)
+        }
+    };
+}
+
+impl<T:TrySub<Output=TD,Error=E>, E, TD, NormT, N:ArrayLength> TryDistance for GenericArray<T,N> where GenericArray<TD,N> : Norm<NormT=NormT> {
+    type TryDistT=NormT;
+    type Error=E;
+    impl_try_distance!();
+}
+
 impl<T:TrySub<Output=TD,Error=E>, E, TD, NormT, const N:usize> TryDistance for [T;N] where [TD;N] : Norm<NormT=NormT> {
     type TryDistT=NormT;
     type Error=E;
-    fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<NormT>,E> {
-        let rhs:Self=rhs.into();
-        rhs.try_sub(self)
-           .map(Norm::into_norm)
-    }
+    impl_try_distance!();
 }
 
 impl<T, S, E, NormT> TryDistance for Vec<T> where Self : TrySub<Output=S,Error=E>, S : Norm<NormT=NormT> {
     type TryDistT=NormT;
     type Error=E;
-    fn try_into_distance(self, rhs:impl Into<Self>) -> Result<Nonnegative<NormT>,E> {
-        let rhs:Self=rhs.into();
-        rhs.try_sub(self)
-           .map(|d|d.into_norm())
-    }
+    impl_try_distance!();
 }

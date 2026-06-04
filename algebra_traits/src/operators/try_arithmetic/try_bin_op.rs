@@ -1,5 +1,9 @@
 use container_traits::LensNotEqualError;
+use utils::result::*;
+
 use either::Either;
+
+use generic_array::{ArrayLength,GenericArray};
 
 macro_rules! try_bin_op {
     ($tr:ident, $fn:ident) => {
@@ -56,6 +60,22 @@ macro_rules! try_add_sub {
         //     $crate::impl_tryop_from_tryop_impl!($tr, $fn,by rhs:Vec<T2>);
         // }
 
+        impl<T:[<Try $tr>]<T2,Output=TR>,T2,TR,N:ArrayLength> [<Try $tr>]<GenericArray<T2,N>> for GenericArray<T,N> {
+            type Output = GenericArray<TR,N>;
+            type Error  = <T as [<Try $tr>]<T2>>::Error;
+            fn [<is_ $fn able_by>](&self, rhs:&GenericArray<T2,N>) -> Result<(),       <T as [<Try $tr>]<T2>>::Error> {
+                self.iter()
+                    .zip(rhs.iter())
+                    .map(|(l,r)|l.[<is_ $fn able_by>](r))
+                    .collect()
+            }
+            fn [<try_ $fn>]    ( self, rhs: GenericArray<T2,N>) -> Result<Self::Output,<T as [<Try $tr>]<T2>>::Error> {
+                unwrap_if_all_are_ok_gen_arr(GenericArray::<Result<TR,_>,N>::try_from_iter(
+                    self.into_iter()
+                        .zip(rhs.into_iter())
+                        .map(|(l,r)|<T as [<Try $tr>]<T2>>::[<try_ $fn>](l,r))).unwrap())
+            }
+        }
 
         impl<T:[<Try $tr>]<T2,Output=TR>,T2,TR,const N:usize> [<Try $tr>]<[T2;N]> for [T;N] {
             type Output = [TR;N];
@@ -64,15 +84,14 @@ macro_rules! try_add_sub {
                  self.iter()
                     .zip(rhs.iter())
                     .map(|(l,r)|<T as [<Try $tr>]<T2>>::[<is_ $fn able_by>](l,r))
-                    .collect::<Result<Vec<()>,_>>()
-                    .map(|_|())
+                    .collect()
             }
             fn [<try_ $fn>]    ( self, rhs: [T2;N]) -> Result<Self::Output,<T as [<Try $tr>]<T2>>::Error> {
-                self.into_iter()
-                    .zip(rhs.into_iter())
-                    .map(|(l,r)|<T as [<Try $tr>]<T2>>::[<try_ $fn>](l,r))
-                    .collect::<Result<Vec<TR>,_>>()
-                    .map(|v|v.try_into().ok().unwrap())
+                let mut iter=
+                    self.into_iter()
+                        .zip(rhs.into_iter())
+                        .map(|(l,r)|<T as [<Try $tr>]<T2>>::[<try_ $fn>](l,r));
+                unwrap_if_all_are_ok_arr(utils::iter::next_chunk(& mut iter).ok().unwrap())
             }
         }
 

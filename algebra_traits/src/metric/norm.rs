@@ -1,5 +1,6 @@
 use either::Either;
 use container_traits::{IntoIter, Iter};
+use generic_array::{ArrayLength,GenericArray};
 use crate::{Max, Nonnegative, TryDiv};
 
 pub trait Norm {
@@ -110,6 +111,7 @@ macro_rules! impl_norm_for_vector {
 }
 
 crate::impl_norm_from_squared_norm_generic!(for [T;N]  where T, const N:usize);
+crate::impl_norm_from_squared_norm_generic!(for GenericArray<T,N>  where T, N:ArrayLength);
 crate::impl_norm_from_squared_norm_generic!(for Vec<T> where T);
 
 // unfortunately we can not define norm for rowvector and colvector because then the 1x1 vector is defined twice

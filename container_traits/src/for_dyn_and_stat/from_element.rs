@@ -1,5 +1,7 @@
 use super::OCTSize;
 
+use generic_array::{GenericArray, ArrayLength};
+
 pub trait FromElement<Index,T:Clone> : Sized {
     fn from_element(size:Index,t:T) -> Self;
 }
@@ -9,6 +11,14 @@ impl<T:Clone> FromElement<usize,T> for Vec<T> {
         std::iter::repeat(t)
             .take(len)
             .collect()
+    }
+}
+
+impl<T:Clone, N : ArrayLength> FromElement<usize,T> for GenericArray<T,N> {
+    fn from_element(size:usize,t:T) -> Self {
+        GenericArray::try_from_iter(
+            std::iter::repeat(t)
+                .take(size)).unwrap()
     }
 }
 

@@ -1,21 +1,35 @@
-use std::ops::{Div, Mul, Neg};
+use std::ops::{Div, Index, IndexMut, Mul, Neg};
 use std::fmt::Debug;
 use algebra_traits::NonZero;
-use container_traits::{ClosedMap, ContainerTryConstruct, ContainerConstructError, IntoInner, Map};
-use derive_more::{AsRef, From, Index, IndexMut};
+use container_traits::{AsMutSlice, AsSlice, ClosedMap, ContainerConstructError, ContainerTryConstruct, IntoInner, ItemT, Map};
+use derive_more::{AsRef, From};
 
 // all own traits
 use algebra_derive::*;
 
 #[derive(
     Clone, Debug, PartialEq,
-    AsRef, ConstElement, From, Index, IndexMut,
+    AsRef, ConstElement, From,
     container_derive::Container,
     Basis, Conjugate, Crossproduct, Distance, IsAZero, Norm, NormSquared,
     ScalarDiv, TryScalarDiv, ScalarMul, Scalarproduct,
     TryAdd, TryDiv, TryNormalize, TrySub
 )]
 pub struct EnhancedContainer<C>(C);
+
+// GenericArray does not implement Index so we need to impl it here
+impl<C:AsSlice<T>+ItemT<T=T>,T> Index<usize> for EnhancedContainer<C> {
+    type Output=T;
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.as_slice()[index]
+    }
+}
+
+impl<C:AsMutSlice<T>+ItemT<T=T>,T> IndexMut<usize> for EnhancedContainer<C> where Self : Index<usize,Output=T> {
+    fn index_mut(&mut self, index: usize) -> & mut Self::Output {
+        &mut self.as_mut_slice()[index]
+    }
+}
 
 impl<C> EnhancedContainer<C> {
     pub const fn new(c:C) -> Self {

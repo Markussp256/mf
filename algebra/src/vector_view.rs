@@ -1,5 +1,4 @@
 
-
 #[macro_export]
 macro_rules! gen_vector_view {
     ($gen:ident, $dyn:ident, $stat:ident) => {
@@ -7,15 +6,13 @@ macro_rules! gen_vector_view {
             container_derive::ContainerView,
             algebra_derive::Norm,
             derive_more::AsRef,
-            derive_more::AsMut,
             derive_more::From,
             derive_more::Index,
-            derive_more::IndexMut,
         )]
         pub struct $gen<C>(C);
 
         pub type $dyn<'a,T>=$gen<$crate::EnhancedVec<&'a T>>;
-        pub type $stat<'a,T,const N:usize>=$gen<$crate::EnhancedArray<&'a T,N>>;
+        pub type $stat<'a,T,N:generic_array::ArrayLength>=$gen<$crate::EnhancedArray<&'a T,N>>;
 
         impl<'a,
              C : container_traits::Iter<T>
@@ -59,7 +56,7 @@ macro_rules! gen_vector_view {
             }
         }
 
-        impl<'a,T,const N:usize> From<$stat<'a,T,N>> for $dyn<'a,T> {
+        impl<'a,T,N:generic_array::ArrayLength> From<$stat<'a,T,N>> for $dyn<'a,T> {
             fn from(arr:$stat<'a,T,N>) -> Self {
                 let v:Vec<&'a T>=<$crate::EnhancedArray<&'a T,N> as container_traits::IntoIter<&'a T>>::into_iterator(arr.0).collect();
                 v.into()
@@ -75,18 +72,18 @@ macro_rules! gen_vector_view {
             }
         }
 
-        impl<'a,T> $stat<'a,T,2> {
+        impl<'a,T> $stat<'a,T,generic_array::typenum::U2> {
             pub const fn new(x:&'a T,y:&'a T) -> Self {
-                Self($crate::EnhancedArray::new([x,y]))
+                Self($crate::EnhancedArray::from_array([x,y]))
             }
 
             pub fn x(&'a self) -> &'a T { &self[0] }
             pub fn y(&'a self) -> &'a T { &self[1] }
         }
 
-        impl<'a,T> $stat<'a,T,3> {
+        impl<'a,T> $stat<'a,T,generic_array::typenum::U3> {
             pub const fn new(x:&'a T,y:&'a T,z:&'a T) -> Self {
-                Self($crate::EnhancedArray::new([x,y,z]))
+                Self($crate::EnhancedArray::from_array([x,y,z]))
             }
 
             pub fn x(&'a self) -> &'a T { &self[0] }
@@ -95,51 +92,52 @@ macro_rules! gen_vector_view {
         }
 
         paste::paste!(
-            pub type [<$stat 2>]<'a,T>=$stat<'a,T,2>;
-            pub type [<$stat 3>]<'a,T>=$stat<'a,T,3>;
-            pub type [<$stat 4>]<'a,T>=$stat<'a,T,4>;
+            pub type [<$stat 2>]<'a,T>=$stat<'a,T,generic_array::typenum::U2>;
+            pub type [<$stat 3>]<'a,T>=$stat<'a,T,generic_array::typenum::U3>;
+            pub type [<$stat 4>]<'a,T>=$stat<'a,T,generic_array::typenum::U4>;
         );
 
-        impl<'a, T,const N:usize> Into<$crate::EnhancedArray<&'a T,N>> for $stat<'a,T,N> {
+        impl<'a, T,N:generic_array::ArrayLength> Into<$crate::EnhancedArray<&'a T,N>> for $stat<'a,T,N> {
             fn into(self) -> $crate::EnhancedArray<&'a T,N> {
                 self.0
             }
         }
 
-        impl<'a, T, const N:usize> Into<[&'a T;N]> for $stat<'a,T,N> {
-            fn into(self) -> [&'a T;N] {
+        impl<'a, T, N:generic_array::ArrayLength> $stat<'a,T,N> {
+            fn into_array<const U:usize>(self) -> [&'a T;U]
+            where typenum::Const<U>: generic_array::IntoArrayLength<ArrayLength = N> {
                 self.0
-                    .into()
+                    .into_array::<U>()
             }
-        }
 
-        impl<'a, T, const N:usize> From<[&'a T;N]> for $stat<'a,T,N> {
-            fn from(arr:[&'a T;N]) -> Self {
-                $crate::EnhancedArray::<&'a T,N>::from(arr).into()
+            fn from_array<const U:usize>(arr:[&'a T;U]) -> Self
+            where typenum::Const<U>: generic_array::IntoArrayLength<ArrayLength = N> {
+                $crate::EnhancedArray::<&'a T,N>::from_array(arr).into()
             }
         }
         
-        impl<'a, T, const N:usize> Into<Vec<&'a T>> for $stat<'a, T,N> {
+        impl<'a, T, N:generic_array::ArrayLength> Into<Vec<&'a T>> for $stat<'a, T,N> {
             fn into(self) -> Vec<&'a T> {
                 <$crate::EnhancedArray<&'a T,N> as container_traits::IntoInner>::into_inner(self.0)
-                    .into()
+                    .into_iter()
+                    .collect()
             }
         }
 
-        impl<'a, T, const N:usize> TryFrom<Vec<&'a T>> for $stat<'a,T,N> {
-            type Error=<[&'a T;N] as TryFrom<Vec<&'a T>>>::Error;
+        impl<'a, T, N:generic_array::ArrayLength> TryFrom<Vec<&'a T>> for $stat<'a,T,N> {
+            type Error=container_traits::LenNotEqualToRequiredLenError;
             fn try_from(v:Vec<&'a T>) -> Result<Self,Self::Error> {
-                <[&'a T;N] as TryFrom<Vec<&'a T>>>::try_from(v)
-                    .map(|a|a.into())
+                <$crate::EnhancedArray<&'a T, N> as TryFrom<Vec<&'a T>>>::try_from(v)
+                    .map(|a|Self(a))
             }
         }
 
-        impl<'a, T, const N:usize> TryFrom<$dyn<'a,T>> for $stat<'a,T,N> {
-            type Error=<[&'a T;N] as TryFrom<Vec<&'a T>>>::Error;
+        impl<'a, T, N:generic_array::ArrayLength> TryFrom<$dyn<'a,T>> for $stat<'a,T,N> {
+            type Error=container_traits::LenNotEqualToRequiredLenError;
             fn try_from(v:$dyn<'a,T>) -> Result<Self,Self::Error> {
                 let v:Vec<&'a T>=<$crate::EnhancedVec<&'a T> as container_traits::IntoInner>::into_inner(v.0);
-                <[&'a T;N] as TryFrom<Vec<&'a T>>>::try_from(v)
-                    .map(|a:[&'a T;N]|a.into())
+                <$crate::EnhancedArray<&'a T, N> as TryFrom<Vec<&'a T>>>::try_from(v)
+                    .map(|a|Self(a))
             }
         }
 
@@ -149,24 +147,22 @@ macro_rules! gen_vector_view {
             }
         }
 
-        impl<C:'static> $gen<C> {
-            pub fn from_unchecked_view<C2:'static+Into<C>>(value:$gen<C2>) -> Self {
-                Self(value.0.into())
-            }
+            // pub fn from_unchecked_view<C2:'static+Into<C>>(value:$gen<C2>) -> Self {
+            //     Self(value.0.into())
+            // }
 
-            pub fn into_unchecked_view<C2:'static>(self) -> $gen<C2> where C:Into<C2> {
-                $gen::from_unchecked_view(self)
-            }
-            pub fn try_from_unchecked_view<C2:'static>(value:$gen<C2>) -> Result<Self, $gen<C2>> where C2 : TryInto<C,Error=C2> {
-                value.0
-                     .try_into()
-                     .map(|c|$gen(c))
-                     .map_err(|c2|$gen(c2))
-            }
-            pub fn try_into_unchecked_view<C2:'static>(self) -> Result<$gen<C2>, Self> where C:TryInto<C2,Error=C> {
-                $gen::try_from_unchecked_view(self)
-            }
-        }
+            // pub fn into_unchecked_view<C2:'static>(self) -> $gen<C2> where C:Into<C2> {
+            //     $gen::from_unchecked_view(self)
+            // }
+            // pub fn try_from_unchecked_view<C2:'static>(value:$gen<C2>) -> Result<Self, $gen<C2>> where C2 : TryInto<C,Error=C2> {
+            //     value.0
+            //          .try_into()
+            //          .map(|c|$gen(c))
+            //          .map_err(|c2|$gen(c2))
+            // }
+            // pub fn try_into_unchecked_view<C2:'static>(self) -> Result<$gen<C2>, Self> where C:TryInto<C2,Error=C> {
+            //     $gen::try_from_unchecked_view(self)
+            // }
 
     };
 }

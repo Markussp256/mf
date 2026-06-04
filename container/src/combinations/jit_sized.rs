@@ -37,8 +37,8 @@ impl<Index:Clone,C> Size<Index> for JITSized<Index,C> {
     }
 }
 
-impl<Index,F2,C:ChangeT<F2,Output=C2>,C2> ChangeT<F2> for JITSized<Index,C> {
-    type Output=JITSized<Index,C2>;
+impl<Index,F2,C:ChangeT<F2>> ChangeT<F2> for JITSized<Index,C> {
+    type Output<'a>=JITSized<Index,<C as ChangeT<F2>>::Output<'a>>;
 }
 
 impl<Index, T, C> Iter<T> for JITSized<Index,C> where Self : IterIndexed<Index,T> {

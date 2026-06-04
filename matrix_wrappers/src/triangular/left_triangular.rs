@@ -9,7 +9,7 @@ type U2=(usize,usize);
 
 #[derive(Clone, Debug, PartialEq,
          algebra_derive::ScalarContainer,
-         algebra_derive::Inv,
+         algebra_derive::ClosedInv,
          container_derive::JustContainer,
          container_derive::NewUnchecked,
          container_derive::IntoInner,

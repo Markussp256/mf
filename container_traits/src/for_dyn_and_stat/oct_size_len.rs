@@ -1,6 +1,10 @@
 // optional compile time size
 use std::fmt::Debug;
 
+use generic_array::{GenericArray, ArrayLength};
+use typenum::Unsigned;
+
+
 pub trait OCTSize<Index> {
     const OCTSIZE:Option<Index>;
 
@@ -13,6 +17,10 @@ pub trait OCTSize<Index> {
 
 impl<T> OCTSize<usize> for Vec<T> {
     const OCTSIZE:Option<usize>=None;
+}
+
+impl<T,N:ArrayLength+Unsigned> OCTSize<usize> for GenericArray<T,N> {
+    const OCTSIZE:Option<usize> = Some(N::USIZE);
 }
 
 impl<T,const N:usize> OCTSize<usize> for [T;N] {

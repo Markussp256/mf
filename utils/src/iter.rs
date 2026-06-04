@@ -31,32 +31,13 @@ pub use repeat::RepeatN;
 pub mod repeater;
 pub use repeater::RepeaterN;
 
+pub mod next_chunk;
+pub use next_chunk::{next_chunk,next_chunk_gen_arr,next_chunk_dyn};
+
 
 pub fn try_take_away<T>(iter:& mut impl ExactSizeIterator<Item=T>, n:usize) -> Option<impl ExactSizeIterator<Item=T>> {
     (iter.len() >= n).then(||
     std::iter::from_fn(|| iter.next()).into_exact_size_iter(n))
-}
-
-// if std::iter::next_chunk get stabilized we can use it instead
-pub fn next_chunk<I: Iterator<Item = T>, T, const N: usize>(iter: &mut I) -> Result<[T; N], Vec<T>> {
-    // assumes that from_fn queries in the right order, i.e. 0, then 1, then 2, etc. 
-    let oarr = std::array::from_fn(|_| iter.next());
-    crate::option::unwrap_if_all_are_some_arr(oarr)
-        .map_err(|err|err.into_iter()
-                         .filter(|o|o.is_some())
-                         .map(Option::unwrap)
-                         .collect())
-}
-
-pub fn next_chunk_dyn<I:Iterator<Item=T>, T>(iter: & mut I, n:usize) -> Result<Vec<T>,Vec<T>> {
-    let mut vs=Vec::new();
-    for _ in 0..n {
-        match iter.next() {
-            Some(t) => vs.push(t),
-            None => return Err(vs)
-        };
-    }
-    Ok(vs)
 }
 
 pub enum AllSameError {
@@ -85,9 +66,4 @@ pub fn check<T:Eq+Clone, I:Iterator<Item=T>>(iter:& mut I, f: impl Fn(&T)-> bool
     next.clone()
         .filter(f)
         .ok_or(next)
-}
-
-pub fn split_iterator<I:Iterator<Item=T>,T>(mut iter: I, n: usize) -> (Vec<T>, I) {
-    let collected: Vec<T> = iter.by_ref().take(n).collect();
-    (collected, iter)
 }

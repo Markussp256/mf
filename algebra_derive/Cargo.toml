@@ -22,4 +22,4 @@ derive_helper = { path = "../derive_helper" }
 algebra_traits = { path="../algebra_traits", features = ["num_support"]}
 num = "0.4.3"
 num-traits= "0.2.15"
-paste =     "1.0.14" # for anysub macro 
+paste =     "1.0.15" # for anysub macro 

@@ -9,7 +9,7 @@ type U2=(usize,usize);
          algebra_derive::ScalarContainer,
          container_derive::JustContainer,
          container_derive::NewUnchecked,
-         container_derive::Map,
+         container_derive::ClosedMap,
          container_derive::IntoInner,
          matrix_derive::Identity,
          matrix_derive::Inherit,

@@ -321,12 +321,8 @@ pub fn matrix_vector_product_proc_macro(input: TokenStream) -> TokenStream {
     assert_eq!(wt.len(),1);
     let wt=wt.remove(0);
     quote! {
-        impl #generics #tr for #ty where #wt : #tr, Rhs : matrix_traits::ColVectorView, #where_clause {
+        impl #generics #tr for #ty where #wt : #tr, Rhs : Clone+matrix_traits::ColVectorView, #where_clause {
             type Output=<#wt as #tr>::Output;
-            fn matrix_vector_product(&self, rhs:&Rhs) -> <#wt as #tr>::Output {
-                self.0
-                    .matrix_vector_product(rhs)
-            }
 
             fn into_matrix_vector_product(self, rhs:&Rhs) -> <#wt as #tr>::Output {
                 self.0
@@ -336,10 +332,6 @@ pub fn matrix_vector_product_proc_macro(input: TokenStream) -> TokenStream {
 
         impl #generics #tr_try for #ty where #wt : #tr_try, Rhs : matrix_traits::ColVectorView, #where_clause {
             type Output=<#wt as #tr_try>::Output;
-            fn try_matrix_vector_product(&self, rhs:&Rhs) -> Result<<#wt as #tr_try>::Output,matrix_traits::VectorConstructError> {
-                self.0
-                    .try_matrix_vector_product(rhs)
-            }
 
             fn try_into_matrix_vector_product(self, rhs:&Rhs) -> Result<<#wt as #tr_try>::Output,matrix_traits::VectorConstructError> {
                 self.0
@@ -366,24 +358,24 @@ pub fn closed_matrix_matrix_product_proc_macro(input: TokenStream) -> TokenStrea
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let tr =quote!{matrix_traits::MatrixMatrixProduct};
     let tr_try=quote!{matrix_traits::TryMatrixMatrixProduct};
-    let (generics, where_clause, [(ty, wt),(ty1, wt1),(ty2, wt2)])=
+    let (generics, where_clause, [(ty, wt)])=
     preprocess_no_impl(& mut input);
     // let mul_bound=quote!{<#ty as container_traits::ItemT>::T : std::ops::Mul<<#ty1 as container_traits::ItemT>::T>};
     quote! {
-        impl #generics #tr<#ty1> for #ty where #(#wt : #tr<#wt1,Output=#wt2>, #wt2 : matrix_traits::Matrix,)*  #where_clause {
-            type Output=#ty2;
-            fn matrix_matrix_product(&self, rhs:&#ty1) -> #ty2 {
-                #ty2(self.0
+        impl #generics #tr<Self> for #ty where #(#wt : #tr<#wt,Output=#wt>, #wt : matrix_traits::Matrix,)*  #where_clause {
+            type Output=Self;
+            fn matrix_matrix_product(&self, rhs:&Self) -> Self {
+                Self(self.0
                          .matrix_matrix_product(&rhs.0))
             }
         }
 
-        impl #generics #tr_try<#ty1> for #ty where #(#wt : #tr_try<#wt1,Output=#wt2>, #wt2 : matrix_traits::Matrix,)* #where_clause {
-            type Output=#ty2;
-            fn try_matrix_matrix_product(&self, rhs:&#ty1) -> Result<#ty2,matrix_traits::MatrixConstructError> {
+        impl #generics #tr_try<Self> for #ty where #(#wt : #tr_try<#wt,Output=#wt>, #wt : matrix_traits::Matrix,)* #where_clause {
+            type Output=Self;
+            fn try_matrix_matrix_product(&self, rhs:&Self) -> Result<Self,matrix_traits::MatrixConstructError> {
                 self.0
                     .try_matrix_matrix_product(&rhs.0)
-                    .map(|c|#ty2(c))
+                    .map(|c|Self(c))
             }
         }
     }.into()

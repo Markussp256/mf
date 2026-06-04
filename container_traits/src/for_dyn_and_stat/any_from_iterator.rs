@@ -1,10 +1,12 @@
 use crate::{IntoIter, LenNotEqualToRequiredLenError, LenTooSmallError, LinearContainerConstructError};
 
+use generic_array::{GenericArray, ArrayLength};
+
 // due to Concatenated we pass a reference to an instance of type Self
 // so that size information can be extracted
 
-// take away takes elements form the iterator possible leaving some element in the iterator left
-// from_iter is supposed to take all elements from the iterator
+// any_take_away takes elements form the iterator possible leaving some element in the iterator left
+// any_from_iter is supposed to take all elements from the iterator
 
 pub trait AnyFromIterator<T,E> : Sized {
     fn any_take_away<I:    Iterator<Item=T>>(oref:Option<&Self>, iter:& mut I) -> Result<Self,E>;
@@ -50,14 +52,36 @@ impl<T> AnyFromIterator<T,LinearContainerConstructError> for Vec<T> {
     any_from_iter_impl!(T);
 }
 
-impl<T, const N:usize> AnyFromIterator<T,LinearContainerConstructError> for [T;N] {
-    fn any_take_away<I:Iterator<Item=T>>(_:Option<&Self>, iter:& mut I) -> Result<Self,LinearContainerConstructError> {
-        utils::iter::next_chunk(iter)
-            .map_err(|v|LenTooSmallError::new(N,v.len()).into())
+// Array
+impl<T, const N:usize> AnyFromIterator<T, LinearContainerConstructError> for [T; N] {
+    fn any_take_away<I: Iterator<Item=T>>(_: Option<&Self>, iter: &mut I) -> Result<Self, LinearContainerConstructError> {
+        utils::iter::next_chunk(iter).map_err(|v| LenTooSmallError::new(N, v.len()).into())
     }
-    
+
     any_from_iter_impl!(T);
 }
+
+// GenericArray
+impl<T, N: ArrayLength> AnyFromIterator<T, LinearContainerConstructError> for GenericArray<T, N> {
+    fn any_take_away<I: Iterator<Item=T>>(_: Option<&Self>, iter: &mut I) -> Result<Self, LinearContainerConstructError> {
+        utils::iter::next_chunk_gen_arr(iter).map_err(|v| LenTooSmallError::new(N::to_usize(), v.len()).into())
+    }
+
+    any_from_iter_impl!(T);
+}
+
+// Reference GenericArray
+// impl<'a, T, N: ArrayLength<&'a T>> AnyFromIterator<&'a T, LinearContainerConstructError> for GenericArray<&'a T, N> {
+//     fn any_take_away<I: Iterator<Item=&'a T>>(_: Option<&Self>, iter: &mut I) -> Result<Self, LinearContainerConstructError> {
+//         utils::iter::next_chunk_gen_arr(iter).map_err(|v| LenTooSmallError::new(N::to_usize(), v.len()).into())
+//     }
+
+//     fn any_from_iter<I: IntoIterator<Item=&'a T>>(_: Option<&Self>, iter: I) -> Result<Self, LinearContainerConstructError> {
+//         let mut iter = iter.into_iter();
+//         Self::any_take_away(None, &mut iter)
+//     }
+// }
+
 
 macro_rules! impl_any_from_iter {
     ($f:ty) => {

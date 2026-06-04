@@ -1,6 +1,7 @@
 
 use super::{OCTSize,Size};
 use core::fmt::Debug;
+
 pub trait SizeFromORef<Index> {
     fn size_from_oref(oref:Option<&Self>) -> Index;
 }

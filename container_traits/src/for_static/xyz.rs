@@ -1,6 +1,8 @@
 use num_traits::{Zero,One};
-use std::array::from_fn;
 
+use generic_array::GenericArray;
+
+use super::FromFn;
 
 macro_rules! def {
     ($uc:ident, $lc:ident, $euc:ident, $elc:ident, $j:literal $(, $i:literal)*) => {
@@ -14,12 +16,21 @@ macro_rules! def {
         }
 
         $(
+            paste::paste!(
+            impl<F> $uc<F> for GenericArray<F,typenum::[<U $i>]> {
+                fn $lc(&self) -> &F { &self[$j] }
+            }
+
+            impl<F> $euc<F> for GenericArray<F,typenum::[<U $i>]> {
+                fn $elc() -> Self where F:Zero+One { Self::from_fn(|i| match i { $j => F::one(), _ => F::zero() })}
+            });
+
             impl<F> $uc<F> for [F;$i] {
                 fn $lc(&self) -> &F { &self[$j] }
             }
 
             impl<F> $euc<F> for [F;$i] {
-                fn $elc() -> Self where F:Zero+One { from_fn(|i| match i { $j => F::one(), _ => F::zero() })}
+                fn $elc() -> Self where F:Zero+One { std::array::from_fn(|i| match i { $j => F::one(), _ => F::zero() })}
             }
         )*
     };

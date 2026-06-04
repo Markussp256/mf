@@ -1,8 +1,19 @@
+use generic_array::{ArrayLength,GenericArray};
+
 macro_rules! impl_arr_vec {
     ($tr:ident, $fn:ident) => {
         impl<T:$tr<F>, F, const N:usize> $tr<F> for [T;N] {
             fn $fn(self, f:&F) -> Self {
                 self.map(|vi|vi.$fn(f))
+            }
+        }
+
+        impl<T:$tr<F>, F, N:ArrayLength> $tr<F> for GenericArray<T,N> {
+            fn $fn(self, f:&F) -> Self {
+                Self::try_from_iter(
+                    self.into_iter()
+                        .map(|vi|vi.$fn(f))
+                ).unwrap()
             }
         }
 
@@ -40,6 +51,24 @@ pub trait TryScalarDiv<Field> : Sized {
     type Error;
     fn is_scalar_divable_by(&self, f:&Field) -> Result<(),Self::Error>;
     fn try_scalar_div(self, f:&Field) -> Result<Self,Self::Error>;
+}
+
+impl<T:TryScalarDiv<F,Error=E>, E, F:Clone, N:ArrayLength> TryScalarDiv<F> for GenericArray<T,N>  {
+    type Error=E;
+
+    fn is_scalar_divable_by(&self, f:&F) -> Result<(),E> {
+        for t in self {
+            t.is_scalar_divable_by(f)?
+        }
+        Ok(())
+    }
+
+    fn try_scalar_div(self, f:&F) -> Result<Self,E> {
+        self.is_scalar_divable_by(f)?;
+        Ok(Self::try_from_iter(
+            self.into_iter()
+                .map(|t|t.try_scalar_div(f).ok().unwrap())).unwrap())
+    }
 }
 
 impl<T:TryScalarDiv<F,Error=E>, E, F:Clone, const N:usize> TryScalarDiv<F> for [T;N]  {

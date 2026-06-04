@@ -1,6 +1,6 @@
 use nalgebra::{Const, DVector, Dyn, OMatrix, RowDVector, Scalar};
 use crate::{for_dynamic::*, for_dyn_and_stat::*, IntoVec, ChangeLen, IndexOutOfBoundsError};
-use num_traits::{Zero,One};
+use num_traits::Zero;
 
 use crate::ContainerConstructError;
 
@@ -10,12 +10,6 @@ type CCE=ContainerConstructError<U2>;
 
 macro_rules! impl_vector_owned {
     ($t:ty) => {
-
-        impl<T:Scalar+Zero+One> StandardBasis for $t {
-            fn try_standard_basis_element(len:usize, index:usize) -> Result<Self,IndexOutOfBoundsError<usize>> {
-                <Self as TryPutAt<usize,T>>::try_put_at(len,index,T::one())
-            }
-        }
 
         impl<T:Scalar> Concat for $t {
             fn concat(self, rhs:Self) -> Self {
@@ -58,17 +52,19 @@ macro_rules! impl_vector_owned {
             }
         }
 
+        impl<T:Scalar> Zeros<usize,T> for $t {
+            fn zeros(len:usize) -> Self where T:Zero {
+                <$t>::zeros(len)
+            }
+        }
+
         impl<T:Scalar> FromVec<T> for $t {
             fn from_vec(v:Vec<T>) -> Self {
                 <$t>::from_vec(v)
             }
         }
 
-        impl<T:Scalar> Zeros<usize,T> for $t {
-            fn zeros(len:usize) -> Self where T:Zero {
-                <$t>::zeros(len)
-            }
-        }
+
     };
 }
 impl_vector_owned!(OMatrix<T,Dyn,Const<1>>);

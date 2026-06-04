@@ -8,8 +8,8 @@ use container_traits::{TryFromFn, Get, IntoInner, Iter, IntoSum, TryFromSuperCon
 type U2=(usize,usize);
 
 #[derive(Clone, Debug, PartialEq,
-    algebra_derive::Conjugate,
-    algebra_derive::Inv,
+    algebra_derive::ClosedConjugate,
+    algebra_derive::ClosedInv,
     container_derive::IntoInner,
     container_derive::JustContainer,
     container_derive::NewUnchecked,

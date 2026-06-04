@@ -5,6 +5,8 @@
 
 use container_traits::{ContainerTryConstruct, ContainerConstructError, Map};
 
+use generic_array::{ArrayLength,GenericArray};
+
 macro_rules! neg_inv {
     ($tr:ident,$fn:ident) => {
         pub trait $tr {
@@ -39,29 +41,49 @@ def_bin_op!(Sub,sub);
 def_bin_op!(Mul,mul);
 def_bin_op!(Div,div);
 
-macro_rules! impl_eleme_wise_bin_op {
+macro_rules! impl_eleme_wise_bin_op_arr {
     ($tr:ident,$fn:ident) => {
         impl<T:std::ops::$tr<T2,Output=TR>,T2,TR,const N:usize> $tr<[T2;N]> for [T;N] {
             type Output=[TR;N];
             fn $fn(self, rhs:[T2;N]) -> [TR;N] {
-                self.into_iter()
-                    .zip(rhs.into_iter())
-                    .map(|(l,r)|l.$fn(r))
-                    .collect::<Vec<TR>>()
-                    .try_into()
-                    .ok().unwrap()
-
-                // utils::iter::next_chunk(& mut self.into_iter()
-                // .zip(rhs.into_iter())
-                // .map(|(l,r)|l.$fn(r))).ok().unwrap()
+                let mut iter=
+                    self.into_iter()
+                        .zip(rhs.into_iter())
+                        .map(|(l,r)|l.$fn(r));
+                utils::iter::next_chunk(& mut iter).ok().unwrap()
             }
         }
     };
 }
-impl_eleme_wise_bin_op!(Add,add);
-impl_eleme_wise_bin_op!(Sub,sub);
+macro_rules! impl_eleme_wise_bin_op_gen_arr {
+    ($tr:ident,$fn:ident) => {
+        impl<T:std::ops::$tr<T2,Output=TR>,T2,TR,N:ArrayLength> $tr<GenericArray<T2,N>> for GenericArray<T,N> {
+            type Output=GenericArray<TR,N>;
+            fn $fn(self, rhs:GenericArray<T2,N>) -> GenericArray<TR,N> {
+                let iter=
+                    self.into_iter()
+                        .zip(rhs.into_iter())
+                        .map(|(l,r)|l.$fn(r));
+                GenericArray::try_from_iter(iter).unwrap()
+            }
+        }
+    };
+}
+impl_eleme_wise_bin_op_arr!(Add,add);
+impl_eleme_wise_bin_op_arr!(Sub,sub);
+impl_eleme_wise_bin_op_gen_arr!(Add,add);
+impl_eleme_wise_bin_op_gen_arr!(Sub,sub);
+
+
 
 // scalar multiplication
+impl<T:std::ops::Mul<T2,Output=TR>,T2:Clone,TR,N:ArrayLength> Mul<T2> for GenericArray<T,N> {
+    type Output=GenericArray<TR,N>;
+    fn mul(self,rhs:T2) -> Self::Output {
+        self.map(|ti|ti*rhs.clone())
+    }
+}
+
 impl<T:std::ops::Mul<T2,Output=TR>,T2:Clone,TR,const N:usize> Mul<T2> for [T;N] {
     type Output=[TR;N];
     fn mul(self,rhs:T2) -> Self::Output {

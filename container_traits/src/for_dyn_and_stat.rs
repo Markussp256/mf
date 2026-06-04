@@ -19,6 +19,9 @@ pub use ndofs::NumberOfDegreesOfFreedom;
 pub mod oct_size_len;
 pub use oct_size_len::{OCTLen,OCTSize};
 
+pub mod rebind;
+pub use rebind::Rebind;
+
 pub mod size_len_from_oref;
 pub use size_len_from_oref::{LenFromORef,SizeFromORef};
 

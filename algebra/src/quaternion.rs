@@ -4,9 +4,11 @@ use algebra_traits::*;
 use num_traits::{Zero,One,Inv};
 use algebra_traits::operators::basic::Add;
 
-use container_traits::{for_static::{IntoArray,TryFromIterator, TryFromParameters}, IntoParameters, LinearContainerConstructError};
+use container_traits::{AsSlice, IntoParameters, LinearContainerConstructError, for_static::{TryFromIterator, TryFromParameters}};
 
 use crate::EnhancedArray;
+
+use typenum::U4;
 
 #[derive(Clone,
          Debug,
@@ -20,7 +22,7 @@ use crate::EnhancedArray;
          container_derive::Iter,
          container_derive::NumberOfDegreesOfFreedom,
 )]
-pub struct Quaternion<T:'static>(EnhancedArray<T,4>);
+pub struct Quaternion<T:'static>(EnhancedArray<T,U4>);
 
 impl<T:Display> Display for Quaternion<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -41,11 +43,11 @@ impl<T:Display> Display for Quaternion<T> {
 impl<T> Quaternion<T> {
     pub fn new(real:T,imag:[T;3]) -> Self {
         let [i0, i1, i2]=imag;
-        Self(EnhancedArray::new([real, i0, i1, i2]))
+        Self(EnhancedArray::from_array([real, i0, i1, i2]))
     }
 
     pub fn real(&self) -> &T {
-        &self.0[0]
+        &self.0.as_slice()[0]
     }
 
     pub fn into_real(self) -> T {
@@ -54,7 +56,7 @@ impl<T> Quaternion<T> {
     }
 
     pub fn imag(&self) -> [&T;3] {
-        [1,2,3].map(|i|&self.0[i])
+        [1,2,3].map(|i|&self.0.as_slice()[i])
     }
 
     pub fn into_imag(self) -> [T;3] {

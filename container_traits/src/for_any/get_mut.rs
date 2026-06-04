@@ -1,22 +1,30 @@
+use generic_array::{ArrayLength, GenericArray};
+
 use crate::{ContainerIndex, IndexOutOfBoundsError};
 
 pub trait GetMut<Index,T> {
     fn get_mut(&mut self, index:Index) -> Result<&mut T,IndexOutOfBoundsError<Index>>;
 }
 
+macro_rules! impl_get_mut {
+    () => {
+        fn get_mut(&mut self, index:usize) -> Result<&mut T,IndexOutOfBoundsError<usize>> {
+            IndexOutOfBoundsError::try_new(&self.len(),&index)?;
+            Ok(& mut self[index])
+        }
+    };
+}
 
 impl<T> GetMut<usize,T> for Vec<T> {
-    fn get_mut(&mut self, index:usize) -> Result<&mut T,IndexOutOfBoundsError<usize>> {
-        IndexOutOfBoundsError::try_new(&self.len(),&index)?;
-        Ok(& mut self[index])
-    }
+    impl_get_mut!();
+}
+
+impl<T,N : ArrayLength> GetMut<usize,T> for GenericArray<T,N> {
+    impl_get_mut!();
 }
 
 impl<T, const N:usize> GetMut<usize,T> for [T;N] {
-    fn get_mut(&mut self, index:usize) -> Result<&mut T,IndexOutOfBoundsError<usize>> {
-        IndexOutOfBoundsError::try_new(&self.len(),&index)?;
-        Ok(& mut self[index])
-    }
+    impl_get_mut!();
 }
 
 macro_rules! impl_get_mut {

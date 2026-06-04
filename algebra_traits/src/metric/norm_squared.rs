@@ -4,6 +4,8 @@ use std::ops::Add;
 use container_traits::Iter;
 use num_traits::Zero;
 
+use generic_array::{ArrayLength,GenericArray};
+
 pub trait NormSquared {
     type Norm2T;
     fn norm_squared(&self) -> Nonnegative<Self::Norm2T>;
@@ -22,40 +24,47 @@ pub trait NormSquared {
 //     }
 // }
 
-fn norm_squared_impl<T:NormSquared<Norm2T = TR>, TR:Zero+Max>(s:impl Iter<T>) -> Nonnegative<TR> {
-    s.iter()
-     .map(NormSquared::norm_squared)
-     .fold(Nonnegative::zero(),|acc,new|acc.add(new))
+macro_rules! impl_norm_squared {
+    () => {
+        fn norm_squared(&self) -> Nonnegative<Self::Norm2T> {
+            self.iter()
+                .map(NormSquared::norm_squared)
+                .fold(Nonnegative::zero(),|acc,new|acc.add(new))
+        }        
+    };
 }
 
-fn into_norm_squared_impl<T:NormSquared<Norm2T = TR>, TR:Zero+Max>(s:impl IntoIterator<Item=T>) -> Nonnegative<TR> {
-    s.into_iter()
-     .map(NormSquared::into_norm_squared)
-     .fold(Nonnegative::zero(),|acc,new|acc.add(new))
+macro_rules! impl_into_norm_squared {
+    () => {
+        fn into_norm_squared(self) -> Nonnegative<Self::Norm2T> {
+            self.into_iter()
+                .map(NormSquared::into_norm_squared)
+                .fold(Nonnegative::zero(),|acc,new|acc.add(new))
+        }        
+    };
 }
-
 
 
 impl<T:NormSquared<Norm2T = TR>, TR: Zero+Max> NormSquared for Vec<T> {
     type Norm2T=TR;
-    fn norm_squared(&self) -> Nonnegative<Self::Norm2T> {
-        norm_squared_impl(self)
-    }
-    fn into_norm_squared(self) -> Nonnegative<Self::Norm2T> {
-        into_norm_squared_impl(self)
-    }
+    impl_norm_squared!();
+    impl_into_norm_squared!();
 }
 
+impl<T:NormSquared<Norm2T = TR>, TR: Zero+Max, N:ArrayLength> NormSquared for GenericArray<T,N> {
+    type Norm2T=TR;
+    impl_norm_squared!();
+    impl_into_norm_squared!();
+}
 
 impl<T:NormSquared<Norm2T = TR>, TR: Zero+Max, const N:usize> NormSquared for [T;N] {
     type Norm2T=TR;
-    fn norm_squared(&self) -> Nonnegative<Self::Norm2T> {
-        norm_squared_impl(self)
-    }
-    fn into_norm_squared(self) -> Nonnegative<Self::Norm2T> {
-        into_norm_squared_impl(self)
-    }
+    impl_norm_squared!();
+    impl_into_norm_squared!();
 }
+
+
+
 
 
 #[test]

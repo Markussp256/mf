@@ -1,25 +1,28 @@
+use generic_array::{ArrayLength, GenericArray};
+
+
 pub trait Reverse {
     fn reverse(self) -> Self; 
 }
 
+macro_rules! impl_rev {
+    () => {
+        fn reverse(mut self) -> Self {
+            self.as_mut_slice()
+                .reverse();
+            self
+        }
+    };
+}
+
 impl<T> Reverse for Vec<T> {
-    fn reverse(self) -> Self {
-        self.into_iter()
-        .rev()
-        .collect()
-        // let mut s=self;
-        // s.as_mut_slice().reverse();
-        // s
-    }
+    impl_rev!();
+}
+
+impl<T, N : ArrayLength> Reverse for GenericArray<T,N> {
+    impl_rev!();
 }
 
 impl<T,const N:usize> Reverse for [T;N] {
-    fn reverse(self) -> Self {
-        self.into_iter()
-            .rev()
-            .collect::<Vec<T>>()
-            .try_into()
-            .ok()
-            .unwrap()
-    }
+    impl_rev!();
 }

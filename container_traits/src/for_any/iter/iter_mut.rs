@@ -1,4 +1,7 @@
 
+use generic_array::{ArrayLength, GenericArray};
+
+
 pub trait IterMut<T> {
     fn iter_mut<'a>(&'a mut self) -> impl ExactSizeIterator<Item=&'a mut T> where T:'a;
 }
@@ -17,6 +20,14 @@ impl<T> IterMut<T> for Vec<T> {
 }
 
 impl<T> IterMut<T> for & mut Vec<T> {
+    impl_iter_mut!();
+}
+
+impl<T,N:ArrayLength> IterMut<T> for GenericArray<T,N> {
+    impl_iter_mut!();
+}
+
+impl<T,N:ArrayLength> IterMut<T> for & mut GenericArray<T,N> {
     impl_iter_mut!();
 }
 

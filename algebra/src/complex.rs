@@ -2,9 +2,12 @@ use std::convert::Infallible;
 use std::ops::{Neg,Mul,Div};
 use std::fmt::Display;
 use algebra_traits::{div_by_small_natural::Div2,*};
+use container_traits::AsSlice;
 use num_traits::{Inv, Zero, One};
 
 use crate::EnhancedArray;
+
+use typenum::U2;
 
 // we dont use container_derive for add and sub
 // because that would implement it too general
@@ -24,7 +27,7 @@ use crate::EnhancedArray;
         container_derive::Iter,
         container_derive::NumberOfDegreesOfFreedom
         )]
-pub struct Complex<T:'static>(EnhancedArray<T,2>);
+pub struct Complex<T:'static>(EnhancedArray<T,U2>);
 
 impl<T:Display+Zero+PartialOrd> Display for Complex<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -38,20 +41,20 @@ impl<T:Display+Zero+PartialOrd> Display for Complex<T> {
 impl<T> RealAndImag for Complex<T> {
     type RealT = T;
     fn new(real:Self::RealT, imag:Self::RealT) -> Self {
-        Self(EnhancedArray::new([real, imag]))
+        Self(EnhancedArray::new([real, imag].into()))
     }
     
     fn real(&self) -> &Self::RealT {
-        &self.0[0]
+        &self.0.as_slice()[0]
     }
     
     fn imag(&self) -> &Self::RealT {
-        &self.0[1]
+        &self.0.as_slice()[1]
     }
     
     fn into_real_imag(self) -> [Self::RealT;2] {
         self.0
-            .into()
+            .into_array()
     }
 }
 
@@ -438,7 +441,7 @@ impl<R:Clone+RealNumber> TryDiv<R> for Complex<R> {
 macro_rules! impl_const {
     ($name:ident, $const_name:ident) => {
         impl<R:$name+ConstZero> $name for Complex<R> {
-            const $const_name:Self=Self(EnhancedArray::new([R::$const_name, R::ZERO]));
+            const $const_name:Self=Self(EnhancedArray::from_array::<2>([R::$const_name, R::ZERO]));
         }
     };
 }

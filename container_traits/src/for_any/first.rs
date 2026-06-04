@@ -1,23 +1,31 @@
+use generic_array::{ArrayLength, GenericArray};
+
 use crate::EmptyContainerError;
 
 pub trait First<T> {
     fn first(&self) -> Result<&T,EmptyContainerError>;
 }
 
+macro_rules! impl_first {
+    () => {
+        fn first(&self) -> Result<&T,EmptyContainerError> {
+            self.as_slice()
+                .first()
+                .ok_or(EmptyContainerError)
+        }
+    };
+}
+
 impl<T> First<T> for Vec<T> {
-    fn first(&self) -> Result<&T,EmptyContainerError> {
-        self.as_slice()
-            .first()
-            .ok_or(EmptyContainerError)
-    }
+    impl_first!();
+}
+
+impl<T,N:ArrayLength> First<T> for GenericArray<T,N> {
+    impl_first!();
 }
 
 impl<T,const N:usize> First<T> for [T;N] {
-    fn first(&self) -> Result<&T,EmptyContainerError> {
-        self.as_slice()
-            .first()
-            .ok_or(EmptyContainerError)
-    }
+    impl_first!();
 }
 
 #[macro_export]

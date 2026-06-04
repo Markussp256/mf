@@ -1,3 +1,6 @@
+use generic_array::{GenericArray, ArrayLength};
+
+
 pub trait NumberOfDegreesOfFreedom<T> {
     fn ndofs(&self) -> usize;
 }
@@ -5,6 +8,12 @@ pub trait NumberOfDegreesOfFreedom<T> {
 impl<T> NumberOfDegreesOfFreedom<T> for Vec<T> {
     fn ndofs(&self) -> usize {
         self.len()
+    }
+}
+
+impl<T,N:ArrayLength> NumberOfDegreesOfFreedom<T> for GenericArray<T,N> {
+    fn ndofs(&self) -> usize {
+        N::to_usize()
     }
 }
 

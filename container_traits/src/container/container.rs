@@ -5,7 +5,8 @@ pub trait Container<Index>
           : ContainerView  <Index>
            +IntoIterIndexed<Index,Self::T>
            +IntoIter       <      Self::T>
-           +TryIntoElement <Index,Self::T> {}
+           +TryIntoElement <Index,Self::T> {
+}
 
 
 impl<T,Index,

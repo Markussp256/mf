@@ -2,7 +2,7 @@
 // we would need to compute determinant which requires QR which requires matrix_wrappers, hence a circular dependency
 
 use algebra::{Quaternion, quaternion::ProjectiveQuaternion};
-use algebra_traits::{Exp, TryLog, IntoConjugate};
+use algebra_traits::{Exp, TryLog, Conjugate};
 use num_traits::{Zero,One};
 
 use matrix_traits::{*,identity::for_static::Identity};
@@ -18,7 +18,7 @@ macro_rules! def_orthogonal_or_unitary {
     ($uc:ident, $tr:ident $(, $name:ident)?) => {
         paste::paste!(
             #[derive(Clone, Debug, PartialEq,
-              algebra_derive::Conjugate,
+              algebra_derive::ClosedConjugate,
               container_derive::Empty,
               container_derive::IntoInner,
               container_derive::Inner,
@@ -54,14 +54,14 @@ macro_rules! def_orthogonal_or_unitary {
                  }
              }
 
-            impl<M:MatrixViewSquare+IntoConjugate<Output=M>+Transpose<Output=M>> algebra_traits::Inv for [<Special $uc>]<M> where M::T : $tr {
+            impl<M:MatrixViewSquare+Conjugate<Output=M>+Transpose<Output=M>> algebra_traits::Inv for [<Special $uc>]<M> where M::T : $tr {
                 type Output=Self;
                 fn inv(self) -> Self {
                     self.into_conjugate_transpose()
                 }
             }
 
-            impl<M:MatrixViewSquare+IntoConjugate<Output=M>+Transpose<Output=M>> algebra_traits::TryInv for [<Special $uc>]<M> where M::T : $tr {
+            impl<M:MatrixViewSquare+Conjugate<Output=M>+Transpose<Output=M>> algebra_traits::TryInv for [<Special $uc>]<M> where M::T : $tr {
                 type Output=Self;
                 type Error=();
                 fn is_invertible(&self) -> Result<(),()> { Ok(()) }

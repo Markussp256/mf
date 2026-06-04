@@ -1,25 +1,32 @@
 use crate::EmptyContainerError;
 
+use generic_array::{ArrayLength, GenericArray};
 
 
 pub trait Last<T> {
     fn last(&self) -> Result<&T,EmptyContainerError>; 
 }
 
+macro_rules! impl_last {
+    () => {
+        fn last(&self) -> Result<&T,EmptyContainerError> {
+            self.as_slice()
+                .last()
+                .ok_or(EmptyContainerError)
+        }
+    };
+}
+
 impl<T> Last<T> for Vec<T> {
-    fn last(&self) -> Result<&T,EmptyContainerError> {
-        self.as_slice()
-            .last()
-            .ok_or(EmptyContainerError)
-    }
+    impl_last!();
+}
+
+impl<T,N:ArrayLength> Last<T> for GenericArray<T,N> {
+    impl_last!();
 }
 
 impl<T,const N:usize> Last<T> for [T;N] {
-    fn last(&self) -> Result<&T,EmptyContainerError> {
-        self.as_slice()
-            .last()
-            .ok_or(EmptyContainerError)
-    }
+    impl_last!();
 }
 
 #[macro_export]

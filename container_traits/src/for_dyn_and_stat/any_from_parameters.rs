@@ -2,12 +2,12 @@ use crate::{LenTooSmallError, LinearContainerConstructError};
 
 // equivalent as any_from_iterator but for optimization
 
-// take away takes elements form the iterator possible leaving some element in the iterator left
-// from_iter is supposed to take all elements from the iterator
+// any_take_away takes elements form the iterator possible leaving some elements in the iterator left
+// any_from_iter is supposed to take all elements from the iterator
 
 pub trait AnyFromParameters<T,E> : Sized {
-    fn any_take_away<I:Iterator<Item=T>>(oref:Option<&Self>, iter:& mut I) -> Result<Self,E>;
-    fn any_from_iter<I:IntoIterator<Item=T>>(oref:Option<&Self>, iter:I) -> Result<Self,E>;
+    fn any_take_away<I:Iterator    <Item=T>>(oref:Option<&Self>, iter:& mut I) -> Result<Self,E>;
+    fn any_from_iter<I:IntoIterator<Item=T>>(oref:Option<&Self>, iter:      I) -> Result<Self,E>;
 }
 
 // pub fn any_from_parameters_part2_impl<S:IntoParameters<T>,T,E>(s:S,mut iter:impl Iterator<Item=T>) -> Result<S,E> where LenNotEqualToRequiredLenError : Into<E> {

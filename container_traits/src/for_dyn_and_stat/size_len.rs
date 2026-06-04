@@ -1,6 +1,8 @@
 // only use this if its guaranteed that data lives in some multidimensional box
 
 use crate::EmptyVecError;
+use generic_array::{GenericArray, ArrayLength};
+
 
 pub trait Size<Index> {
     fn size(&self) -> Index;
@@ -9,6 +11,12 @@ pub trait Size<Index> {
 impl<T> Size<usize> for Vec<T> {
     fn size(&self) -> usize {
         self.len()
+    }
+}
+
+impl<T, N : ArrayLength> Size<usize> for GenericArray<T,N> {
+    fn size(&self) -> usize {
+        N::to_usize()
     }
 }
 

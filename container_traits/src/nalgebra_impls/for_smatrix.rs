@@ -1,5 +1,5 @@
 use nalgebra::{SMatrix, Scalar};
-use crate::{ContainerConstructError, FromElement, IndexOutOfBoundsError, LenTooSmallError, for_static};
+use crate::{for_dyn_and_stat, ContainerConstructError, FromElement, IndexOutOfBoundsError, LenTooSmallError, for_static};
 
 type U2=(usize,usize);
 
@@ -65,7 +65,6 @@ impl<T : Scalar, const M:usize, const N:usize> for_static::TryPutAt<usize,T> for
     }
 }
 
-
 impl<T : Scalar+Zero+One, const M:usize, const N:usize> for_static::StandardBasis for SMatrix<T,M,N> {
     fn try_standard_basis_element(index:usize) -> Result<Self,IndexOutOfBoundsError<usize>> {
         <Self as for_static::TryPutAt<usize,T>>::try_put_at(index,T::one())
@@ -73,5 +72,28 @@ impl<T : Scalar+Zero+One, const M:usize, const N:usize> for_static::StandardBasi
     
     fn standard_basis() -> impl ExactSizeIterator<Item=Self> {
         (0..M*N).map(|i|<Self as for_static::StandardBasis>::try_standard_basis_element(i).unwrap())
+    }
+}
+
+
+impl<T:Scalar+Zero, const M:usize, const N:usize> for_dyn_and_stat::TryPutAt<usize,T> for SMatrix<T,M,N> {
+    fn try_put_at(len:usize, index:usize, t:T) -> Result<Self,IndexOutOfBoundsError<usize>> {
+        Vec::<T>::try_put_at(len,index,t)
+            .map(|v|Self::from_vec(v))
+    }
+}
+
+
+impl<T:Scalar, const M:usize, const N:usize> for_dyn_and_stat::FromFn<usize,T> for SMatrix<T,M,N> {
+    fn from_fn(len:usize,f: impl Fn(usize)-> T) -> Self {
+        let iter=(0..len).map(f);
+        <Self as crate::AnyFromIterator<T,ContainerConstructError<usize>>>::any_from_iter(None, iter).unwrap()
+    }
+}
+
+impl<T:Scalar, const M:usize, const N:usize> for_dyn_and_stat::Zeros<usize,T> for SMatrix<T,M,N> {
+    fn zeros(len:usize) -> Self where T:Zero {
+        assert_eq!(len,M*N);
+        Self::zeros()
     }
 }

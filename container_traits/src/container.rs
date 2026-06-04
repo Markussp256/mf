@@ -4,13 +4,13 @@ pub mod container_construct;
 pub use container_construct::ContainerConstruct;
 
 pub mod container_view_mut;
-pub use container_view_mut::ContainerViewMut;
+pub use container_view_mut::{ContainerViewMut,ContainerViewMutable};
 
 pub mod container_try_construct;
 pub use container_try_construct::ContainerTryConstruct;
 
 pub mod container_view;
-pub use container_view::ContainerView;
+pub use container_view::{ContainerView,ContainerViewable};
 
 pub mod container;
 pub use container::Container;

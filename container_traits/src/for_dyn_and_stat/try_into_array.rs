@@ -2,6 +2,7 @@
 
 use super::NumberOfDegreesOfFreedom;
 
+
 pub trait TryIntoArray<T> : Sized + NumberOfDegreesOfFreedom<T> + IntoIterator<Item=T> {
     fn try_into_array<const N:usize>(self) -> Result<[T;N],Self> {
         if self.ndofs() == N {

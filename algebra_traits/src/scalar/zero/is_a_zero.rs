@@ -2,6 +2,8 @@
 // so we can not implement num_traits::Zero,
 // However we can test if it is a zero
 
+use generic_array::{ArrayLength,GenericArray};
+
 
 // we name it is_the_zero or is_a_zero to emphasize that there is exacly one or multiple zeros
 // this also distinguish it from num_traits::is_zero
@@ -22,7 +24,12 @@ macro_rules! impl_is_a_zero_from_iter {
 }
 impl_is_a_zero_from_iter!(Vec<T>);
 
-
+impl<T:IsAZero, N:ArrayLength> IsAZero for GenericArray<T,N> {
+    fn is_a_zero(&self) -> bool {
+        self.iter()
+            .all(<T as IsAZero>::is_a_zero)
+    }
+}
 
 impl<T:IsAZero, const N:usize> IsAZero for [T;N] {
     fn is_a_zero(&self) -> bool {

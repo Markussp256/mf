@@ -1,3 +1,6 @@
+use generic_array::{GenericArray, ArrayLength};
+
+
 pub trait FromFn<Index,T> : Sized {
     fn from_fn(size:Index, f:impl Fn(Index) -> T) -> Self;
 }
@@ -5,6 +8,13 @@ pub trait FromFn<Index,T> : Sized {
 impl<T> FromFn<usize,T> for Vec<T> {
     fn from_fn(len:usize, f:impl Fn(usize) -> T) -> Self {
         (0..len).map(f).collect()
+    }
+}
+
+impl<T, N:ArrayLength> FromFn<usize,T> for GenericArray<T,N> {
+    fn from_fn(_:usize, f:impl Fn(usize) -> T) -> Self {
+        GenericArray::try_from_iter(
+            (0..N::to_usize()).map(f)).unwrap()
     }
 }
 

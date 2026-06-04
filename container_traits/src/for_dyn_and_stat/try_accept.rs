@@ -1,6 +1,9 @@
 
 use crate::ContainerConstructError;
 
+use generic_array::{GenericArray, ArrayLength};
+
+
 pub trait TryAccept<Index,T,Error=ContainerConstructError<Index>> : Sized {
     fn try_accept<'a>(size:Index,f:impl Fn(Index) -> &'a T) -> Result<(),Error> where T: 'a;
 }
@@ -10,6 +13,12 @@ pub trait TryAccept<Index,T,Error=ContainerConstructError<Index>> : Sized {
 
 impl<T> TryAccept<usize,T> for Vec<T> {
     fn try_accept<'a>(_:usize,_: impl Fn(usize) -> &'a T) -> Result<(),ContainerConstructError<usize>> where T:'a {
+        Ok(())
+    }
+}
+
+impl<T, N : ArrayLength> TryAccept<usize,T> for GenericArray<T,N> {
+    fn try_accept<'a>(_:usize,_:impl Fn(usize) -> &'a T) -> Result<(),ContainerConstructError<usize>> where T: 'a {
         Ok(())
     }
 }

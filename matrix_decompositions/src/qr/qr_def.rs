@@ -54,8 +54,8 @@ macro_rules! def_qr {
             where   MQ : Conjugate<Output=MQ>+Transpose<Output=MQ>+TryMatrixVectorProduct<Rhs,T=F, Output=Mid>,
                     F : Mul<Rhs::T,Output=Mid::T>,
                     RightTriangular<MR> : TrySolve<Mid, MatrixSolveError, Output=Out> {
-                let qt=self.q.conjugate_transpose();
-                let qtr=qt.try_matrix_vector_product(rhs).ok()?;
+                let qt=self.q.into_conjugate_transpose();
+                let qtr=qt.try_into_matrix_vector_product(rhs).ok()?;
                 self.r.try_solve(qtr).ok()
             }
         }
@@ -86,7 +86,7 @@ macro_rules! def_qr {
                 let mid=
                     self.q
                         .into_conjugate_transpose()
-                        .try_matrix_vector_product(&rhs).unwrap();
+                        .try_into_matrix_vector_product(&rhs).unwrap();
                 self.r
                     .try_solve(mid)
             }

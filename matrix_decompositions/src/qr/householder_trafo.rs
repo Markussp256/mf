@@ -1,5 +1,5 @@
 use algebra::unit_vector::Unit;
-use container_traits::{Get, IndexOutOfBoundsError, Inner, IntoInner, IntoIter, IntoIterIndexed, IsEmpty, ItemT, Iter, IterIndexed, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
+use container_traits::{Get, IndexOutOfBoundsError, IntoInner, IntoIter, IntoIterIndexed, IsEmpty, ItemT, Iter, IterIndexed, Map, NumberOfDegreesOfFreedom, OCTSize, Size, TryIntoElement};
 use algebra_traits::*;
 use std::ops::Mul;
 use matrix_wrappers::{Hermitian, Symmetric, orthogonality::*};
@@ -39,7 +39,7 @@ impl<Col : Clone
           +ColVectorView<T=F>,
       F  : Clone+Scalar> HouseholderTrafoGeneric<Col> {
     pub fn try_froma2b(a:Unit<Col>, b:Unit<Col>) -> Option<Self> {
-        let sc_prod=a.clone().try_scalar_product(b.clone())?;
+        let sc_prod=a.clone().try_scalar_product(&b)?;
         let fac=-sc_prod.try_normalize().map(|r|r.1).unwrap_or(F::one());
         b.into_inner()
          .try_div(fac).ok()?
@@ -257,12 +257,12 @@ impl<F : Scalar+Mul<V,Output=V>,
      ColV : Clone+ColVector<T=V>+ClosedTrySub> TryMatrixVectorProduct<ColV> for HouseholderTrafoGeneric<ColF>
     where Self : Matrix {
     type Output=ColV;
-    fn try_matrix_vector_product(&self, rhs:&ColV) -> Result<ColV,VectorConstructError> {
+    fn try_into_matrix_vector_product(self, rhs:&ColV) -> Result<ColV,VectorConstructError> {
         MatrixCanNotBeMultipliedWithVectorError::try_new(self.n(), rhs.len())?;
-        let col_f:&ColF=self.u.inner();
+        let col_f:ColF=self.u.into_inner();
         let sp= V::any_linear_combination(col_f.conjugate_transpose(),rhs.clone()).unwrap();
         let fac=sp.muli(2);
-        Ok(rhs.clone().try_sub(col_f.clone().map(|f:F|f*fac.clone())).ok().unwrap())
+        Ok(rhs.clone().try_sub(col_f.map(|f:F|f*fac.clone())).ok().unwrap())
     }
 }
 
@@ -323,6 +323,7 @@ where SVector<F,2> : Norm<NormT=F::RealType> {
 #[test]
 fn test_froma2b_complex() {
     use algebra::complex::c64;
+    use container_traits::Inner;
     use matrix_traits::MatrixVectorProduct;
     let ex=Unit::<SVector::<c64,2>>::ex();
     let onedivsqrt2=1.0/2_f64.sqrt();

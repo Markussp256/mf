@@ -12,6 +12,11 @@ pub trait ContainerView<Index>
            +Iter           <      Self::T>
            +ItemT {}
 
+pub trait ContainerViewable<Index> : crate::Container<Index> {
+    type Viewer<'a> where Self : 'a;
+    fn as_view<'a>(&'a self) -> Self::Viewer<'a>;
+}
+
 
 impl<T,Index,
      C : Sized

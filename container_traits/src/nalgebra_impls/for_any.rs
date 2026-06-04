@@ -1,5 +1,5 @@
-use crate::container::index_iterator::{column_major_index_iterator,row_major_index_iterator};
-use nalgebra::{Dim, IsContiguous, Matrix, RawStorage, RawStorageMut, Scalar};
+use crate::{container::index_iterator::{column_major_index_iterator,row_major_index_iterator}, container_view::ContainerViewable, container_view_mut::ContainerViewMutable};
+use nalgebra::{DefaultAllocator, Dim, IsContiguous, Matrix, RawStorage, RawStorageMut, Scalar, allocator::Allocator};
 
 
 use crate::*;
@@ -92,7 +92,7 @@ impl<T : Scalar,
      R : Dim,
      C : Dim,
      S : ChangeT<T2>> ChangeT<T2> for Matrix<T,R,C,S> {
-    type Output = Matrix<T2,R,C,<S as ChangeT<T2>>::Output>;
+    type Output<'a> = Matrix<T2,R,C,<S as ChangeT<T2>>::Output<'a>>;
 }
 
 
@@ -339,5 +339,64 @@ impl<T : Scalar,
     fn try_into_element(self,index:U2) -> Result<T,IndexOutOfBoundsError<U2>> {
         IndexOutOfBoundsError::try_new(&self.size(),&index)?;
         Ok(self[index].clone())
+    }
+}
+
+
+impl<T, R, C> ContainerViewable<U2> for nalgebra::OMatrix<T, R, C>
+where
+    T: Scalar,
+    R: DimExtension,
+    C: DimExtension,
+    DefaultAllocator: Allocator<R, C>,
+{
+    type Viewer<'a> =
+        nalgebra::Matrix<
+            T,
+            R,
+            C,
+            nalgebra::ViewStorage<
+                'a,
+                T,
+                R,
+                C,
+                <<DefaultAllocator as Allocator<R, C>>::Buffer<T>
+                    as nalgebra::RawStorage<T, R, C>>::RStride,
+                <<DefaultAllocator as Allocator<R, C>>::Buffer<T>
+                    as nalgebra::RawStorage<T, R, C>>::CStride,
+            >
+        >;
+
+    fn as_view<'a>(&'a self) -> Self::Viewer<'a> {
+        self.as_view()
+    }
+}
+
+impl<T, R, C> ContainerViewMutable<U2> for nalgebra::OMatrix<T, R, C>
+where
+    T: Scalar,
+    R: DimExtension,
+    C: DimExtension,
+    DefaultAllocator: Allocator<R, C>,
+{
+    type ViewMuter<'a> =
+        nalgebra::Matrix<
+            T,
+            R,
+            C,
+            nalgebra::ViewStorageMut<
+                'a,
+                T,
+                R,
+                C,
+                <<DefaultAllocator as Allocator<R, C>>::Buffer<T>
+                    as nalgebra::RawStorage<T, R, C>>::RStride,
+                <<DefaultAllocator as Allocator<R, C>>::Buffer<T>
+                    as nalgebra::RawStorage<T, R, C>>::CStride,
+            >
+        >;
+
+    fn as_view_mut<'a>(&'a mut self) -> Self::ViewMuter<'a> {
+        self.as_view_mut()
     }
 }

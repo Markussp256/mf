@@ -1,5 +1,9 @@
 use std::ops::{Sub, Mul};
 
+use generic_array::{GenericArray,typenum::U3};
+
+use container_traits::for_static::FromFn;
+
 pub trait Crossproduct<Rhs=Self> {
     type Output;
     // required
@@ -24,5 +28,19 @@ impl<T: Clone+Mul<T2, Output=T3>,
                 self[i1].clone()*rhs[i2].clone()
                -self[i2].clone()*rhs[i1].clone()})
         }
+    }
 
+
+impl<T: Clone+Mul<T2, Output=T3>,
+     T2:Clone,
+     T3:Sub<Output=TR>,
+     TR> Crossproduct<GenericArray<T2,U3>> for GenericArray<T,U3> {
+        type Output=GenericArray<TR,U3>;
+        fn cross_product(&self, rhs:&GenericArray<T2,U3>) -> Self::Output {
+            GenericArray::from_fn(|i|{
+                let i1=(i+1) % 3;
+                let i2=(i+2) % 3;
+                self[i1].clone()*rhs[i2].clone()
+               -self[i2].clone()*rhs[i1].clone()})
+        }
     }

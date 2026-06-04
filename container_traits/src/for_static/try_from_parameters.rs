@@ -3,6 +3,7 @@
 // the instance and returns the iterator to possible construct more stuff.
 
 use crate::{LenTooSmallError, ContainerConstructError};
+use generic_array::{ArrayLength,GenericArray};
 
 pub trait TryFromParameters<T,E> : Sized {
     fn try_take_away<I:    Iterator<Item=T>>(iter:& mut I) -> Result<Self,E>;
@@ -35,6 +36,14 @@ impl<T, const N:usize> TryFromParameters<T, ContainerConstructError<usize>> for 
     fn try_take_away<I:Iterator<Item=T>>(iter:& mut I) -> Result<Self,ContainerConstructError<usize>> {
         utils::iter::next_chunk(iter)
             .map_err(|e:Vec<T>|LenTooSmallError::new(N, e.len()).into())
+    }
+    try_from_parameters_impl!(T);
+}
+
+impl<T, N:ArrayLength> TryFromParameters<T, ContainerConstructError<usize>> for GenericArray<T,N> {
+    fn try_take_away<I:Iterator<Item=T>>(iter:& mut I) -> Result<Self,ContainerConstructError<usize>> {
+        utils::iter::next_chunk_gen_arr(iter)
+            .map_err(|e:Vec<T>|LenTooSmallError::new(N::to_usize(), e.len()).into())
     }
     try_from_parameters_impl!(T);
 }

@@ -1,4 +1,4 @@
-use algebra_traits::{RealNumber, ComplexNumber, IntoConjugate};
+use algebra_traits::{RealNumber, ComplexNumber, Conjugate};
 use container_traits::{IntoInner, LensNotEqualError, NewUnchecked, TryAccept, ItemT};
 use matrix_traits::{AlgebraMatrix, MatrixConstructError, MatrixSquareTryConstruct, MatrixViewSquare, Transpose, TryPopCol};
 
@@ -10,7 +10,7 @@ macro_rules! def_orthogonal_or_unitary {
     ($uc:ident, $tr:ident) => {
         paste::paste!(
        #[derive(Clone, Debug, PartialEq,
-         algebra_derive::Conjugate,
+         algebra_derive::ClosedConjugate,
          algebra_derive::ClosedNeg,
          container_derive::IntoInner,
          container_derive::Inner,
@@ -33,14 +33,14 @@ macro_rules! def_orthogonal_or_unitary {
             }
         }
 
-        impl<M:MatrixViewSquare+IntoConjugate<Output=M>+Transpose<Output=M>> algebra_traits::Inv for $uc<M> where M::T : $tr {
+        impl<M:MatrixViewSquare+Conjugate<Output=M>+Transpose<Output=M>> algebra_traits::Inv for $uc<M> where M::T : $tr {
             type Output=Self;
             fn inv(self) -> Self {
                 self.into_conjugate_transpose()
             }
         }
 
-        impl<M:MatrixViewSquare+IntoConjugate<Output=M>+Transpose<Output=M>> algebra_traits::TryInv for $uc<M> where M::T : $tr {
+        impl<M:MatrixViewSquare+Conjugate<Output=M>+Transpose<Output=M>> algebra_traits::TryInv for $uc<M> where M::T : $tr {
             type Output=Self;
             type Error=();
             fn is_invertible(&self) -> Result<(),()> { Ok(()) }
@@ -115,7 +115,7 @@ def_orthogonal_or_unitary!(Unitary,       ComplexNumber);
         }
 
         impl<M:MatrixViewSquare
-              +IntoConjugate<Output=M>
+              +Conjugate<Output=M>
               +Transpose<Output=M>> algebra_traits::Inv for Orthogonal<M> where M::T : RealNumber {
             type Output=Self;
             fn inv(self) -> Self {
@@ -123,7 +123,7 @@ def_orthogonal_or_unitary!(Unitary,       ComplexNumber);
             }
         }
 
-        impl<M:MatrixViewSquare+IntoConjugate<Output=M>+Transpose<Output=M>> algebra_traits::TryInv for Orthogonal<M> where M::T : RealNumber {
+        impl<M:MatrixViewSquare+Conjugate<Output=M>+Transpose<Output=M>> algebra_traits::TryInv for Orthogonal<M> where M::T : RealNumber {
             type Output=Self;
             type Error=();
             fn is_invertible(&self) -> Result<(),()> { Ok(()) }

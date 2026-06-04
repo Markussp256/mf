@@ -42,22 +42,23 @@ mod tes_with_nalgebra {
     #[test]
     fn test_qr_smatrix() {
         let m: nalgebra::SMatrix<f64, 3,2>=nalgebra::matrix![1.0,2.0;3.0,4.0;5.0,6.0];
-        check_qr(m.clone());
+        check_qr(&m);
         let m_dyn:DMatrix<f64>=matrix_traits::IntoDynMatrix::into_dyn_matrix(m);
-        check_qr(m_dyn);
+        check_qr(&m_dyn);
     }
 
 
     #[test]
     fn test_new_qr() {
+        use super::QRTrait;
         use algebra_traits::TryMaxNormOfEntries;
         use matrix_traits::TryMatrixMatrixProduct;
         let m:SMatrix<f64,3,2>=nalgebra::matrix![1.0, 0.0; 0.0, 1.0; -1.0, 1.0];
-        check_qr(m.clone());
-        let (q,r)=m.clone().into_qr().into_parts();
+        check_qr(&m);
+        let (q,r)=m.into_qr().into_parts();
         println!("{}",q);
         println!("{}",r);
-        let qr=q.try_matrix_matrix_product(r).unwrap();
+        let qr=q.try_matrix_matrix_product(&r).unwrap();
         //let qrs:SMatrix<f64,3,2>=qr.try_into_matrix().unwrap();
         let err:SMatrix<f64,3,2>=qr-m;
         assert!(err.try_max_norm_of_entries().unwrap() < 1e-12);

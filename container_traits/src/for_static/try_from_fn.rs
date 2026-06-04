@@ -1,5 +1,8 @@
 use crate::ContainerConstructError;
 
+use generic_array::{ArrayLength,GenericArray};
+
+
 pub trait TryFromFn<Index,T,E=ContainerConstructError<Index>> : Sized {
     fn try_from_fn(f:impl Fn(Index) -> T) -> Result<Self,E>;
 }
@@ -7,5 +10,11 @@ pub trait TryFromFn<Index,T,E=ContainerConstructError<Index>> : Sized {
 impl<T,const N:usize> TryFromFn<usize,T> for [T;N] {
     fn try_from_fn(f:impl Fn(usize) -> T) -> Result<Self,ContainerConstructError<usize>> {
         Ok(std::array::from_fn(f))
+    }
+}
+
+impl<T,N:ArrayLength> TryFromFn<usize,T> for GenericArray<T,N> {
+    fn try_from_fn(f:impl Fn(usize) -> T) -> Result<Self,ContainerConstructError<usize>> {
+        Ok(<Self as super::FromFn<usize,T>>::from_fn(f))
     }
 }

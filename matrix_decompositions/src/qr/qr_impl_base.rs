@@ -141,11 +141,11 @@ use crate::QRTrait;
 
 #[cfg(test)]
 pub fn check_qr
-    <M : Clone+QRTrait>(m:M) -> bool
+    <M : Clone+QRTrait>(m:&M) -> bool
     where M::T : Scalar+TryDiv,
           <M as QRTrait>::MQ : Matrix<T=<M::T as TryDiv>::Output>+TryMatrixMatrixProduct<<M as QRTrait>::MR,Output=M>,
           <M as QRTrait>::MR : Matrix<T=M::T> {
         let (q,r)=m.clone().into_qr().into_parts();
         let qr:M=q.try_matrix_matrix_product(&r).unwrap();
-        qr.is_close_to(&m)
+        qr.is_close_to(m)
 }

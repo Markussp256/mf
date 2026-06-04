@@ -1,4 +1,5 @@
 use crate::{index_iterator::ContainerIndexIterator, ContainerSize, Get};
+use generic_array::{ArrayLength, GenericArray};
 
 
 pub trait Iter<T> {
@@ -20,6 +21,14 @@ impl<T> Iter<T> for Vec<T> {
 }
 
 impl<T> Iter<T> for &Vec<T> {
+    iter_impl!();
+}
+
+impl<T,N:ArrayLength> Iter<T> for GenericArray<T,N> {
+    iter_impl!();
+}
+
+impl<T,N:ArrayLength> Iter<T> for & mut GenericArray<T,N> {
     iter_impl!();
 }
 

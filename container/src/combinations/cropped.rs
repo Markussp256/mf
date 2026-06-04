@@ -35,8 +35,8 @@ impl<Index : Iter<usize>, C> IsEmpty for Cropped<Index, C> {
     }
 }
 
-impl<Index,F2,C:ChangeT<F2,Output=C2>,C2> ChangeT<F2> for Cropped<Index,C> {
-    type Output=Cropped<Index,C2>;
+impl<Index,F2,C:ChangeT<F2>> ChangeT<F2> for Cropped<Index,C> {
+    type Output<'a>=Cropped<Index,<C as ChangeT<F2>>::Output<'a>>;
 }
 
 impl<Index, T, C> Iter<T> for Cropped<Index,C> where Self : IterIndexed<Index,T> {

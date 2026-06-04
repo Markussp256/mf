@@ -1,5 +1,8 @@
 use num_traits::Zero;
 
+use generic_array::{GenericArray, ArrayLength};
+
+
 pub trait Zeros<Index,T> {
     fn zeros(size:Index) -> Self where T:Zero;
 }
@@ -9,6 +12,13 @@ impl<T> Zeros<usize,T> for Vec<T> {
         std::iter::repeat_with(||T::zero())
             .take(size)
             .collect()
+    }
+}
+
+impl<T, N:ArrayLength> Zeros<usize,T> for GenericArray<T,N> {
+    fn zeros(size:usize) -> Self where T:Zero {
+        assert_eq!(size,N::to_usize());
+        GenericArray::try_from_iter(std::iter::repeat_with(||T::zero()).take(N::to_usize())).unwrap()
     }
 }
 

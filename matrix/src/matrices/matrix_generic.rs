@@ -209,36 +209,46 @@ impl<F,
 
 impl<Row : IsEmpty,
      Col : ChangeT<Row,Output=C>,
-     C   : IsEmpty+Iter<Row>> IsEmpty for MatrixGeneric<Row,Col> {
+     C   : First<Row>> IsEmpty for MatrixGeneric<Row,Col> {
     fn is_empty(&self) -> bool {
-        self.0
-            .is_empty() ||
-        self.iter()
-            .all(Empty::is_empty)
+        if let Ok(row)=<C as First<Row>>::first(&self.0) {
+            row.is_empty()
+        } else {
+            true
+        }
     }
 }
 
 impl<F,
-     Row  : RowVectorView<T=F>,
-     Col  : ColVectorView<T=F>+ChangeT<Row,Output=C>,
-     C    : 'static+ColVectorView<T=Row>> MatrixView for MatrixGeneric<Row,Col> {
-    type RowView<'a>=Row where Self : 'a;
-    type ColView<'a>=Col where Self : 'a;
-    
+     Row  : RowVector<T=F>+ContainerViewable<usize>,
+     Col  : ColVector<T=F>+ContainerViewable<usize>+ChangeT<Row,Output=C>,
+     C    : 'static+ColVectorView<T=Row>> MatrixView for MatrixGeneric<Row,Col>
+     where for<'a> <Row as ContainerViewable<usize>>::Viewer::<'a> : RowVectorView<T=F>+Clone,
+           for<'a> <Col as ContainerViewable<usize>>::Viewer::<'a> : ColVectorView<T=F>+AnyFromIterator<&'a F,VectorConstructError>
+    {
+    type RowView<'a>=<Row as ContainerViewable<usize>>::Viewer::<'a> where Self : 'a;
+    type ColView<'a>=<Col as ContainerViewable<usize>>::Viewer::<'a> where Self : 'a;
+
     fn try_row_view<'a>(&'a self, i:usize) -> Result<Self::RowView<'a>,IndexOutOfBoundsError<usize>> {
         self.0
             .get(i)
+            .cloned()
     }
-    
+
     fn try_col_view<'a>(&'a self, j:usize) -> Result<Self::ColView<'a>,IndexOutOfBoundsError<usize>> {
-        todo!()
+        IndexOutOfBoundsError::<usize>::try_new(&self.ncols(),&j)?;
+        Ok(Self::ColView::<'a>::any_from_iter(
+            None,
+            self.0
+                     .iter()
+                     .map(|r|r.get(j).unwrap())).unwrap())
     }
 }
 
 impl<F,
      Row  : RowVectorTryConstruct<T=F>,
      Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>,
-     C    : 'static+ColVectorTryConstruct<T=Row>> Matrix for MatrixGeneric<Row,Col> {
+     C    : 'static+ColVectorTryConstruct<T=Row>> Matrix for MatrixGeneric<Row,Col> where Self : MatrixView<T=F> {
     type Row=Row;
     type Col=Col;
 
@@ -263,7 +273,8 @@ impl<F,
 impl<F    : Clone+Scalar,
      Row  : RowVectorTryConstruct<T=F>,
      Col  : ColVectorTryConstruct<T=F>+ChangeT<Row,Output=C>+TryScalarproduct<TryScProdT=F>,
-     C    : 'static+ColVectorTryConstruct<T=Row>+Conjugate<Output=C>> AlgebraMatrix for MatrixGeneric<Row,Col> {
+     C    : 'static+ColVectorTryConstruct<T=Row>+Conjugate<Output=C>> AlgebraMatrix for MatrixGeneric<Row,Col>
+     where Self : Matrix<T=F> {
     algebra_matrix_impl!();
 }
 
@@ -506,8 +517,8 @@ impl<Row : TryVectorVectorProduct<Rhs,Output=F3>,
      Col : ColVector<T=Row::T>+ChangeT<Row>+ChangeT<F3,Output=Out>,
      Out : ColVectorTryConstruct<T=F3>> TryMatrixVectorProduct<Rhs> for MatrixGeneric<Row,Col> where Self : Matrix<Row=Row,Col=Col> { // where Self : Matrix<Row=Row,Col=Col>
         type Output=Out;
-        fn try_matrix_vector_product(&self, rhs:&Rhs) -> Result<Out,VectorConstructError> {
-            try_matrix_vector_product_impl(self,rhs)
+        fn try_into_matrix_vector_product(self, rhs:&Rhs) -> Result<Out,VectorConstructError> {
+            try_into_matrix_vector_product_impl(self,rhs)
         }
 }
 
@@ -527,35 +538,6 @@ impl<Row1 : RowVector<T=F1>,
             try_matrix_matrix_product_impl(self,rhs)
         }
 }
-
-impl<Row : TryVectorVectorProduct<Rhs,Output=F3>,
-     F3  : Zero,
-     Rhs : ColVector+Clone,
-     Col : ColVector<T=Row::T>+ChangeT<Row>+ChangeT<F3,Output=Out>,
-     Out : ColVectorTryConstruct<T=F3>> TryIntoMatrixVectorProduct<Rhs> for MatrixGeneric<Row,Col> where Self : Matrix<Row=Row,Col=Col> { // where Self : Matrix<Row=Row,Col=Col>
-        type Output=Out;
-        fn try_into_matrix_vector_product(self, rhs:&Rhs) -> Result<Out,VectorConstructError> {
-            try_into_matrix_vector_product_impl(self,rhs)
-        }
-}
-
-impl<Row1 : RowVector<T=F1>,
-     Col1 : ColVector<T=F1>+ChangeT<F3,Output=Col3>+ChangeT<Row1>,
-     F1   : Mul<F2,Output=F3>, F2, F3:Zero,
-     Row2 : RowVector<T=F2>+ChangeT<F3,Output=Row3>,
-     Col2 : ColVector<T=F2>+ChangeT<Row2>,
-     Row3 : RowVector<T=F3>,
-     Col3 : ColVector<T=F3>+ChangeT<Row3>> TryIntoMatrixMatrixProduct<MatrixGeneric<Row2,Col2>> for MatrixGeneric<Row1,Col1>
-     where 
-     MatrixGeneric<Row1,Col1> : Matrix<T=F1,Row=Row1,Col=Col1>+TryMatrixVectorProduct<Col2,Output=Col3>+Clone,
-     MatrixGeneric<Row2,Col2> : Matrix<T=F2,Row=Row2,Col=Col2>,
-     MatrixGeneric<Row3,Col3> : MatrixTryConstruct<T=F3,Row=Row3,Col=Col3> {
-        type Output=MatrixGeneric<Row3,Col3>;
-        fn try_into_matrix_matrix_product(self, rhs:&MatrixGeneric<Row2,Col2>) -> Result<MatrixGeneric<Row3,Col3>,MatrixConstructError> {
-            try_into_matrix_matrix_product_impl(self,rhs)
-        }
-}
-
 
 
 impl<F   : RealNumber,
