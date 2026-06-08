@@ -13,7 +13,7 @@ pub trait ContainerView<Index>
            +ItemT {}
 
 pub trait ContainerViewable<Index> : crate::Container<Index> {
-    type Viewer<'a> where Self : 'a;
+    type Viewer<'a> where Self : 'a, Self::T : 'a;
     fn as_view<'a>(&'a self) -> Self::Viewer<'a>;
 }
 

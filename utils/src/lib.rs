@@ -30,6 +30,9 @@ pub mod iter;
 pub mod kronecker_delta;
 pub use kronecker_delta::kron_delta;
 
+pub mod most_frequent;
+pub use most_frequent::{most_frequent,most_frequent_index};
+
 pub mod number_theory;
 pub use number_theory::get_divisors;
 

@@ -95,7 +95,6 @@ impl<T : Scalar,
     type Output<'a> = Matrix<T2,R,C,<S as ChangeT<T2>>::Output<'a>>;
 }
 
-
 impl<T : Scalar,
      R : Dim,
      C : Dim,

@@ -22,6 +22,10 @@ pub use oct_size_len::{OCTLen,OCTSize};
 pub mod rebind;
 pub use rebind::Rebind;
 
+pub mod rebind_nalgebra_scalar;
+pub use rebind_nalgebra_scalar::RebindNAlgebraScalar;
+
+
 pub mod size_len_from_oref;
 pub use size_len_from_oref::{LenFromORef,SizeFromORef};
 

@@ -15,6 +15,6 @@ impl<T,Index,
         +GetMut        <Index,T>> ContainerViewMut<Index> for C {}
 
 pub trait ContainerViewMutable<Index> : crate::Container<Index> {
-    type ViewMuter<'a> where Self : 'a;
+    type ViewMuter<'a> where Self : 'a, Self::T : 'a;
     fn as_view_mut<'a>(&'a mut self) -> Self::ViewMuter<'a>;
 }

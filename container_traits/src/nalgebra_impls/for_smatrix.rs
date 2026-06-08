@@ -53,7 +53,6 @@ impl<T : Scalar,
             .map_err(|e|LenTooSmallError::new(M*N, e.len()).into())
     }
 
-    crate::try_from_iter_impl!(T, ContainerConstructError<U2>);
 }
 
 impl<T : Scalar, const M:usize, const N:usize> for_static::TryPutAt<usize,T> for SMatrix<T,M,N> {

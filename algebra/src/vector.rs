@@ -207,44 +207,39 @@ macro_rules! gen_vector_and_view {
             $crate::gen_vector_view!([<$name ViewGeneric>],[<$name ViewDyn>],[<$name View>]);
             $crate::gen_vector_view_mut!([<$name ViewMutGeneric>],[<$name ViewMutDyn>],[<$name ViewMut>]);
 
-            impl<T,CS:container_traits::ItemT<T=T>> container_traits::ContainerViewable<usize> for [<$name Generic>]<CS>
-                where Self : container_traits::LinearContainer<T=T>
-                            +container_traits::Rebind<container_traits::LinearContainerConstructError> {
-                type Viewer<'a>=[<$name ViewGeneric>]<<CS as container_traits::Rebind<container_traits::LinearContainerConstructError>>::With<&'a T>>;
+            impl<T,CS:container_traits::LinearContainer<T=T>
+                     +container_traits::Rebind<container_traits::LinearContainerConstructError>>
+                      container_traits::ContainerViewable<usize> for [<$name Generic>]<CS> {
+                type Viewer<'a>=[<$name ViewGeneric>]<<CS as container_traits::Rebind<container_traits::LinearContainerConstructError>>::With<&'a T>> where CS : 'a, T:'a;
                 fn as_view<'a>(&'a self) -> Self::Viewer<'a> {
-                    <Self as container_traits::Rebind<container_traits::LinearContainerConstructError>>::any_from_iter(
+                    <Self::Viewer<'a> as container_traits::AnyFromIterator<&'a T,container_traits::LinearContainerConstructError>>::any_from_iter(
                         None,
                         <Self as container_traits::Iter<T>>::iter(self)
                     ).unwrap()
                 }
             }
 
-            impl<T  : 'static,
-                 CS : 'static
-                      +container_traits::LinearContainer<T=T>
+            impl<T,
+                 CS : container_traits::LinearContainer<T=T>
                       +container_traits::LinearContainerViewMut<T=T> 
                       +container_traits::Rebind<container_traits::LinearContainerConstructError>>
                     container_traits::ContainerViewMutable<usize> for [<$name Generic>]<CS> {
-                type ViewMuter<'a>=[<$name ViewGeneric>]<<CS as container_traits::Rebind<container_traits::LinearContainerConstructError>>::With<&'a mut T>>;
+                type ViewMuter<'a>=[<$name ViewGeneric>]<<CS as container_traits::Rebind<container_traits::LinearContainerConstructError>>::With<&'a mut T>> where CS: 'a, T:'a;
                 fn as_view_mut<'a>(&'a mut self) -> Self::ViewMuter<'a> {
-                    <Self as container_traits::Rebind<container_traits::LinearContainerConstructError>>::any_from_iter(
+                    <Self::ViewMuter<'a> as container_traits::AnyFromIterator<&'a mut T,container_traits::LinearContainerConstructError>>::any_from_iter(
                         None,
                         <Self as container_traits::IterMut<T>>::iter_mut(self)
                     ).unwrap()
                 }
             }
-
         );
     }
 }
 
 gen_vector_and_view!(Vector);
 
-// #[cfg(test)]
-// use container_traits::ContainerViewable;
-
 fn test_is_viewer<'a,N:generic_array::ArrayLength>(v:&'a Vector<f64,N>) -> VectorView<'a,f64,N> {
-    <Vector<f64,N> as container_traits::ContainerViewable<usize>>::as_view(& v)
+    <Vector<f64,N> as container_traits::ContainerViewable<usize>>::as_view(v)
 }
 
 fn test<'a>(a:Vector3<f64>) -> impl Sized+container_traits::ContainerViewable<usize,Viewer<'a>=VectorView3<'a,f64>> {

@@ -1,4 +1,4 @@
-use crate::{IntoIterIndexed, container::{Container, ContainerIndex, ContainerTryConstruct, ContainerConstructError}};
+use crate::{IntoIterIndexed, LenNotEqualToRequiredLenError, container::{Container, ContainerConstructError, ContainerIndex, ContainerTryConstruct}};
 
 use crate::error::SizeTooSmallError;
 
@@ -8,7 +8,7 @@ pub trait TryFromSuperContainer<Index,C2:Container<Index>,E=ContainerConstructEr
 
 impl<Index:ContainerIndex,
      T,
-     E  : From<SizeTooSmallError<Index>>,
+     E  : From<SizeTooSmallError<Index>>+From<LenNotEqualToRequiredLenError>,
      C  : ContainerTryConstruct<Index, E, T=T>,
      C2 : Container<Index,T=T>> TryFromSuperContainer<Index,C2,E> for C {
     fn try_from_super(c2:C2, start:Index, size:Index) -> Result<Self, E> {
@@ -17,7 +17,7 @@ impl<Index:ContainerIndex,
         SizeTooSmallError::try_new_ref(&required_size, &actual_size)?;
         let f=|ind:Index|c2.get(start.clone().elem_wise_add(ind)).unwrap();
         Self::try_accept(size.clone(),f)?;
-        Self::any_from_iter(None,
+        C::any_from_iter(None,
             <C2 as IntoIterIndexed<Index,T>>::into_iter_indexed(c2)
             //c2.into_iterator()
               .filter(|(ind,_)|start.is_elem_wise_smaller_eq(ind) &&

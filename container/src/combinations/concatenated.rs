@@ -1,3 +1,4 @@
+use container_traits::rebind_nalgebra_scalar::NAlgebraScalar;
 use container_traits::*;
 
 use container_traits::LinearContainerConstructError as LCCE;
@@ -316,8 +317,6 @@ impl<T,
         let b=B::any_take_away(oref.map(|r|&r.1),iter)?;
         Ok(Self::new(a,b))
     }
-
-    any_from_iter_impl!(T);
 }
 
 impl<T,
@@ -348,3 +347,19 @@ impl<T,A,B:Push<T>> Push<T> for Concatenated<A,B> {
     }
 }
 
+impl<T,
+     A : LinearContainer<T=T>+RebindNAlgebraScalar<LCCE>,
+     B : LinearContainer<T=T>+RebindNAlgebraScalar<LCCE>> RebindNAlgebraScalar<LCCE> for Concatenated<A,B> {
+    type WithNAlgebraScalar<T2> = Concatenated<
+        <A as RebindNAlgebraScalar<LCCE>>::WithNAlgebraScalar<T2>,
+        <B as RebindNAlgebraScalar<LCCE>>::WithNAlgebraScalar<T2>>
+        where T2 : NAlgebraScalar;
+}
+
+impl<T,
+     A : LinearContainer<T=T>+Rebind<LCCE>,
+     B : LinearContainer<T=T>+Rebind<LCCE>> Rebind<LCCE> for Concatenated<A,B> {
+    type With<T2> = Concatenated<
+        <A as Rebind<LCCE>>::With<T2>,
+        <B as Rebind<LCCE>>::With<T2>>;
+}

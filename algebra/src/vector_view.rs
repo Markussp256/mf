@@ -4,6 +4,7 @@ macro_rules! gen_vector_view {
     ($gen:ident, $dyn:ident, $stat:ident) => {
         #[derive(Clone, Debug, PartialEq,
             container_derive::ContainerView,
+            container_derive::TryFromIterator,
             algebra_derive::Norm,
             derive_more::AsRef,
             derive_more::From,

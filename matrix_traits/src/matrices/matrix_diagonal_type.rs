@@ -4,10 +4,9 @@ use num_traits::{Zero,One};
 
 use algebra_traits::{Det, DivError, FloatOpError, MulError};
 use container_traits::{index_iterator::ContainerIndexIterator, *};
-use utils::iter::{InterLeave, IntoExactSizeIterator, RepeatN};
-
+use container_traits::LinearContainerConstructError as LCCE;
+use utils::iter::{InterLeave, IntoExactSizeIterator, next_chunk_dyn};
 use crate::*;
-
 type U2=(usize,usize);
 
 #[derive(Clone,
@@ -16,57 +15,59 @@ type U2=(usize,usize);
 )]
 pub struct DiagonalMatrixGeneric<Diag:ItemT> {
    diag:Diag, // diagonal elements written in a Diag vector
-   zero:Diag::T
+   o_zero:Option<Diag::T>, // none if dim <= 1
 }
 
 
+impl<Diag : ItemT> DiagonalMatrixGeneric<Diag> {
 
-
-impl<Diag:ItemT+ChangeT<T2,Output=Diag2>,
-     T2,
-     Diag2:ItemT> ChangeT<T2> for DiagonalMatrixGeneric<Diag> {
-   type Output = DiagonalMatrixGeneric<Diag2>;
-}
-
-
-impl<Diag : ItemT<T=F>, F:Zero> DiagonalMatrixGeneric<Diag> {
-   pub fn new(diag:impl Into<Diag>) -> Self {
-      Self{diag:diag.into(),zero:F::zero()}
+   pub fn new(diag:impl Into<Diag>, o_zero:Option<Diag::T>) -> Self {
+      Self{diag:diag.into(),o_zero}
    }
+
+   pub fn new_with_zero(diag:impl Into<Diag>) -> Self where Diag::T : Zero {
+      Self::new(diag,Some(Diag::T::zero()))
+   }
+
 
    pub fn n(&self) -> usize where Diag : Len {
       self.diag
           .len()
    }
 
-   pub fn diagonal<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a F>
-      where Diag : Iter<F>,
-               F : 'static {
+   pub fn zero(&self) -> &Diag::T {
+      self.o_zero
+          .as_ref()
+          .expect("no zero value available, this function is not supposed to be called when n <= 1 because then there are no off diagonal entries")
+   }
+
+   pub fn diagonal<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a Diag::T>
+      where Diag    : Iter<Diag::T> {
       self.diag
           .iter()
    }
 
-   pub fn into_diagonal(self) -> impl ExactSizeIterator<Item=F>
-   where Diag : IntoIter<F> {
+   pub fn into_diagonal(self) -> impl ExactSizeIterator<Item=Diag::T>
+   where Diag : IntoIter<Diag::T> {
       self.diag
           .into_iterator()
    }
 
-   pub fn map_diagonal<Diag2 : ItemT>(self, f:impl Fn(F) -> Diag2::T) -> DiagonalMatrixGeneric<Diag2>
-   where Diag : Map<F,Diag2::T,Output=Diag2>, Diag2::T : Zero {
-      DiagonalMatrixGeneric::new(self.diag.map(f))
+   pub fn map_diagonal<Diag2 : ItemT>(self, f:impl Fn(Diag::T) -> Diag2::T, o_zero:Option<Diag2::T>) -> DiagonalMatrixGeneric<Diag2>
+   where Diag : Map<Diag::T,Diag2::T,Output=Diag2>, Diag2::T : Zero {
+      DiagonalMatrixGeneric::new(self.diag.map(f), o_zero)
    }
 }
 
 impl<F,Diag:ItemT<T=F>+Zeros<usize,F>> Zeros<usize,F> for DiagonalMatrixGeneric<Diag> {
     fn zeros(size:usize) -> Self where F:Zero {
-        DiagonalMatrixGeneric::<Diag>::new(Diag::zeros(size))
+        DiagonalMatrixGeneric::<Diag>::new_with_zero(Diag::zeros(size))
     }
 }
 
 impl<T:Clone+Zero,Diag:ItemT<T=T>+FromElement<usize,T>> FromElement<usize,T> for DiagonalMatrixGeneric<Diag> {
    fn from_element(size:usize,t:T) -> Self {
-       Self::new(Diag::from_element(size, t))
+       Self::new_with_zero(Diag::from_element(size, t))
    }
 }
 
@@ -86,7 +87,7 @@ macro_rules! impl_try {
          }
          fn [<try_ $fn>](self,rhs:Self) -> Result<Self::Output, [<$tr Error>]> {
             self.[<is_ $fn able_by>](&rhs)?;
-            Ok(Self::new(
+            Ok(Self::new_with_zero(
                   Diag::try_from_vec(
                   self.diag
                       .into_iterator()
@@ -120,15 +121,15 @@ impl<Diag:ItemT<T=F>+Len+Get<usize,F>,F:Zero> Get<U2,F> for DiagonalMatrixGeneri
             .get(i)
             .unwrap()
       } else {
-         &self.zero
+         self.zero()
       })
    }
 }
 
 impl<Diag:Iter<F>+Len+ItemT<T=F>,F:Zero> Iter<F> for DiagonalMatrixGeneric<Diag> {
     fn iter<'a>(&'a self) -> impl ExactSizeIterator<Item=&'a F> where F:'a {
-        let sep=RepeatN::new(&self.zero, self.n()+1);
-        self.diag.iter().inter_leave(sep)
+         let sep=std::iter::repeat_with(||self.zero()).take(self.n()+1);
+         self.diag.iter().inter_leave(sep)
     }
 }
 
@@ -168,7 +169,7 @@ impl<Diag:TryIntoElement<usize,F>+Len+ItemT<T=F>,F:Zero> TryIntoElement<U2,F> fo
          Ok(self.diag
             .try_into_element(index.0).unwrap())
       } else {
-         Ok(self.zero)
+         Ok(F::zero())
       }
    }
 }
@@ -201,6 +202,52 @@ impl<Diag:Len+ItemT<T=F>,F:Zero> NumberOfDegreesOfFreedom<F> for DiagonalMatrixG
    }
 }
 
+impl<T : PartialEq, Diag:ItemT<T=T>+Len+AnyFromIterator<T,LCCE>> AnyFromIterator<T,MatrixConstructError> for DiagonalMatrixGeneric<Diag> {
+   fn any_take_away<I:    Iterator<Item=T>>(oref:Option<&Self>, iter:& mut I) -> Result<Self,MatrixConstructError> {
+      let (v,n,oref)=match oref {
+         Some(r) => {
+            let n=r.n();
+            (next_chunk_dyn(iter, n*n)
+               .map_err(|e|LenNotEqualToRequiredLenError::new(n*n,e.len()))?,
+            n,
+            Some(&r.diag))
+         },
+         None => {
+            let vs: Vec<T>=iter.collect();
+            let n = vs.len().isqrt();
+            LenNotEqualToRequiredLenError::try_new(n*n,vs.len())?;
+            (vs,n,None)
+         }
+      };
+      let mut diag=Vec::new();
+      let mut o_zero:Option<T>=None;
+      for (i,vi) in v.into_iter().enumerate() {
+         if i % n+1 == 0 {
+            diag.push(vi);
+         } else {
+            match &o_zero {
+               None => o_zero=Some(vi),
+               Some(zero) => {
+                  if &vi != zero {
+                     return Err(MatrixConstructError::DataDoesNotSatisfyRequiredPropertiesOfMatrixType);
+                  }
+               }
+            }
+         }
+      }
+      Diag::any_from_iter(oref, diag.into_iter())
+         .map(|diag|Self::new(diag,o_zero))
+         .map_err(|e|e.into())
+   }
+}
+
+impl<T:PartialEq, Diag:ItemT<T=T>+Len+AnyFromIterator<T,LCCE>> TryFromVec<T,MatrixConstructError> for DiagonalMatrixGeneric<Diag> {
+   fn try_from_vec(v:Vec<T>) -> Result<Self,MatrixConstructError> {
+       <Self as AnyFromIterator<T,MatrixConstructError>>::any_from_iter(None,v.into_iter())
+   }
+}
+
+
 impl<F    : Clone+Zero+'static,
      Diag : LinearContainerView<T=F>> MatrixView for DiagonalMatrixGeneric<Diag> {
    type RowView<'a>=SparseRowView<'a,F> where Self : 'a;
@@ -217,7 +264,7 @@ impl<F    : Clone+Zero+'static,
       self.diag
           .get(i)
           .map(|t|{
-               let mut res=SparseRowView::new(&self.zero,self.ncols());
+               let mut res=SparseRowView::new(self.zero(),self.ncols());
                let _=res.insert(i,t);
                res
           })
@@ -227,7 +274,7 @@ impl<F    : Clone+Zero+'static,
       self.diag
           .get(j)
           .map(|t|{
-               let mut res=SparseColView::new(&self.zero,self.ncols());
+               let mut res=SparseColView::new(self.zero(),self.ncols());
                let _=res.insert(j,t);
                res
           })
@@ -239,7 +286,7 @@ impl<F    : Clone+Zero+'static,
    }
 }
 
-impl<F    : Clone+Zero+'static,
+impl<F    : Clone+Zero+PartialEq+'static,
      Diag : LinearContainer<T=F>> Matrix for DiagonalMatrixGeneric<Diag> {
    type Row=SparseRow<F>;
    type Col=SparseCol<F>;
@@ -314,37 +361,12 @@ impl<F : Zero, FOut : Zero,
         } else {
             self.diag
                 .try_map(f)
-                .map(|cout|DiagonalMatrixGeneric::new(cout))
+                .map(|cout|DiagonalMatrixGeneric::new_with_zero(cout))
                 .map_err(|_|MatrixConstructError::DataDoesNotSatisfyRequiredPropertiesOfMatrixType)
         }
     }
 }
 
-impl<Diag : AnyFromIterator<F,LinearContainerConstructError>+IntoIter<F>+ItemT<T=F>+Len,
-     F : Zero> AnyFromIterator<F,MatrixConstructError> for DiagonalMatrixGeneric<Diag>
-     where Self : SizeFromORef<U2> {
-   fn any_take_away<I:Iterator<Item=F>>(oref:Option<&Self>, iter: & mut I) -> Result<Self, MatrixConstructError> {
-      let n=SizeFromORef::size_from_oref(oref).0;
-      let vs:Vec<F>=utils::iter::next_chunk_dyn(iter, n*n)
-            .map_err(|e|LenTooSmallError::new(n*n,e.len()))?;
-      let mut iter=vs.into_iter();
-      let mut first=true;
-      let fiter=||{
-         let res=if first {
-            iter.next()
-         } else {
-            iter.nth(n)
-         };
-         first=false;
-         res
-      };
-      Diag::any_from_iter(oref.map(|s|&s.diag),std::iter::from_fn(fiter))
-         .map(|diag|DiagonalMatrixGeneric::new(diag))
-         .map_err(|_|MatrixConstructError::DataDoesNotSatisfyRequiredPropertiesOfMatrixType)
-   }
-
-   container_traits::any_from_iter_impl!(F,MatrixConstructError);
-}
 
 impl<Diag : ItemT<T=F>+TryFromFn<usize,F,ContainerConstructError<usize>>, F : Zero> TryFromFn<U2,F,MatrixConstructError> for DiagonalMatrixGeneric<Diag> {
    fn try_from_fn(size:U2,f:impl Fn(U2) -> F) -> Result<Self,MatrixConstructError> {
@@ -356,7 +378,7 @@ impl<Diag : ItemT<T=F>+TryFromFn<usize,F,ContainerConstructError<usize>>, F : Ze
          }
       }
       Diag::try_from_fn(size.0, |i|f((i,i)))
-         .map(|diag|DiagonalMatrixGeneric::new(diag))
+         .map(|diag|DiagonalMatrixGeneric::new_with_zero(diag))
          .map_err(|_|MatrixConstructError::DataDoesNotSatisfyRequiredPropertiesOfMatrixType)
    }
 }
@@ -374,7 +396,7 @@ impl<Row: TryClosedMap<F,LinearContainerConstructError>
          rows.into_iter()
                    .enumerate()
                    .map(|(i,row)|row.try_into_element(i).unwrap().into())).unwrap();
-       Ok(Self::new(diag))
+       Ok(Self::new_with_zero(diag))
    }
 }
 
@@ -386,7 +408,7 @@ impl<Diag:ItemT<T=F>,F:Zero> MatrixDiagonal for DiagonalMatrixGeneric<Diag> wher
 impl<Diag:ItemT<T=F>+TryFromVec<F,LinearContainerConstructError>,F:Zero> TryFromVec<F,LinearContainerConstructError> for DiagonalMatrixGeneric<Diag> {
    fn try_from_vec(vs:Vec<F>) -> Result<Self,LinearContainerConstructError> {
       Diag::try_from_vec(vs)
-         .map(|row|Self::new(row))
+         .map(|row|Self::new_with_zero(row))
    }
 }
 
@@ -403,7 +425,7 @@ impl<F   : Zero+Mul<F2,Output=F3>,
      F2  : Clone,
      F3,
      Diag  : ItemT<T=F>+IntoIter<F>+VectorVectorProduct<Vec2,Output=F3>,
-     Vec2 : ColVector<T=F2>+ChangeT<F3,Output=Vec3>,
+     Vec2 : ColVector<T=F2>+Rebind<LCCE,With<F3>=Vec3>,
      Vec3 : ColVectorTryConstruct<T=F3>> MatrixVectorProduct<Vec2> for DiagonalMatrixGeneric<Diag>
      where Self : MatrixTryConstruct<T=F,Row=Diag> {
    type Output=Vec3;
@@ -435,7 +457,7 @@ impl<F   : Zero+Mul<F2,Output=F3>,
 
 impl<F:Zero+Mul<F2,Output=F3>,F2 : Clone,F3,
      Diag  : ItemT<T=F>+IntoIter<F>+TryVectorVectorProduct<Col2,Output=F3>,
-     Col2 : ColVector<T=F2>+ChangeT<F3,Output=Col3>,
+     Col2 : ColVector<T=F2>+Rebind<LCCE,With<F3>=Col3>,
      Col3 : ColVectorTryConstruct<T=F3>> TryMatrixVectorProduct<Col2> for DiagonalMatrixGeneric<Diag>
      where Self : MatrixTryConstruct<T=F,Row=Diag> {
    type Output=Col3;
@@ -453,7 +475,7 @@ impl<F   : 'static+Clone+Zero+Mul<F2,Output=F3>,
      F2  : Clone,
      F3,
      Row : RowVectorView<T=F>+ItemT<T=F>,
-     M   : Clone+Matrix<T=F2,Row=MRow>+ChangeT<F3,Output=Out>,
+     M   : Clone+Matrix<T=F2,Row=MRow>+Rebind<MatrixConstructError,With<F3>=Out>,
      MRow: RowVector<T=F2>+std::ops::Mul<F,Output=Out::Row>,
      Out : MatrixTryConstruct<T=F3>> TryMatrixMatrixProduct<M> for DiagonalMatrixGeneric<Row> {
          type Output=Out;
@@ -621,8 +643,8 @@ impl<F     : 'static+Zero+Clone+Mul<F2,Output=F3>,
      F2    : 'static+Zero+Clone,
      F3    : Zero,
      Diag  : ItemT<T=F>+LinearContainerSized<T=F>+Iter<F>
-            +ChangeT<F2,Output=Diag2>
-            +ChangeT<F3,Output=Diag3>,
+            +Rebind<LCCE,With<F2>=Diag2>
+            +Rebind<LCCE,With<F3>=Diag3>,
      Diag2 : ItemT<T=F2>+Iter<F2>,
      Diag3 : ItemT<T=F3>
             +AnyFromIterator<F3,LinearContainerConstructError>> MatrixMatrixProduct<DiagonalMatrixGeneric<Diag2>> for DiagonalMatrixGeneric<Diag>
@@ -633,7 +655,7 @@ impl<F     : 'static+Zero+Clone+Mul<F2,Output=F3>,
          type Output=DiagonalMatrixGeneric<Diag3>;
 
          fn matrix_matrix_product(&self, rhs:&DiagonalMatrixGeneric<Diag2>) -> DiagonalMatrixGeneric<Diag3> {
-             DiagonalMatrixGeneric::<Diag3>::new(Diag3::any_from_iter(None,
+             DiagonalMatrixGeneric::<Diag3>::new_with_zero(Diag3::any_from_iter(None,
                  self.diagonal().cloned()
                      .zip(rhs.diagonal().cloned())
                      .map(|(lhs,rhs)|lhs*rhs)).ok().unwrap())

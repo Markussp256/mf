@@ -166,7 +166,17 @@ impl<T : Scalar,
         let c=C::from_usize(c);
         Ok(Self::from_iterator_generic(r, c, v))
     }
-    crate::any_from_iter_impl!(T, E);
+}
+
+impl<T : Scalar,
+     R : Dim,
+     C : Dim,
+     E : From<OtherDimensionMismatchError>> RebindNAlgebraScalar<E> for OMatrix<T,R,C>
+     where DefaultAllocator              : Allocator<R, C>,
+           LenTooSmallError              : Into<E>,
+           LenNotEqualToRequiredLenError : Into<E>,
+           OtherDimensionMismatchError   : Into<E> {
+    type WithNAlgebraScalar<T2:Scalar>=OMatrix<T2,R,C>;
 }
 
 

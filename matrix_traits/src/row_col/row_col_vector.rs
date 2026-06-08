@@ -104,9 +104,16 @@ impl_row_col_view!(SparseColView, SparseRowView, ColVectorView);
 macro_rules! impl_row_col {
     ($name:ident, $other:ident, $tr:ident) => {
         #[derive(Clone, Debug,
-            container_derive::Container)]
+            container_derive::ContainerView)]
         pub struct $name<T>(ContainerSparse<usize,T>);
 
+        impl<T:PartialEq> container_traits::AnyFromIterator<T,container_traits::LinearContainerConstructError> for $name<T> {
+            fn any_take_away<I:    Iterator<Item=T>>(oref:Option<&Self>, iter:& mut I) -> Result<Self,container_traits::LinearContainerConstructError> {
+                <ContainerSparse<usize,T> as container_traits::AnyFromIterator<T,container_traits::LinearContainerConstructError>>::
+                    any_take_away(oref.map(|r|&r.0),iter)
+                        .map(|r|$name(r))
+            }
+        }
 
         impl<T> $name<T> {
             pub fn new(default:T, size:usize) -> Self {

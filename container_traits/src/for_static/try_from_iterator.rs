@@ -2,28 +2,24 @@
 // we provide the method try_take_away which removes this number of elements to construct
 // the instance and returns the iterator to possible construct more stuff.
 
-use crate::{LenTooSmallError,ContainerConstructError};
+use crate::{LenNotEqualToRequiredLenError, LenTooSmallError,ContainerConstructError};
 use generic_array::{ArrayLength,GenericArray};
-
+use utils::iter::Counted;
 
 pub trait TryFromIterator<T,E> : Sized {
     fn try_take_away<I:    Iterator<Item=T>>(iter:& mut I) -> Result<Self,E>;
-    fn try_from_iter<I:IntoIterator<Item=T>>(iter:      I) -> Result<Self,E>;
-}
-
-#[macro_export]
-macro_rules! try_from_iter_impl {
-    ($t:ty) => {
-        $crate::try_from_iter_impl!($t, $crate::ContainerConstructError<usize>);
-    };
-
-    ($t:ty, $e:ty) => {
-        fn try_from_iter<I:IntoIterator<Item=$t>>(iter:I) -> Result<Self,$e> {
-            let mut iter=iter.into_iter();
-            let s=<Self as $crate::for_static::TryFromIterator<$t,$e>>::try_take_away(& mut iter)?;
-            $crate::any_from_iterator::any_from_iter_part2_impl(s,iter)
+    fn try_from_iter<I:IntoIterator<Item=T>>(iter:      I) -> Result<Self,E> where E : From<LenNotEqualToRequiredLenError> {
+        let mut c_iter=Counted::<I::IntoIter>::new(iter.into_iter());
+        let res=Self::try_take_away(& mut c_iter);
+        let (iter,elems_taken)=c_iter.into_parts();
+        let s=res?;
+        let elems_rem=iter.count();
+        if elems_rem == 0 {
+            Ok(s)
+        } else {
+            Err(LenNotEqualToRequiredLenError::new(elems_taken,elems_taken+elems_rem).into())
         }
-    };
+    }
 }
 
 
@@ -32,7 +28,6 @@ impl<T, const N:usize> TryFromIterator<T, ContainerConstructError<usize>> for [T
         utils::iter::next_chunk(iter)
             .map_err(|e:Vec<T>|LenTooSmallError::new(N, e.len()).into())
     }
-    try_from_iter_impl!(T);
 }
 
 impl<T, N:ArrayLength> TryFromIterator<T, ContainerConstructError<usize>> for GenericArray<T,N> {
@@ -40,7 +35,6 @@ impl<T, N:ArrayLength> TryFromIterator<T, ContainerConstructError<usize>> for Ge
         utils::iter::next_chunk_gen_arr(iter)
             .map_err(|e:Vec<T>|LenTooSmallError::new(N::to_usize(), e.len()).into())
     }
-    try_from_iter_impl!(T);
 }
 
 macro_rules! impl_try_from_iter {
@@ -51,7 +45,6 @@ macro_rules! impl_try_from_iter {
                     .ok_or(LenTooSmallError::new(1,0).into())
             }
 
-            try_from_iter_impl!($f);
         }
     };
 }

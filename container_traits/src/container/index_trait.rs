@@ -124,7 +124,6 @@ impl TryFromIterator<usize,ContainerConstructError<usize>> for (usize,usize) {
         let second=iter.next().ok_or(LenTooSmallError::new(2,1))?;
         Ok((first,second))
     }
-    crate::try_from_iter_impl!(usize);
 }
 
 impl Iter<usize> for (usize,usize) {

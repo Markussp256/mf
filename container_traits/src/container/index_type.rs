@@ -47,8 +47,6 @@ impl<const N:usize> TryFromIterator<usize,ContainerConstructError<usize>> for In
             .map(|arr|Self(arr))
             .map_err(|v:Vec<usize>|LenTooSmallError::new(N,v.len()).into())
     }
-
-    crate::try_from_iter_impl!(usize);
 }
 
 impl<const N:usize> Zero for IndexN<N> {

@@ -1672,20 +1672,16 @@ pub fn try_from_iter_proc_macro(input: TokenStream) -> TokenStream {
           .collect();
     let implementation_any=fields.struct_literal(&struct_name,exprs_any);
     quote! {
-        impl #generics #tr_any for #ty where #(#wt : #tr_any,)* Self : container_traits::IntoIter<TTryFromIter>, container_traits::LenNotEqualToRequiredLenError : Into<ErrorTryFromIter>, #wc {
+        impl #generics #tr_any for #ty where #(#wt : #tr_any,)* container_traits::LenNotEqualToRequiredLenError : Into<ErrorTryFromIter>, #wc {
             fn any_take_away<I:Iterator<Item=TTryFromIter>>(oref:Option<&Self>, iter:& mut I) -> Result<Self,ErrorTryFromIter> {
                 Ok(#implementation_any)
             }
-
-            container_traits::any_from_iter_impl!(TTryFromIter, ErrorTryFromIter);
         }
 
-        impl #generics #tr for #ty where #(#wt : #tr,)* Self : container_traits::IntoIter<TTryFromIter>, container_traits::LenNotEqualToRequiredLenError : Into<ErrorTryFromIter>, #wc {
+        impl #generics #tr for #ty where #(#wt : #tr,)* container_traits::LenNotEqualToRequiredLenError : Into<ErrorTryFromIter>, #wc {
             fn try_take_away<I:Iterator<Item=TTryFromIter>>(iter:& mut I) -> Result<Self,ErrorTryFromIter> {
                 Ok(#implementation)
             }
-
-            container_traits::try_from_iter_impl!(TTryFromIter, ErrorTryFromIter);
         }
     }.into()
 }
@@ -1696,39 +1692,29 @@ pub fn try_from_iter_proc_macro(input: TokenStream) -> TokenStream {
 /// # Example
 /// 
 /// ```rust
-/// use container_derive::{IntoIterator,Rebind};
+/// use container_derive::{AnyFromIterator, IntoIterator,Rebind};
 ///
-/// #[derive(IntoIterator, Rebind, Debug, PartialEq)]
+/// #[derive(AnyFromIterator, IntoIterator, Rebind, Debug, PartialEq)]
 /// struct MyWrapper<C>(C);
 /// 
 /// let res=<MyWrapper::<[f64;3]> as Rebind<_>>::any_from_iter(None,vec![0, 1, 2]);
-/// assert_eq!(res, Ok(MyWrapper::<[i32;3]>([0, 1, 2])));
-/// 
-/// let mut iter=vec![0, 1, 2, 3].into_iter();
-/// let res0=MyWrapper::<[f64;3]>::any_take_away(None,& mut iter);
-/// assert!(res0.is_ok());
-/// 
-/// let res1=MyWrapper::<[f64;3]>::any_from_iter(None,vec![0, 1, 2, 3]);
-/// assert!(res1.is_err());
+/// assert_eq!(TypeId::of::<<MyWrapper::<[f64;3]> as Rebind<_>>::With<i32>>(),TypeId::of::<MyWrapper<[i32;3]>>());
 /// ```
 #[proc_macro_derive(Rebind)]
 pub fn rebind_proc_macro(input: TokenStream) -> TokenStream {
     let mut input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let struct_name=input.ident.clone();
     let tr=quote!{ container_traits::Rebind<ErrorRebind> };
+    let tr_na=quote!{ container_traits::RebindNAlgebraScalar<ErrorRebind> };
     let (generics, wc, [(ty, mut wt)])=
     preprocess_no_impl_add_gen_types(& mut input,vec!["ErrorRebind"]);
     let wt=wt.remove(0);
     quote! {
         impl #generics #tr for #ty where #wt : #tr, container_traits::LenNotEqualToRequiredLenError : Into<ErrorRebind>, #wc {
             type With<TRebind>=#struct_name<<#wt as #tr>::With<TRebind>>;
-
-            fn any_take_away<TRebind, I:Iterator<Item=TRebind>>(oref:Option<&Self>,iter:& mut I) -> Result<<Self as #tr>::With<TRebind>,ErrorRebind> {
-                <#wt as #tr>::any_take_away(oref.map(|r|&r.0),iter)
-                    .map(|s|#struct_name(s))
-            }
-
-            container_traits::rebind_any_from_iter_impl!(TRebind, ErrorRebind);
+        }
+        impl #generics #tr_na for #ty where #wt : #tr_na, container_traits::LenNotEqualToRequiredLenError : Into<ErrorRebind>, #wc {
+            type WithNAlgebraScalar<TRebind:nalgebra::Scalar>=#struct_name<<#wt as #tr_na>::WithNAlgebraScalar<TRebind>>;
         }
     }.into()
 }

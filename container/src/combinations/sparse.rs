@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
 use num_traits::Zero;
-use utils::iter::{IntoExactSizeIterator, LookAhead};
+use utils::{iter::{IntoExactSizeIterator, LookAhead}, most_frequent_index};
 use container_traits::index_iterator::ContainerIndexIterator;
 use container_traits::*;
+
 
 #[derive(Clone,Debug)]
 pub struct ContainerSparse<Index,T> {
@@ -197,21 +198,29 @@ impl<Index : Clone+Ord, T:Zero, T2:Zero> TryMap<T,T2,ContainerConstructError<Ind
     }
 }
 
-impl<Index : 'static+ContainerSize, T:'static+Clone+Zero> AnyFromIterator<T,ContainerConstructError<Index>> for ContainerSparse<Index,T> where Self : SizeFromORef<Index> {
-    fn any_take_away<I:    Iterator<Item=T>>(oref:Option<&Self>, iter:& mut I) -> Result<Self,ContainerConstructError<Index>> {
-        let size=SizeFromORef::size_from_oref(oref);
+impl<Index : ContainerSize, T : PartialEq> AnyFromIterator<T,ContainerConstructError<Index>> for ContainerSparse<Index,T> where Self : SizeFromORef<Index> {
+    fn any_take_away<I:    Iterator<Item=T>>(oref:Option<&Self>, iter:& mut I) -> Result<Self,ContainerConstructError<Index>> {       
+        let size=<Self as SizeFromORef<Index>>::size_from_oref(oref);
         let required_len=size.numel();
+        if required_len == 0 {
+            panic!("size is not allowed to be empty");
+        }
         let vals=utils::iter::next_chunk_dyn(iter, required_len)
                 .map_err(|v|ContainerConstructError::from(LenTooSmallError::new(required_len,v.len())))?;
-        let bm=
-            BTreeMap::<Index,T>::from_iter(
-            ContainerIndexIterator::from_size(size.clone())
-                .zip(vals)
-                .filter(|(_,t)|!t.is_zero()));
-        Ok(Self{bm,default:T::zero(),size})
+        let ind_first_default=most_frequent_index(&vals).expect("size is not allowed to be empty");
+        let mut o_default:Option<T>=None;
+        let mut bm= BTreeMap::<Index,T>::new();
+        let mut count=0;
+        for (index,value) in ContainerIndexIterator::from_size(size.clone()).zip(vals) {
+            if count == ind_first_default {
+                o_default=Some(value);
+            } else if o_default.is_none() || &value != o_default.as_ref().unwrap() {
+                bm.insert(index,value);
+            }
+            count += 1;
+        }
+        Ok(Self{bm,default:o_default.unwrap(),size})
     }
-
-    any_from_iter_impl!(T,ContainerConstructError<Index>);
 }
 
 impl<Index:'static+ContainerSize, T:'static+Clone+Zero> TryFromFn<Index,T> for ContainerSparse<Index,T> {
@@ -229,4 +238,8 @@ impl<Index, T> TryAccept<Index,T> for ContainerSparse<Index,T> {
     fn try_accept<'a>(_:Index,_:impl Fn(Index) -> &'a T) -> Result<(),ContainerConstructError<Index>> where T: 'a {
         Ok(())
     }
+}
+
+impl<Index : 'static+ContainerSize, T> RebindNAlgebraScalar<ContainerConstructError<Index>> for ContainerSparse<Index,T> {
+    type WithNAlgebraScalar<T2 : rebind_nalgebra_scalar::NAlgebraScalar> = ContainerSparse<Index,T2>;
 }

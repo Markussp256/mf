@@ -86,7 +86,6 @@ impl<T : Scalar,
             .map_err(|e|LenTooSmallError::new(M*N, e.len()).into())
     }
 
-    crate::try_from_iter_impl!(T);
 }
 
 impl<   F:Scalar, const M:usize, const K:usize> LinearContainerSized for SMatrix       <   F,M,K> { const N:usize=M*K; }

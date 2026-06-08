@@ -1,6 +1,9 @@
 pub mod chain_exact_size;
 pub use chain_exact_size::ChainExactSize;
 
+pub mod counted;
+pub use counted::Counted;
+
 pub mod current;
 pub use current::Current;
 
